@@ -110,6 +110,7 @@ class TaskManager:
             environment["XDG_CONFIG_HOME"] = str(self.tool_config)
             proc = await asyncio.create_subprocess_exec(
                 *args,
+                stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 start_new_session=True,

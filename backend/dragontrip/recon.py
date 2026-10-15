@@ -150,6 +150,7 @@ async def discover(only=None):
                     if key == "httpx"
                     else ["--version"] if key != "ffuf" else ["-V"]
                 ),
+                stdin=asyncio.subprocess.DEVNULL,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
                 env=nmap.external_environment(),

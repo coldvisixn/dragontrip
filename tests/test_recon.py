@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 import pytest
@@ -407,3 +408,42 @@ def test_new_web_nodes_do_not_overlap_existing_services_or_manual_nodes(app):
             (db.get(Node, nid).x, db.get(Node, nid).y) == position
             for nid, position in before.items()
         )
+
+
+def test_tool_process_receives_eof_instead_of_inheriting_input(app):
+    async def scenario():
+        manager = app.state.manager
+        with app.state.sessions() as db:
+            p = Project(name="Noninteractive tool")
+            db.add(p)
+            db.flush()
+            scan = Scan(
+                id="stdin-eof",
+                project_id=p.id,
+                target="127.0.0.1",
+                command=json.dumps(
+                    [
+                        sys.executable,
+                        "-c",
+                        "import sys; print('EOF_BYTES='+str(len(sys.stdin.buffer.read())))",
+                    ]
+                ),
+            )
+            db.add(scan)
+            db.commit()
+        original_input = os.dup(0)
+        read_end, write_end = os.pipe()
+        try:
+            os.dup2(read_end, 0)
+            os.close(read_end)
+            # The parent input remains open and has no EOF. Children must not inherit it.
+            await asyncio.wait_for(manager.run("stdin-eof"), 3)
+        finally:
+            os.dup2(original_input, 0)
+            os.close(original_input)
+            os.close(write_end)
+        with app.state.sessions() as db:
+            saved = db.get(Scan, "stdin-eof")
+            assert "EOF_BYTES=0" in saved.output
+
+    asyncio.run(scenario())

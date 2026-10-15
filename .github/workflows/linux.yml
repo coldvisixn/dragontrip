@@ -73,6 +73,20 @@ jobs:
       - run: .venv/bin/python scripts/smoke-packaged.py
       - name: Prepare native test driver
         run: cargo install tauri-driver --locked
+      - name: System WhatWeb runtime diagnostic
+        run: |
+          {
+            command -v ruby
+            head -n 1 /usr/bin/whatweb
+            /usr/bin/ruby --version
+            timeout 12s whatweb --version < /dev/null || true
+            timeout 12s /usr/bin/ruby /usr/bin/whatweb --version < /dev/null || true
+          } > whatweb-runtime.log 2>&1
+          message="$(tail -n 20 whatweb-runtime.log)"
+          message="${message//'%'/'%25'}"
+          message="${message//$'\n'/'%0A'}"
+          message="${message//$'\r'/'%0D'}"
+          echo "::notice::$message"
       - name: Real recon tools and scope acceptance
         run: |
           set -o pipefail
