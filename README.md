@@ -73,7 +73,7 @@ source .venv/bin/activate
 npm run desktop:build
 python scripts/smoke-packaged.py
 ls src-tauri/target/release/bundle/deb/*.deb
-sudo apt install ./src-tauri/target/release/bundle/deb/dragontrip_0.1.1_amd64.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/dragontrip_0.1.2_amd64.deb
 dragontrip
 # Uninstall (user projects remain):
 sudo apt remove dragontrip

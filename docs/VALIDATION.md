@@ -77,3 +77,9 @@ The first GitHub run passed backend/frontend tests, production compilation and f
 ## Rendering regression gate in 0.1.1
 
 DOM automation initially passed on WebKitGTK 2.54 while the visible webview remained white; its WebDriver screenshot was also unusable. The native checks now capture the actual X11 display with scrot and inspect central workspace pixels, rejecting white or black unpainted surfaces. This new gate reproduced the 0.1.0 failure and passed with the installed 0.1.1 launcher and native graph. Version 0.1.1 initializes software compositing before WebKit startup and maximizes the window to fit the available desktop. The rendering opt-in remains available.
+
+## External tool environment fix in 0.1.2
+
+PyInstaller prepends its private runtime libraries to `LD_LIBRARY_PATH`. Nmap is a system executable, so inheriting this path can load incompatible libraries from the bundled Python runtime on a newer distribution. The runner now restores `LD_LIBRARY_PATH_ORIG` (or removes the injected path when there was no original value) only for external children of a frozen Linux backend. The backend process keeps its own runtime environment.
+
+Two regression cases start a real external process with a deliberately invalid private `libm.so.6`: the contaminated environment fails at the loader, while the restored environment starts correctly. Native failure diagnostics also include the graph, scan status and visible terminal output. The 0.1.1 Kali check passed installation, desktop launch and Dashboard, then failed waiting for Nmap service ingestion; the new version must pass that complete scenario before it is marked verified on Kali.

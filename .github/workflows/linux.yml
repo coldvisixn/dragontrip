@@ -39,7 +39,7 @@ jobs:
       - name: Native packaged application test
         run: |
           cargo install tauri-driver --locked
-          dpkg-deb -x src-tauri/target/release/bundle/deb/dragontrip_0.1.1_amd64.deb "$RUNNER_TEMP/dragontrip-native"
+          dpkg-deb -x src-tauri/target/release/bundle/deb/dragontrip_0.1.2_amd64.deb "$RUNNER_TEMP/dragontrip-native"
           set -o pipefail
           xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip" --profile 2>&1 | tee native-check.log
       - name: Native failure diagnostics
@@ -137,7 +137,7 @@ jobs:
           path: test-driver
       - name: Install actual Debian package on Kali
         run: |
-          DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifact/src-tauri/target/release/bundle/deb/dragontrip_0.1.1_amd64.deb
+          DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifact/src-tauri/target/release/bundle/deb/dragontrip_0.1.2_amd64.deb
           dpkg-query -W dragontrip
           chmod +x test-driver/tauri-driver
       - name: Installed launcher, native acceptance and resource profile

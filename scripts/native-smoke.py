@@ -376,6 +376,13 @@ def main():
                                            "Z" in Path(f"/proc/{pid}/status").read_text().split("State:")[1].splitlines()[0]
                                            for pid in tracked), 15)
                     print("PASS: closing native app during Nmap leaves no live application descendants")
+                except Exception:
+                    try:
+                        print("Native failure graph:", json.dumps(driver.graph()), flush=True)
+                        print("Native failure UI:", driver.js("return document.body.innerText"), flush=True)
+                    except Exception as diagnostic_error:
+                        print("Native diagnostics unavailable:", diagnostic_error, flush=True)
+                    raise
                 finally:
                     try:
                         driver.stop()

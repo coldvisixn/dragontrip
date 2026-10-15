@@ -1,6 +1,8 @@
 """Nmap adapter: no shell, no user-supplied switches, bounded XML."""
 import ipaddress
+import os
 import shutil
+import sys
 from pathlib import Path
 from defusedxml import ElementTree
 
@@ -15,6 +17,18 @@ def ipv4(value: str):
 def discover():
     path = shutil.which("nmap")
     return {"name": "Nmap", "installed": bool(path), "path": path}
+
+
+def external_environment():
+    """Let system tools load system libraries, not PyInstaller's private copies."""
+    environment = os.environ.copy()
+    if getattr(sys, "frozen", False) and sys.platform.startswith("linux"):
+        original = environment.get("LD_LIBRARY_PATH_ORIG")
+        if original is None:
+            environment.pop("LD_LIBRARY_PATH", None)
+        else:
+            environment["LD_LIBRARY_PATH"] = original
+    return environment
 
 
 def arguments(binary, target, artifact):

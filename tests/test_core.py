@@ -1,6 +1,8 @@
 import json
 import asyncio
 import sys
+import os
+import subprocess
 from pathlib import Path
 import pytest
 from defusedxml.common import DefusedXmlException
@@ -8,6 +10,27 @@ from defusedxml.common import DefusedXmlException
 from dragontrip.db import Scan, Node
 from dragontrip.graph import ingest
 from dragontrip.nmap import ipv4, parse, arguments
+
+
+@pytest.mark.parametrize("restore_original", [False, True])
+def test_frozen_external_tool_uses_system_libraries(monkeypatch, tmp_path, restore_original):
+    from dragontrip.nmap import external_environment
+    original = os.environ.get("LD_LIBRARY_PATH", "")
+    # A real dynamic-loader failure if the frozen library directory leaks.
+    (tmp_path / "libm.so.6").write_text("private incompatible library")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setenv("LD_LIBRARY_PATH", str(tmp_path))
+    if restore_original:
+        monkeypatch.setenv("LD_LIBRARY_PATH_ORIG", original)
+    else:
+        monkeypatch.delenv("LD_LIBRARY_PATH_ORIG", raising=False)
+    contaminated = subprocess.run([sys.executable, "-c", "print('should not start')"],
+                                  env=os.environ.copy(), capture_output=True, text=True)
+    assert contaminated.returncode != 0 and "libm.so.6" in contaminated.stderr
+    result = subprocess.run([sys.executable, "-c", "print('external tool started')"],
+                            env=external_environment(), capture_output=True, text=True, check=True)
+    assert result.stdout.strip() == "external tool started"
+    assert os.environ["LD_LIBRARY_PATH"] == str(tmp_path)
 
 XML = """<?xml version="1.0"?>
 <!DOCTYPE nmaprun>

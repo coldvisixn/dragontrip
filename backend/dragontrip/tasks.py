@@ -48,7 +48,7 @@ class TaskManager:
                 db.commit()
             proc = await asyncio.create_subprocess_exec(
                 *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-                start_new_session=True, limit=65536)
+                start_new_session=True, limit=65536, env=nmap.external_environment())
             self.processes[scan_id] = proc
 
             async def consume():
