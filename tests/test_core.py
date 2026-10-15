@@ -156,9 +156,11 @@ def test_interrupted_scans_recovered(app):
 
 
 def test_missing_nmap_and_explicit_scope(client, monkeypatch):
-    from dragontrip import nmap
+    from dragontrip import recon
     pid=client.post("/projects",json={"name":"Scope"}).json()["id"]
-    monkeypatch.setattr(nmap,"discover",lambda:{"installed":False,"path":None})
+    async def unavailable(only=None):
+        return [{"id":"nmap", "name":"Nmap", "installed":False, "path":None}]
+    monkeypatch.setattr(recon,"discover",unavailable)
     assert client.post(f"/projects/{pid}/scans",json={"target":"127.0.0.1","authorized":True}).status_code==409
     for target in ("127.0.0.1; whoami","127.0.0.0/24","example.com"):
         assert client.post(f"/projects/{pid}/scans",json={"target":target,"authorized":True}).status_code==422

@@ -28,12 +28,38 @@ jobs:
         with:
           go-version: '1.24.9'
           cache: false
+      - uses: actions/cache/restore@v4
+        id: httpx-cache
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            ~/go/bin/httpx
+          key: ${{ runner.os }}-${{ runner.arch }}-go1.24.9-httpx1.7.1
       - name: Install ProjectDiscovery httpx for recon acceptance
         run: |
           go install github.com/projectdiscovery/httpx/cmd/httpx@v1.7.1
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - uses: actions/cache/save@v4
+        if: steps.httpx-cache.outputs.cache-hit != 'true'
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+            ~/go/bin/httpx
+          key: ${{ runner.os }}-${{ runner.arch }}-go1.24.9-httpx1.7.1
       - run: bash scripts/setup.sh
-      - run: .venv/bin/python -m pytest -q
+      - name: Backend tests
+        run: |
+          set -o pipefail
+          .venv/bin/python -m pytest -q 2>&1 | tee backend-check.log || {
+            message="$(tail -n 85 backend-check.log)"
+            message="${message//'%'/'%25'}"
+            message="${message//$'\n'/'%0A'}"
+            message="${message//$'\r'/'%0D'}"
+            echo "::error::$message"
+            exit 1
+          }
         env:
           DRAGONTRIP_LIVE_TEST: '1'
       - run: npm test
@@ -43,7 +69,10 @@ jobs:
         run: |
           source .venv/bin/activate
           npm run desktop:build
+          rm -f docs/native-profile.json docs/screenshots/native-graph.png docs/screenshots/native-recon.png
       - run: .venv/bin/python scripts/smoke-packaged.py
+      - name: Prepare native test driver
+        run: cargo install tauri-driver --locked
       - name: Real recon tools and scope acceptance
         run: |
           set -o pipefail
@@ -56,13 +85,13 @@ jobs:
             exit 1
           }
       - name: Native packaged application test
+        id: native
         run: |
-          cargo install tauri-driver --locked
           dpkg-deb -x src-tauri/target/release/bundle/deb/dragontrip_0.2.0_amd64.deb "$RUNNER_TEMP/dragontrip-native"
           set -o pipefail
           xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip" --profile 2>&1 | tee native-check.log
       - name: Native failure diagnostics
-        if: failure()
+        if: failure() && steps.native.outcome == 'failure'
         run: |
           {
             echo '### Native validation diagnostics'
