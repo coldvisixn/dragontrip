@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: kalilinux/kali-rolling@sha256:02f5d6c019e549b0f55da58e835cad5355ef1030c6b2645265a324e37dfc4acc
-      options: --memory=4g --cpus=2 --shm-size=256m
+      options: --memory=4g --cpus=2 --shm-size=256m --volume /etc/ssl/certs/ca-certificates.crt:/run/bootstrap-ca.crt:ro
     defaults:
       run:
         shell: bash
@@ -72,7 +72,9 @@ jobs:
         run: |
           set -o pipefail
           # Use the official TLS endpoint rather than an HTTP mirror redirect.
-          sed -i 's|http://http.kali.org/kali|https://http.kali.org/kali|g' /etc/apt/sources.list
+          sed -i 's|http://http.kali.org/kali|https://http.kali.org/kali|g' /etc/apt/sources.list.d/kali.sources
+          # Minimal Kali omits CA certificates; trust the runner's public roots for bootstrap.
+          printf 'Acquire::https::CaInfo "/run/bootstrap-ca.crt";\n' > /etc/apt/apt.conf.d/99bootstrap-ca
           {
             apt-get update
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates git nmap webkit2gtk-driver xvfb xauth dbus-x11 python3 desktop-file-utils libgtk-3-bin xdotool wmctrl xfwm4 x11-utils at-spi2-core scrot python3-pil
