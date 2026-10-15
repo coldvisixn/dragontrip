@@ -93,3 +93,21 @@ The subsequent detailed Kali trace identified an independent container constrain
 The official Kali Rolling image used stock installed application and Nmap binaries, XFWM, a private Xvfb/D-Bus session, 4 GB RAM and two CPUs. Actual apt installation, launcher/icon/window class and painted pixels, authorized loopback Nmap discovery, Inspector/source XML, native export, node dragging/manual relationships, restart persistence and shutdown during an active scan all passed. Uninstall removed the executable and retained a user-data marker. Its production archive and checksum are in `dragontrip-linux-amd64`; the Kali resource profile and actual X11 screenshot are in `kali-native-validation`.
 
 The container-only WebKit sandbox flag and Nmap capability allowance are test-environment configuration, not application startup requirements. This establishes container compatibility, not a hardware benchmark on the user's VirtualBox VM. The earlier measured software-rendering limitation at 300 nodes remains documented above.
+
+
+## Phase 2 local acceptance (0.2.0)
+
+The Phase 2 backend suite passed 39 tests with real Nmap enabled, including migration of a populated Phase 1 database, tool identity checks, bounded queue/cancellation, scope validation, source parsers, graph positioning and subprocess stdin isolation. All 11 frontend tests passed. The frozen backend, production frontend and native Debian package build passed.
+
+The installed native application also passed on Debian 13 in an isolated 4 GB / two-CPU container: desktop launcher, real Nmap, WhatWeb launched from Inspector, URL ingestion, private XML/JSON export, graph editing, history filtering, restart persistence and shutdown during a scan. The [actual X11 screenshot](screenshots/phase2-recon.png) and [resource measurements](phase2-native-profile.json) were captured from code commit `24db948`, before the final stdin isolation and test-selection fixes. This local run used the default 64 MiB Docker shared-memory limit and software rendering; it was not a VirtualBox hardware benchmark.
+
+For 100 nodes the measured drag-frame median/p95 was 17/61 ms; for 300 nodes it was 28/175 ms. Process-tree RSS at 300 nodes was 887.5 MiB (PSS 653.5 MiB). Large-graph smoothness and memory targets still need work. Supported execution targets in this release are single IPv4 addresses or HTTP(S) IPv4 URLs; hostname/CIDR batching remains outside 0.2.0.
+
+
+## Final Phase 2 CI acceptance
+
+[GitHub Actions run 38792713976](https://github.com/coldvisixn/dragontrip/actions/runs/38792713976) verified code commit `50293bf` on 15 October 2026. Ubuntu passed backend/frontend tests, production packaging, frozen-backend migration/restart checks, real Nmap/WhatWeb/ProjectDiscovery httpx/ffuf acceptance and the complete native UI scenario. Official Kali Rolling passed apt preflight, installation of the actual 0.2.0 package, all four real-tool checks, desktop launcher/native graph and export/restart/resource checks, and uninstall with retained user data.
+
+Both real-tool runs included selected-service enumeration with the bounded NSE allowlist, URL graph ingestion/deduplication, preserved coordinates, rejection of cross-origin redirect ingestion and disposable wordlist cleanup. The native scenario explicitly selects the loopback HTTP service even when an unrelated SSH service is present. External version probes and task processes receive closed stdin; this also resolved the Ubuntu WhatWeb discovery stall seen in earlier acceptance runs.
+
+Download the package and matching checksum from **dragontrip-linux-amd64** in that run. **kali-native-validation** contains CI-generated screenshots and measurements from the installed Kali application. These artifacts are separate from the local Debian measurements above. Phase 3 is not implemented by this release.

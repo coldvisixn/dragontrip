@@ -4,7 +4,7 @@
 
 Local security workspace for Kali Linux: Tauri 2 + React/TypeScript + Python/FastAPI + SQLite. Phase 2 recon automation: Nmap, WhatWeb, ProjectDiscovery httpx and ffuf, with a persistent infrastructure graph and bounded task queue.
 
-**Delivery status:** 0.2.0 implementation and local validation are complete; full release CI is being verified. See [Phase 2 workflows and limits](docs/PHASE2.md). The previous version 0.1.2 passed [the complete Linux CI run](https://github.com/coldvisixn/dragontrip/actions/runs/38776280992), including backend/frontend tests, native Tauri acceptance on Ubuntu, actual apt installation and desktop launch on official Kali Rolling, real Nmap, graph editing, XML export, restart persistence, shutdown during a scan, and uninstall/data retention. The Kali container was limited to 4 GB RAM and two CPUs. Download the `.deb` and matching checksum from that run’s `dragontrip-linux-amd64` artifact. A check on the user’s actual Kali/XFCE VirtualBox VM remains manual.
+**Delivery status:** Phase 2 is complete in 0.2.0; Ubuntu and installed Kali acceptance passed. See [workflows and limits](docs/PHASE2.md) and [validation results](docs/VALIDATION.md). The [release CI run](https://github.com/coldvisixn/dragontrip/actions/runs/38792713976) contains the `.deb` and matching checksum in **dragontrip-linux-amd64**, plus native test evidence. The user's Kali/XFCE VirtualBox performance check remains manual.
 
 ## Implemented
 
@@ -20,7 +20,7 @@ Local security workspace for Kali Linux: Tauri 2 + React/TypeScript + Python/Fas
 - Alembic migrations, XDG storage, loopback API, fresh per-launch token, strict Host/Origin checks.
 - Tauri-managed backend startup/shutdown; PyInstaller one-folder distribution; Linux launcher, icons and CI build recipe.
 
-No sample discoveries are injected into user projects. Screenshots under `docs/screenshots/` come from real local Nmap tests; `native-graph.png` is from the packaged WebKitGTK application. Attack Paths, Findings and Notes are disabled future features.
+No sample discoveries are injected into user projects. Screenshots under `docs/screenshots/` come from real local recon tests; `native-graph.png` is from the packaged WebKitGTK application. Attack Paths, Findings and Notes are disabled future features.
 
 For installing the ready-made package, see [Инструкция для Kali](docs/INSTALL-KALI.md).
 

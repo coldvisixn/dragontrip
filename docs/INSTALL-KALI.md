@@ -2,7 +2,7 @@
 
 Готовый пакет: `dragontrip_0.2.0_amd64.deb` (около 28,2 MiB). Архитектура — x86_64.
 
-Скачайте артефакт **dragontrip-linux-amd64** из [успешной сборки GitHub Actions](https://github.com/coldvisixn/dragontrip/actions/runs/38776280992), распакуйте его и найдите `dragontrip_0.2.0_amd64.deb` в `src-tauri/target/release/bundle/deb/`. Рядом находится файл SHA-256. Откройте терминал в папке с пакетом:
+Скачайте артефакт **dragontrip-linux-amd64** из [сборки GitHub Actions](https://github.com/coldvisixn/dragontrip/actions/runs/38792713976), распакуйте его и найдите `dragontrip_0.2.0_amd64.deb` в `src-tauri/target/release/bundle/deb/`. Рядом находится файл SHA-256. Откройте терминал в папке с пакетом:
 
 ```bash
 sudo apt update
@@ -15,7 +15,7 @@ sudo apt install ./dragontrip_0.2.0_amd64.deb nmap whatweb httpx-toolkit ffuf
 dragontrip
 ```
 
-Отдельно запускать Python, Vite или браузер не нужно. Backend и его Python-зависимости входят в пакет. Nmap используется из системы.
+Отдельно запускать Python, Vite или браузер не нужно. Backend и его Python-зависимости входят в пакет. Nmap, WhatWeb, ProjectDiscovery httpx и ffuf используются из системы.
 
 Первый сценарий:
 

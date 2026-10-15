@@ -56,4 +56,4 @@ npm run build
 
 The real-tool check scans only its own loopback HTTP servers. It verifies selected-service NSE setup, WhatWeb/httpx/ffuf execution, JSON ingestion, URL deduplication, preserved coordinates, bounded wordlist cleanup and no redirects to a second origin. `--skip-httpx` is explicitly a partial local check, not full acceptance. CI runs full acceptance on Ubuntu and on the installed Kali package, plus native Tauri/graph/export/restart checks.
 
-Validation status and release artifact links are recorded in VALIDATION.md after the corresponding CI run completes. A real 4 GB VirtualBox performance check remains separate from container acceptance.
+The complete Ubuntu and installed Kali acceptance passed; release artifact links and evidence are recorded in [VALIDATION.md](VALIDATION.md). A real 4 GB VirtualBox performance check remains separate from container acceptance.
