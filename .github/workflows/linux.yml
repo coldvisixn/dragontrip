@@ -71,7 +71,7 @@ jobs:
           printf 'Acquire::https::CaInfo "/run/bootstrap-ca.crt";\n' > /etc/apt/apt.conf.d/99bootstrap-ca
           if ! {
             apt-get update --error-on=any &&
-            apt-get install --simulate -y --no-install-recommends ca-certificates git nmap webkit2gtk-driver xvfb xauth dbus-x11 python3 desktop-file-utils libgtk-3-bin xdotool wmctrl xfwm4 x11-utils at-spi2-core scrot python3-pil
+            apt-get install --simulate -y --no-install-recommends ca-certificates git nmap webkitgtk-webdriver xvfb xauth dbus-x11 python3 desktop-file-utils libgtk-3-bin xdotool wmctrl xfwm4 x11-utils at-spi2-core scrot python3-pil
           } > /tmp/kali-repository.log 2>&1; then
             tail -n 40 /tmp/kali-repository.log
             message="$(tail -n 30 /tmp/kali-repository.log)"
@@ -102,7 +102,7 @@ jobs:
           printf 'Acquire::https::CaInfo "/run/bootstrap-ca.crt";\n' > /etc/apt/apt.conf.d/99bootstrap-ca
           {
             apt-get update --error-on=any
-            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates git nmap webkit2gtk-driver xvfb xauth dbus-x11 python3 desktop-file-utils libgtk-3-bin xdotool wmctrl xfwm4 x11-utils at-spi2-core scrot python3-pil
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates git nmap webkitgtk-webdriver xvfb xauth dbus-x11 python3 desktop-file-utils libgtk-3-bin xdotool wmctrl xfwm4 x11-utils at-spi2-core scrot python3-pil
           } 2>&1 | tee /tmp/kali-dependencies.log || {
             message="$(tail -n 25 /tmp/kali-dependencies.log)"
             message="${message//'%'/'%25'}"
