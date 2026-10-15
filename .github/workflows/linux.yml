@@ -69,7 +69,10 @@ jobs:
         run: |
           sed -i 's|http://http.kali.org/kali|https://http.kali.org/kali|g' /etc/apt/sources.list.d/kali.sources
           printf 'Acquire::https::CaInfo "/run/bootstrap-ca.crt";\n' > /etc/apt/apt.conf.d/99bootstrap-ca
-          if ! apt-get update > /tmp/kali-repository.log 2>&1; then
+          if ! {
+            apt-get update --error-on=any
+            apt-get install --simulate -y --no-install-recommends ca-certificates git nmap webkit2gtk-driver xvfb xauth dbus-x11 python3 desktop-file-utils libgtk-3-bin xdotool wmctrl xfwm4 x11-utils at-spi2-core scrot python3-pil
+          } > /tmp/kali-repository.log 2>&1; then
             tail -n 40 /tmp/kali-repository.log
             while IFS= read -r line; do echo "::error::$line"; done < /tmp/kali-repository.log
             exit 1
@@ -94,7 +97,7 @@ jobs:
           # Minimal Kali omits CA certificates; trust the runner's public roots for bootstrap.
           printf 'Acquire::https::CaInfo "/run/bootstrap-ca.crt";\n' > /etc/apt/apt.conf.d/99bootstrap-ca
           {
-            apt-get update
+            apt-get update --error-on=any
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates git nmap webkit2gtk-driver xvfb xauth dbus-x11 python3 desktop-file-utils libgtk-3-bin xdotool wmctrl xfwm4 x11-utils at-spi2-core scrot python3-pil
           } 2>&1 | tee /tmp/kali-dependencies.log || {
             tail -n 25 /tmp/kali-dependencies.log | while IFS= read -r line; do echo "::error::$line"; done
