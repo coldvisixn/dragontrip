@@ -115,7 +115,7 @@ The current scan profile is intentionally fixed: `-sT -sV --version-light -n -Pn
 
 ## Native integration and profiling
 
-On a Linux test machine, install `webkit2gtk-driver`, `xvfb` and `xauth`, then install `tauri-driver` with `cargo install tauri-driver --locked`. Run against the installed application or an extracted Debian executable:
+On an Ubuntu/Debian test machine, install `webkit2gtk-driver`, `xvfb`, `xauth`, `dbus-x11`, `scrot` and `xdotool` (current Kali names its driver package `webkitgtk-webdriver`), then install `tauri-driver` with `cargo install tauri-driver --locked`. Run against the installed application or an extracted Debian executable:
 
 ```bash
 xvfb-run -a .venv/bin/python scripts/native-smoke.py /usr/bin/dragontrip --profile
@@ -131,4 +131,4 @@ Installed-package checks (requires the XFWM window manager plus `wmctrl`, `xdoto
 xvfb-run -a dbus-run-session -- bash scripts/installed-smoke.sh
 ```
 
-The check launches the actual desktop entry with `gtk-launch`, checks its icon/window class and closes it through the window manager before the full native acceptance/profile test. The isolated Docker CI job disables the nested WebKit sandbox for the test only; the application never disables its production sandbox.
+The check launches the actual desktop entry with `gtk-launch`, checks its icon/window class and visible X11 pixels, and closes it through the window manager before the full native acceptance/profile test. Native checks use Pillow from the development lockfile; installed-system checks additionally need XFWM, wmctrl, desktop-file-utils and python3-pil. The isolated Docker CI job disables the nested WebKit sandbox for the test only; the application never disables its production sandbox.

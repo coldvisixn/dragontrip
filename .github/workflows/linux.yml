@@ -131,7 +131,14 @@ jobs:
           GSETTINGS_BACKEND: memory
         run: |
           set -o pipefail
-          xvfb-run -a dbus-run-session -- bash scripts/installed-smoke.sh "$GITHUB_WORKSPACE/test-driver/tauri-driver" 2>&1 | tee kali-native-check.log
+          xvfb-run -a dbus-run-session -- bash scripts/installed-smoke.sh "$GITHUB_WORKSPACE/test-driver/tauri-driver" 2>&1 | tee kali-native-check.log || {
+            message="$(tail -n 45 kali-native-check.log; tail -n 15 /tmp/dragontrip-native-driver.log 2>/dev/null || true)"
+            message="${message//'%'/'%25'}"
+            message="${message//$'\n'/'%0A'}"
+            message="${message//$'\r'/'%0D'}"
+            echo "::error::$message"
+            exit 1
+          }
       - name: Kali validation summary
         if: always()
         run: |
