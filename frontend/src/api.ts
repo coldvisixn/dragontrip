@@ -9,7 +9,7 @@ export type Project = {
 };
 export type ObjectNode = {
   id: string;
-  kind: 'host' | 'service' | 'custom';
+  kind: 'host' | 'service' | 'custom' | 'url';
   label: string;
   x: number;
   y: number;
@@ -22,12 +22,33 @@ export type Relation = {
   kind: string;
   evidence: string | null;
 };
+export type Profile = {
+  scripts?: string[];
+  id: string;
+  name: string;
+  tool: string;
+  ports: string;
+  rate: number;
+  timeout: number;
+};
+export type ScanRequest = {
+  target: string;
+  profile: string;
+  authorized: boolean;
+  confirmed: boolean;
+  words: string[];
+  service_node?: string;
+};
 export type Scan = {
+  tool?: string;
+  profile?: string;
+  options?: Profile;
   id: string;
   target: string;
   status: string;
   command: string[];
   started: string;
+  queued_at?: string;
   ended: string | null;
   exit_code: string | null;
   output?: string;
@@ -77,10 +98,27 @@ export async function downloadArtifact(id: string) {
   if (!r.ok) throw new Error('Evidence is unavailable');
   return r.text();
 }
-export async function saveArtifact(id: string) {
-  const content = await downloadArtifact(id);
+export async function saveArtifact(id: string, format: 'xml' | 'json' = 'xml') {
+  let content = await downloadArtifact(id);
+  if (format === 'json') {
+    try {
+      JSON.parse(content);
+    } catch {
+      content = JSON.stringify(
+        content
+          .split('\n')
+          .filter((line) => line.trim())
+          .map((line) => JSON.parse(line)),
+        null,
+        2,
+      );
+    }
+  }
   try {
-    return await invoke<string>('export_xml', { scanId: id, content });
+    return await invoke<string>(format === 'xml' ? 'export_xml' : 'export_json', {
+      scanId: id,
+      content,
+    });
   } catch (error) {
     throw new Error(error instanceof Error ? error.message : String(error));
   }

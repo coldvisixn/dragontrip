@@ -2,18 +2,19 @@
 
 [Builds and downloadable Debian artifacts](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml)
 
-Local security workspace for Kali Linux: Tauri 2 + React/TypeScript + Python/FastAPI + SQLite. Phase 1 implementation, with real Nmap discovery and a persistent infrastructure graph.
+Local security workspace for Kali Linux: Tauri 2 + React/TypeScript + Python/FastAPI + SQLite. Phase 2 recon automation: Nmap, WhatWeb, ProjectDiscovery httpx and ffuf, with a persistent infrastructure graph and bounded task queue.
 
-**Delivery status:** version 0.1.2 passed [the complete Linux CI run](https://github.com/coldvisixn/dragontrip/actions/runs/38776280992), including backend/frontend tests, native Tauri acceptance on Ubuntu, actual apt installation and desktop launch on official Kali Rolling, real Nmap, graph editing, XML export, restart persistence, shutdown during a scan, and uninstall/data retention. The Kali container was limited to 4 GB RAM and two CPUs. Download the `.deb` and matching checksum from that run’s `dragontrip-linux-amd64` artifact. A check on the user’s actual Kali/XFCE VirtualBox VM remains manual.
+**Delivery status:** 0.2.0 implementation and local validation are complete; full release CI is being verified. See [Phase 2 workflows and limits](docs/PHASE2.md). The previous version 0.1.2 passed [the complete Linux CI run](https://github.com/coldvisixn/dragontrip/actions/runs/38776280992), including backend/frontend tests, native Tauri acceptance on Ubuntu, actual apt installation and desktop launch on official Kali Rolling, real Nmap, graph editing, XML export, restart persistence, shutdown during a scan, and uninstall/data retention. The Kali container was limited to 4 GB RAM and two CPUs. Download the `.deb` and matching checksum from that run’s `dragontrip-linux-amd64` artifact. A check on the user’s actual Kali/XFCE VirtualBox VM remains manual.
 
 ## Implemented
 
 - Dashboard, project creation/switching, last-project restoration, activity history.
-- Single authorized IPv4, detected system Nmap, fixed TCP connect/light service detection profile.
-- Asynchronous execution, one active scan, cancellation, deadlines, process group termination, restart recovery.
+- Quick/Full/Service Enumeration and saved custom profiles; four detected system tools, with IPv4 or IPv4 web-origin scope.
+- FIFO queue, configurable 1–3 concurrent tasks, cancellation, deadlines, process group termination and restart recovery.
 - Bounded terminal tail and raw XML evidence; XML parsing rejects entity expansion. Source XML exports use a native, private, atomic save in Downloads without overwriting existing files.
-- Stable Host/Service identities, rescan updates, preserved coordinates and custom objects.
+- Stable Host/Service/URL identities, scoped rescan updates, web technology evidence, preserved coordinates and custom objects.
 - Lazy-loaded XYFlow graph with custom cards, pan/zoom, minimap, selection, Inspector, search, custom nodes/relationships and guarded deletion.
+- Service-aware recommendations, paginated/filterable scan history, private XML/JSON export and settings for profiles/queue.
 - Explicit manual hypotheses; automatically discovered objects link to their source scan.
 - Resizable Inspector/task panel, logs/events, Ctrl+K palette, offline fonts, reduced-motion support.
 - Alembic migrations, XDG storage, loopback API, fresh per-launch token, strict Host/Origin checks.
@@ -73,7 +74,7 @@ source .venv/bin/activate
 npm run desktop:build
 python scripts/smoke-packaged.py
 ls src-tauri/target/release/bundle/deb/*.deb
-sudo apt install ./src-tauri/target/release/bundle/deb/dragontrip_0.1.2_amd64.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/dragontrip_0.2.0_amd64.deb
 dragontrip
 # Uninstall (user projects remain):
 sudo apt remove dragontrip
@@ -85,13 +86,13 @@ Before a stable release, complete the remaining Kali installation checks in [doc
 
 ## Data and process model
 
-`$XDG_DATA_HOME/dragontrip/` (default `~/.local/share/dragontrip/`) contains SQLite and `artifacts/<scan UUID>.xml`. Storage is created privately; the desktop sets a restrictive umask. Alembic upgrades the schema before opening the API. Back up the entire data directory while the application is closed.
+`$XDG_DATA_HOME/dragontrip/` (default `~/.local/share/dragontrip/`) contains SQLite and `artifacts/<scan UUID>.xml or .json`. Storage is created privately; the desktop sets a restrictive umask. Alembic upgrades the schema before opening the API. Back up the entire data directory while the application is closed.
 
-Only successful XML artifacts are retained. They are evidence, not disposable temporary files; failed/cancelled XML is removed. Evidence retention is currently manual. Terminal output combines stdout/stderr and keeps the last 64 KiB per scan. Historical scans retain at most that tail, not complete console transcripts.
+Only successful XML/JSON artifacts are retained. They are evidence, not disposable temporary files; failed/cancelled partial evidence and temporary wordlists are removed. Evidence retention is currently manual. Terminal output combines stdout/stderr and keeps the last 64 KiB per scan. Historical scans retain at most that tail, not complete console transcripts.
 
 Tauri generates a random 256-bit token and launches the backend on an OS-assigned IPv4 loopback port. Token transport is restricted to local Tauri IPC and the backend process environment. The API rejects unknown Host/Origin values and requires a bearer header on every request. Desktop CSP restricts scripts to bundled assets. Browser polling is used instead of a WebSocket: project updates every 2 seconds and selected terminal tail every 1.5 seconds while scans run. Idle polling stops after completion. Polling is bounded and cleaned up on project changes/unmount.
 
-The backend supervises Nmap in a separate process group. Shutdown cancels tasks, sends TERM then KILL if necessary, and reaps children. A parent watchdog handles unexpected shell loss; interrupted jobs are marked on restart. No automatic scan resumes.
+The backend supervises each recon tool in a separate process group. Shutdown cancels tasks, sends TERM then KILL if necessary, and reaps children. A parent watchdog handles unexpected shell loss; interrupted jobs are marked on restart. No automatic scan resumes.
 
 ## Layout
 

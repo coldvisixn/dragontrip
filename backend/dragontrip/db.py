@@ -53,13 +53,23 @@ class Scan(Base):
     id = Column(String, primary_key=True, default=uid)
     project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
     target = Column(String, nullable=False)
+    tool = Column(Text, nullable=False, default="nmap")
+    profile = Column(Text, nullable=False, default="quick")
+    options = Column(Text, nullable=False, default="{}")
     status = Column(String, default="queued")
     command = Column(Text, default="[]")
+    queued_at = Column(String, nullable=False, default=now)
     started = Column(String, default=now)
     ended = Column(String, nullable=True)
     exit_code = Column(String, nullable=True)
     output = Column(Text, default="")
     error = Column(Text, default="")
+
+
+class Configuration(Base):
+    __tablename__ = "configuration"
+    id = Column(String, primary_key=True)
+    value = Column(Text, nullable=False)
 
 
 class Activity(Base):
@@ -78,24 +88,36 @@ def record(db, project_id, message):
 
 
 def serialize(obj, exclude=()):
-    result = {c.name: getattr(obj, c.name) for c in obj.__table__.columns if c.name not in exclude}
+    result = {
+        c.name: getattr(obj, c.name)
+        for c in obj.__table__.columns
+        if c.name not in exclude
+    }
     if isinstance(obj, Node):
         result["attrs"] = json.loads(result["attrs"])
     if isinstance(obj, Scan):
         result["command"] = json.loads(result["command"])
+        result["options"] = json.loads(result["options"])
     return result
 
 
 def database(path: Path):
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    engine = create_engine(f"sqlite:///{path}", connect_args={"check_same_thread": False})
+    engine = create_engine(
+        f"sqlite:///{path}", connect_args={"check_same_thread": False}
+    )
+
     @event.listens_for(engine, "connect")
     def configure(connection, _):
         connection.execute("PRAGMA foreign_keys=ON")
         connection.execute("PRAGMA journal_mode=WAL")
         connection.execute("PRAGMA busy_timeout=5000")
+
     return engine, sessionmaker(engine, expire_on_commit=False)
 
 
 def data_dir():
-    return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")) / "dragontrip"
+    return (
+        Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
+        / "dragontrip"
+    )

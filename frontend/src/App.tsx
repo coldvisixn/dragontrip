@@ -1,3 +1,5 @@
+import { ScanForm, ReconSettings, Suggestions, ScanHistory } from './Recon';
+import type { ScanRequest } from './api';
 import packageInfo from '../../package.json';
 import {
   lazy,
@@ -150,8 +152,10 @@ export default function App() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
-  const [authorized, setAuthorized] = useState(false);
+  const [profileId, setProfileId] = useState('quick');
+  const [serviceNode, setServiceNode] = useState<string | undefined>();
   const [query, setQuery] = useState('');
+  const [nodeKind, setNodeKind] = useState('all');
   const [bottom, setBottom] = useState(false);
   const [tab, setTab] = useState('Terminal Output');
   const [scanId, setScanId] = useState<string | null>(null);
@@ -197,6 +201,7 @@ export default function App() {
   useEffect(() => {
     generation.current++;
     setDetail(null);
+    setNodeKind('all');
     setSelected(null);
     setScan(null);
     setScanId(null);
@@ -210,7 +215,7 @@ export default function App() {
     const timer = setInterval(() => {
       void refresh(pid)
         .then((d) => {
-          if (d.scans.some(active)) void refreshProjects();
+          void refreshProjects();
         })
         .catch((e) => setError(e.message));
     }, 2000);
@@ -274,7 +279,8 @@ export default function App() {
   }
   function startScan() {
     setTarget('');
-    setAuthorized(false);
+    setProfileId('quick');
+    setServiceNode(undefined);
     setModal('scan');
   }
   async function submitProject(e: FormEvent) {
@@ -287,17 +293,16 @@ export default function App() {
       notify('Project created');
     });
   }
-  async function submitScan(e: FormEvent) {
-    e.preventDefault();
+  async function submitScan(request: ScanRequest) {
     if (!pid) return;
     await perform(async () => {
-      const s = await api<Scan>('/projects/' + pid + '/scans', 'POST', { target, authorized });
+      const s = await api<Scan>('/projects/' + pid + '/scans', 'POST', request);
       setScanId(s.id);
       setBottom(true);
       setTab('Terminal Output');
       await refresh(pid);
       setModal(null);
-      notify('Nmap scan started');
+      notify('Recon task queued');
     });
   }
   async function submitNode(e: FormEvent) {
@@ -501,7 +506,7 @@ export default function App() {
                         [Folder, 'Projects', projects.length, 'Independent workspaces'],
                         [Server, 'Hosts', hostCount, 'In the selected project'],
                         [Globe, 'Services', serviceCount, 'Evidence from Nmap'],
-                        [Activity, 'Active scans', running, 'One task at a time'],
+                        [Activity, 'Active scans', running, 'Bounded recon queue'],
                       ].map(([Icon, label, value, hint]) => {
                         const I = Icon as typeof Folder;
                         return (
@@ -637,7 +642,7 @@ export default function App() {
                           <Plus size={14} />
                           Custom node
                         </button>
-                        <button className="primary" onClick={startScan} disabled={running > 0}>
+                        <button className="primary" onClick={startScan}>
                           <Play size={13} />
                           Start scan
                         </button>
@@ -651,10 +656,31 @@ export default function App() {
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
                       />
+                      <select
+                        aria-label="Graph object type"
+                        value={nodeKind}
+                        onChange={(e) => setNodeKind(e.target.value)}
+                      >
+                        {['all', 'host', 'service', 'url', 'custom'].map((kind) => (
+                          <option key={kind} value={kind}>
+                            {kind === 'all' ? 'All types' : kind}
+                          </option>
+                        ))}
+                      </select>
                       {query && (
                         <div className="search-results">
                           {detail.nodes
-                            .filter((n) => n.label.toLowerCase().includes(query.toLowerCase()))
+                            .filter((n) =>
+                              [
+                                n.label,
+                                n.kind,
+                                n.attrs.title,
+                                JSON.stringify(n.attrs.technologies || []),
+                              ]
+                                .join(' ')
+                                .toLowerCase()
+                                .includes(query.toLowerCase()),
+                            )
                             .slice(0, 20)
                             .map((n) => (
                               <button
@@ -674,8 +700,16 @@ export default function App() {
                       <Suspense fallback={<div className="loading">Loading graph…</div>}>
                         <Graph
                           selectedId={selected}
-                          objects={detail.nodes}
-                          relations={detail.edges}
+                          objects={detail.nodes.filter(
+                            (n) => nodeKind === 'all' || n.kind === nodeKind,
+                          )}
+                          relations={detail.edges.filter(
+                            (edge) =>
+                              nodeKind === 'all' ||
+                              [edge.source, edge.target].every(
+                                (id) => detail.nodes.find((n) => n.id === id)?.kind === nodeKind,
+                              ),
+                          )}
                           onSelect={setSelected}
                           onEdge={setSelected}
                           onMove={(id, x, y) => {
@@ -733,7 +767,7 @@ export default function App() {
                         <h1>Hosts</h1>
                         <p>Observed infrastructure in {detail.project.name}</p>
                       </div>
-                      <button className="primary" onClick={startScan} disabled={running > 0}>
+                      <button className="primary" onClick={startScan}>
                         <Play size={14} />
                         Start scan
                       </button>
@@ -762,9 +796,13 @@ export default function App() {
                                 <span className="badge success">{String(n.attrs.state)}</span>
                               </span>
                               <span>
-                                {detail.nodes.filter((s) => s.attrs.host === n.label).length}
+                                {
+                                  detail.nodes.filter(
+                                    (s) => s.kind === 'service' && s.attrs.host === n.label,
+                                  ).length
+                                }
                               </span>
-                              <span>Nmap</span>
+                              <span>{String(n.attrs.source || 'nmap')}</span>
                             </button>
                           )}
                         />
@@ -779,58 +817,20 @@ export default function App() {
                         <h1>Scan history</h1>
                         <p>Real executions, preserved evidence and exact arguments.</p>
                       </div>
-                      <button className="primary" onClick={startScan} disabled={running > 0}>
+                      <button className="primary" onClick={startScan}>
                         <Plus size={14} />
                         New scan
                       </button>
                     </div>
-                    {detail.scans.length === 0 ? (
-                      <Empty icon={Activity} title="No scans yet">
-                        Run Nmap on an authorized target to start discovery.
-                      </Empty>
-                    ) : (
-                      <div className="scan-list">
-                        <VirtualList
-                          items={detail.scans}
-                          rowHeight={82}
-                          itemKey={(s) => s.id}
-                          label="Scan history"
-                          renderItem={(s) => (
-                            <button
-                              key={s.id}
-                              className="scan-row"
-                              onClick={() => {
-                                setScanId(s.id);
-                                setBottom(true);
-                                setTab('Terminal Output');
-                              }}
-                            >
-                              <div className="tool-icon">
-                                <Terminal size={19} />
-                              </div>
-                              <span>
-                                <strong className="mono">{s.target}</strong>
-                                <small>{date(s.started)}</small>
-                              </span>
-                              <span
-                                className={
-                                  'badge ' +
-                                  (s.status === 'completed'
-                                    ? 'success'
-                                    : s.status === 'failed'
-                                      ? 'danger'
-                                      : '')
-                                }
-                              >
-                                {active(s) && <LoaderCircle size={12} className="spin" />}
-                                {s.status}
-                              </span>
-                              <ChevronRight size={16} />
-                            </button>
-                          )}
-                        />
-                      </div>
-                    )}
+                    <ScanHistory
+                      pid={pid!}
+                      revision={detail.scans.map((s) => s.id + s.status).join(',')}
+                      onSelect={(id) => {
+                        setScanId(id);
+                        setBottom(true);
+                        setTab('Terminal Output');
+                      }}
+                    />
                   </div>
                 )}
                 {page === 'Tools' && (
@@ -859,7 +859,9 @@ export default function App() {
                           <span>
                             <strong>{t.name}</strong>
                             <small>{t.version || 'Version unavailable'}</small>
-                            <code>{t.path || 'sudo apt install nmap'}</code>
+                            <code>
+                              {t.path || 'Install this tool using your system package manager'}
+                            </code>
                           </span>
                           <span className={'badge ' + (t.installed ? 'success' : 'warning')}>
                             {t.installed ? 'Installed' : 'Missing'}
@@ -867,7 +869,8 @@ export default function App() {
                         </div>
                       ))}
                       <p className="muted">
-                        WhatWeb, ProjectDiscovery httpx and ffuf are planned for Phase 2.
+                        Tools are detected from your system. ProjectDiscovery httpx may be installed
+                        as httpx-toolkit on Kali. No tools run automatically.
                       </p>
                     </section>
                   </div>
@@ -880,20 +883,21 @@ export default function App() {
                         <p>Predictable defaults for a small, local workstation.</p>
                       </div>
                     </div>
+                    <ReconSettings />
                     <section className="panel settings">
                       {[
                         ['Storage', 'XDG data directory · SQLite with migrations'],
                         ['Local API', 'Loopback only · per-session bearer authentication'],
-                        ['Scan concurrency', '1 task'],
+                        ['Queue limits', '1–3 concurrent tasks · 32 queued/running maximum'],
                         [
                           'Scan limits',
-                          'Single IPv4 · top 100 TCP ports · light version detection',
+                          'Single IPv4 or IPv4 web origin · profile-specific ports and rates',
                         ],
-                        ['Timeout', '180s per host · 240s total'],
+                        ['Timeout', '10–900s according to profile'],
                         ['Output', '64 KiB terminal tail · 16 MiB XML cap'],
                         [
                           'Evidence retention',
-                          'Successful scan XML is retained until removed outside the app',
+                          'Successful XML/JSON is retained until removed outside the app',
                         ],
                         [
                           'Future features',
@@ -934,7 +938,7 @@ export default function App() {
                     <div className={'empty-icon ' + object.kind}>
                       {object.kind === 'host' ? (
                         <Server />
-                      ) : object.kind === 'service' ? (
+                      ) : object.kind === 'service' || object.kind === 'url' ? (
                         <Globe />
                       ) : (
                         <Pentagon />
@@ -943,13 +947,24 @@ export default function App() {
                     <span className="eyebrow">{object.kind}</span>
                     <h2>{object.label}</h2>
                     <span className={'badge ' + (object.kind === 'custom' ? 'warning' : 'success')}>
-                      {object.kind === 'custom' ? 'Manual hypothesis' : 'Observed · Nmap'}
+                      {object.kind === 'custom'
+                        ? 'Manual hypothesis'
+                        : 'Observed · ' + String(object.attrs.source || 'nmap')}
                     </span>
                   </div>
                   <div className="inspector-section">
                     <h3>Attributes</h3>
                     {Object.entries(object.attrs)
-                      .filter(([k]) => !['evidence_xml', 'scan_id'].includes(k))
+                      .filter(
+                        ([k]) =>
+                          ![
+                            'evidence_xml',
+                            'evidence_json',
+                            'scan_id',
+                            'observations',
+                            'evidence_truncated',
+                          ].includes(k),
+                      )
                       .map(([k, v]) => (
                         <div className="attribute" key={k}>
                           <span>{k}</span>
@@ -978,6 +993,57 @@ export default function App() {
                         );
                       })}
                   </div>
+                  {pid && (
+                    <Suggestions
+                      pid={pid}
+                      nodeId={object.id}
+                      revision={detail?.project.updated || ''}
+                      onChoose={(profile, destination, nodeId) => {
+                        setServiceNode(nodeId);
+                        setProfileId(profile);
+                        setTarget(destination);
+                        setModal('scan');
+                      }}
+                    />
+                  )}
+                  {object.attrs.evidence_json != null && (
+                    <div className="inspector-section">
+                      <h3>Source evidence · JSON</h3>
+                      {object.attrs.evidence_truncated === true && (
+                        <p className="muted">
+                          Preview truncated. Export the full scan evidence below.
+                        </p>
+                      )}
+                      <p className="muted">Scan {String(object.attrs.scan_id)}</p>
+                      <pre className="evidence">{String(object.attrs.evidence_json)}</pre>
+                      <button
+                        onClick={() =>
+                          void perform(async () => {
+                            const path = await saveArtifact(String(object.attrs.scan_id), 'json');
+                            notify('Evidence saved: ' + path);
+                          })
+                        }
+                      >
+                        Export source JSON
+                      </button>
+                    </div>
+                  )}
+                  {Array.isArray(object.attrs.observations) && (
+                    <div className="inspector-section">
+                      <h3>Recent observations</h3>
+                      {(
+                        object.attrs.observations as {
+                          scan_id: string;
+                          tool: string;
+                          observed_at: string;
+                        }[]
+                      ).map((observation) => (
+                        <p key={observation.scan_id}>
+                          {observation.tool} · {date(observation.observed_at)}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                   {object.attrs.evidence_xml != null && (
                     <div className="inspector-section">
                       <h3>Source evidence</h3>
@@ -1068,7 +1134,7 @@ export default function App() {
                     <span>
                       {scan ? (
                         <>
-                          Nmap <span className="mono">{scan.target}</span>
+                          {scan.tool || 'nmap'} <span className="mono">{scan.target}</span>
                           <span className="badge">{scan.status}</span> ·{' '}
                           {Math.max(
                             0,
@@ -1084,6 +1150,21 @@ export default function App() {
                         'No scan selected'
                       )}
                     </span>
+                    {scan?.status === 'completed' && (
+                      <button
+                        onClick={() =>
+                          void perform(async () => {
+                            const path = await saveArtifact(
+                              scan.id,
+                              scan.tool && scan.tool !== 'nmap' ? 'json' : 'xml',
+                            );
+                            notify('Evidence saved: ' + path);
+                          })
+                        }
+                      >
+                        Export scan evidence
+                      </button>
+                    )}
                     {scan && active(scan) && (
                       <button
                         className="danger-button"
@@ -1114,7 +1195,7 @@ export default function App() {
                   {detail?.scans.filter(active).map((s) => (
                     <div key={s.id}>
                       <LoaderCircle size={13} className="spin" />
-                      Nmap · {s.target}
+                      {s.tool || 'nmap'} · {s.target}
                       <span>{s.status}</span>
                       <button
                         onClick={() =>
@@ -1239,48 +1320,18 @@ export default function App() {
         </Dialog>
       )}
       {modal === 'scan' && (
-        <Dialog title="Start Nmap discovery" onClose={closeModal}>
-          <form onSubmit={submitScan}>
-            <p className="muted">
-              Top 100 TCP ports · connect scan · light service detection. One target, one task.
-            </p>
-            <label>
-              Target IPv4 address
-              <input
-                required
-                pattern={'(?:[0-9]{1,3}\\.){3}[0-9]{1,3}'}
-                value={target}
-                onChange={(e) => setTarget(e.target.value)}
-                placeholder="10.10.10.10"
-                className="mono"
-              />
-            </label>
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                required
-                checked={authorized}
-                onChange={(e) => setAuthorized(e.target.checked)}
-              />
-              <span>
-                I own this target or have explicit permission to scan it. This IP is within my
-                permitted scope.
-              </span>
-            </label>
-            <div className="hint">
-              <ShieldCheck size={18} />
-              Only this IPv4 address will be passed to Nmap. No custom scripts or exploitation.
-            </div>
-            <div className="dialog-actions">
-              <button type="button" onClick={closeModal}>
-                Cancel
-              </button>
-              <button className="primary" disabled={busy || !authorized || !target}>
-                <Play size={14} />
-                Start scan
-              </button>
-            </div>
-          </form>
+        <Dialog title="Start recon task" onClose={closeModal}>
+          <ScanForm
+            serviceNode={serviceNode}
+            servicePort={
+              Number(detail?.nodes.find((n) => n.id === serviceNode)?.attrs.port) || undefined
+            }
+            initialTarget={target}
+            initialProfile={profileId}
+            busy={busy}
+            onSubmit={(request) => void submitScan(request)}
+            onClose={closeModal}
+          />
         </Dialog>
       )}
       {modal === 'node' && (
@@ -1358,7 +1409,12 @@ export default function App() {
                 </button>
               ))}
             {detail?.nodes
-              .filter((n) => n.label.toLowerCase().includes(query.toLowerCase()))
+              .filter((n) =>
+                [n.label, n.kind, n.attrs.title, JSON.stringify(n.attrs.technologies || [])]
+                  .join(' ')
+                  .toLowerCase()
+                  .includes(query.toLowerCase()),
+              )
               .slice(0, 20)
               .map((n) => (
                 <button

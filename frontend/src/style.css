@@ -1451,3 +1451,93 @@ tbody tr:hover {
   scrollbar-width: thin;
   scrollbar-color: #394358 #11151d;
 }
+
+select {
+  width: 100%;
+  border: 1px solid var(--border, #282f3d);
+  background: #11151d;
+  color: #e8ebf2;
+  border-radius: 6px;
+  padding: 9px 10px;
+  font: inherit;
+}
+.recon-settings {
+  padding: 22px;
+  margin-bottom: 24px;
+}
+.recon-settings h2 {
+  margin: 18px 0 12px;
+}
+.recon-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.recon-grid label,
+.recon-settings label {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.recon-task {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #282f3d;
+  padding: 12px 0;
+  font-size: 12px;
+}
+.recon-task span {
+  overflow-wrap: anywhere;
+}
+.recommendation {
+  width: 100%;
+  display: grid;
+  gap: 5px;
+  text-align: left;
+  margin: 8px 0;
+}
+.recommendation small {
+  color: #939bac;
+}
+.object-card.url {
+  border-top-color: #53c79d;
+}
+.object-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .recon-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.graph-search select {
+  width: 112px;
+  padding: 6px;
+  font-size: 10px;
+  border: 0;
+}
+.dialog {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+.graph-search {
+  max-width: calc(100% - 34px);
+}
+.graph-search input {
+  min-width: 0;
+  flex: 1;
+}
+fieldset {
+  border: 1px solid #282f3d;
+  border-radius: 6px;
+  margin: 12px 0 18px;
+}
+legend {
+  font-size: 11px;
+  color: #939bac;
+}

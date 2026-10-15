@@ -5,8 +5,8 @@ import signal
 from pathlib import Path
 
 from .db import Scan, now, record
-from .graph import ingest
-from . import nmap
+from .graph import ingest, ingest_web
+from . import nmap, recon
 
 
 class TaskManager:
@@ -14,13 +14,68 @@ class TaskManager:
         self.sessions = sessions
         self.artifacts = artifacts
         artifacts.mkdir(parents=True, exist_ok=True, mode=0o700)
+        self.tool_config = artifacts / "tool-config"
+        self.tool_config.mkdir(mode=0o700, exist_ok=True)
+        (self.tool_config / "httpx.yaml").write_text("{}\n")
         self.tasks = {}
         self.processes = {}
+        self.waiting = []
+        self.running = set()
+        self.concurrency = 1
+        self.condition = asyncio.Condition()
         # Crashed scans are never presented as still running after restart.
         with sessions() as db:
             for scan in db.query(Scan).filter(Scan.status.in_(["queued", "running"])):
-                scan.status, scan.ended, scan.error = "interrupted", now(), "Application stopped before scan completed"
+                scan.status, scan.ended, scan.error = (
+                    "interrupted",
+                    now(),
+                    "Application stopped before scan completed",
+                )
+                for extension in ("xml", "json", "words"):
+                    partial = artifacts / f"{scan.id}.{extension}"
+                    if partial.parent == artifacts:
+                        partial.unlink(missing_ok=True)
             db.commit()
+        # Wordlists are disposable, including a crash between file creation and DB commit.
+        from uuid import UUID
+
+        for wordlist in artifacts.glob("*.words"):
+            try:
+                UUID(wordlist.stem)
+            except ValueError:
+                continue
+            wordlist.unlink(missing_ok=True)
+
+    def enqueue(self, scan_id):
+        self.waiting.append(scan_id)
+        self.tasks[scan_id] = asyncio.create_task(self.scheduled(scan_id))
+
+    async def scheduled(self, scan_id):
+        try:
+            async with self.condition:
+                await self.condition.wait_for(
+                    lambda: self.waiting
+                    and self.waiting[0] == scan_id
+                    and len(self.running) < self.concurrency
+                )
+                self.waiting.remove(scan_id)
+                self.running.add(scan_id)
+                self.condition.notify_all()
+            await self.run(scan_id)
+        except asyncio.CancelledError:
+            self.finish(scan_id, "cancelled", "Cancelled before launch", None)
+        finally:
+            async with self.condition:
+                if scan_id in self.waiting:
+                    self.waiting.remove(scan_id)
+                self.running.discard(scan_id)
+                self.tasks.pop(scan_id, None)
+                self.condition.notify_all()
+
+    async def configure(self, concurrency):
+        async with self.condition:
+            self.concurrency = concurrency
+            self.condition.notify_all()
 
     async def stop_process(self, proc):
         if proc.returncode is None:
@@ -39,16 +94,28 @@ class TaskManager:
 
     async def run(self, scan_id):
         proc = None
-        artifact = self.artifacts / f"{scan_id}.xml"
+        with self.sessions() as db:
+            current = db.get(Scan, scan_id)
+            tool = current.tool
+            timeout = json.loads(current.options).get("timeout", 240)
+        artifact = self.artifacts / f"{scan_id}.{"xml" if tool == "nmap" else "json"}"
         try:
             with self.sessions() as db:
                 scan = db.get(Scan, scan_id)
                 args = json.loads(scan.command)
                 scan.status = "running"
+                scan.started = now()
                 db.commit()
+            environment = nmap.external_environment()
+            environment["XDG_CONFIG_HOME"] = str(self.tool_config)
             proc = await asyncio.create_subprocess_exec(
-                *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT,
-                start_new_session=True, limit=65536, env=nmap.external_environment())
+                *args,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+                start_new_session=True,
+                limit=65536,
+                env=environment,
+            )
             self.processes[scan_id] = proc
 
             async def consume():
@@ -61,17 +128,27 @@ class TaskManager:
                         raise ValueError("XML output exceeded 16 MiB safety limit")
                     with self.sessions() as db:
                         scan = db.get(Scan, scan_id)
-                        scan.output = (scan.output + chunk.decode("utf-8", "replace"))[-65536:]
+                        scan.output = (scan.output + chunk.decode("utf-8", "replace"))[
+                            -65536:
+                        ]
                         db.commit()
                 return await proc.wait()
 
-            code = await asyncio.wait_for(consume(), timeout=240)
+            code = await asyncio.wait_for(consume(), timeout=timeout)
             if code != 0:
-                raise RuntimeError(f"Nmap exited with code {code}; see terminal output")
+                raise RuntimeError(
+                    f"{tool} exited with code {code}; see terminal output"
+                )
             with self.sessions() as db:
                 scan = db.get(Scan, scan_id)
-                hosts = await asyncio.to_thread(nmap.parse, artifact, scan.target)
-                ingest(db, scan, hosts)
+                if tool == "nmap":
+                    hosts = await asyncio.to_thread(nmap.parse, artifact, scan.target)
+                    ingest(db, scan, hosts)
+                else:
+                    results = await asyncio.to_thread(
+                        recon.parse, artifact, tool, scan.target
+                    )
+                    ingest_web(db, scan, results)
                 scan.status, scan.ended, scan.exit_code = "completed", now(), str(code)
                 db.commit()
         except asyncio.CancelledError:
@@ -82,11 +159,21 @@ class TaskManager:
         except Exception as exc:
             if proc:
                 await self.stop_process(proc)
-            self.finish(scan_id, "failed", "Scan timeout (240s)" if isinstance(exc, asyncio.TimeoutError) else str(exc), proc)
+            self.finish(
+                scan_id,
+                "failed",
+                (
+                    f"Scan timeout ({timeout}s)"
+                    if isinstance(exc, asyncio.TimeoutError)
+                    else str(exc)
+                ),
+                proc,
+            )
             artifact.unlink(missing_ok=True)
         finally:
             self.processes.pop(scan_id, None)
             self.tasks.pop(scan_id, None)
+            (self.artifacts / f"{scan_id}.words").unlink(missing_ok=True)
 
     def finish(self, scan_id, status, error, proc):
         with self.sessions() as db:
@@ -105,6 +192,13 @@ class TaskManager:
             if scan_id in self.tasks:
                 self.tasks.pop(scan_id, None)
                 self.finish(scan_id, "cancelled", "Cancelled before launch", None)
+            async with self.condition:
+                if scan_id in self.waiting:
+                    self.waiting.remove(scan_id)
+                self.condition.notify_all()
+            (self.artifacts / f"{scan_id}.words").unlink(missing_ok=True)
 
     async def close(self):
-        await asyncio.gather(*(self.cancel(sid) for sid in list(self.tasks)), return_exceptions=True)
+        await asyncio.gather(
+            *(self.cancel(sid) for sid in list(self.tasks)), return_exceptions=True
+        )

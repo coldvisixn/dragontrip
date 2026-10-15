@@ -20,7 +20,12 @@ import type { ObjectNode, Relation } from './api';
 
 type GraphData = { label: string; kind: string; subtitle: string };
 const ObjectCard = memo(function ObjectCard({ data, selected }: NodeProps<Node<GraphData>>) {
-  const Icon = data.kind === 'host' ? Server : data.kind === 'service' ? Globe : Pentagon;
+  const Icon =
+    data.kind === 'host'
+      ? Server
+      : data.kind === 'service' || data.kind === 'url'
+        ? Globe
+        : Pentagon;
   return (
     <div className={'object-card ' + data.kind + (selected ? ' selected' : '')}>
       <Handle type="target" position={Position.Left} />
@@ -82,10 +87,12 @@ export default function Graph({
           subtitle:
             n.kind === 'custom'
               ? 'Manual · hypothesis'
-              : n.kind === 'host'
-                ? String(n.attrs.state || 'unknown')
-                : [n.attrs.product, n.attrs.version].filter(Boolean).join(' ') ||
-                  'Nmap · observed service',
+              : n.kind === 'url'
+                ? String(n.attrs.title || n.attrs.status || 'Observed web resource')
+                : n.kind === 'host'
+                  ? String(n.attrs.state || 'unknown')
+                  : [n.attrs.product, n.attrs.version].filter(Boolean).join(' ') ||
+                    'Nmap · observed service',
         },
       })),
     [objects, selectedId],

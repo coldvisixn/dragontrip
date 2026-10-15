@@ -24,6 +24,24 @@ async fn export_xml(
     scan_id: String,
     content: String,
 ) -> Result<String, String> {
+    export_file(app, scan_id, content, false)
+}
+
+#[tauri::command]
+async fn export_json(
+    app: tauri::AppHandle,
+    scan_id: String,
+    content: String,
+) -> Result<String, String> {
+    export_file(app, scan_id, content, true)
+}
+
+fn export_file(
+    app: tauri::AppHandle,
+    scan_id: String,
+    content: String,
+    json: bool,
+) -> Result<String, String> {
     use std::io::Write;
     let valid_id = scan_id.len() == 36
         && scan_id.bytes().enumerate().all(|(i, b)| {
@@ -33,8 +51,15 @@ async fn export_xml(
                 b.is_ascii_hexdigit()
             }
         });
-    if !valid_id || content.len() > 16 * 1024 * 1024 || !content.contains("<nmaprun") {
-        return Err("Invalid XML evidence export".into());
+    if !valid_id
+        || content.len() > 16 * 1024 * 1024
+        || if json {
+            serde_json::from_str::<serde_json::Value>(&content).is_err()
+        } else {
+            !content.contains("<nmaprun")
+        }
+    {
+        return Err("Invalid evidence export".into());
     }
     let directory = app.path().download_dir().map_err(|e| e.to_string())?;
     std::fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
@@ -43,11 +68,13 @@ async fn export_xml(
         .write_all(content.as_bytes())
         .map_err(|e| e.to_string())?;
     temporary.as_file().sync_all().map_err(|e| e.to_string())?;
+    let prefix = if json { "recon" } else { "nmap" };
+    let extension = if json { "json" } else { "xml" };
     for suffix in 0..100 {
         let filename = if suffix == 0 {
-            format!("nmap-{scan_id}.xml")
+            format!("{prefix}-{scan_id}.{extension}")
         } else {
-            format!("nmap-{scan_id}-{suffix}.xml")
+            format!("{prefix}-{scan_id}-{suffix}.{extension}")
         };
         let path = directory.join(filename);
         match temporary.persist_noclobber(&path) {
@@ -129,7 +156,7 @@ fn main() {
             app.manage(Backend { connection: Connection {port, token}, child: Mutex::new(child) });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![backend_connection, export_xml])
+        .invoke_handler(tauri::generate_handler![backend_connection, export_xml, export_json])
         .build(tauri::generate_context!())
         .expect("Dragontrip failed to initialize");
     app.run(|handle, event| {

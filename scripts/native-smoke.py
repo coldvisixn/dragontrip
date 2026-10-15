@@ -313,6 +313,37 @@ def main():
                     driver.drag(".object-card.custom .react-flow__handle-right",
                                 ".object-card.host .react-flow__handle-left")
                     wait_until(lambda: any(e["kind"] == "CUSTOM_RELATION" for e in driver.graph().get("edges", [])))
+                    # Phase 2: execute a real web adapter through its Inspector recommendation.
+                    driver.js("document.querySelector('.object-card.service').click()")
+                    wait_until(lambda: driver.js("return [...document.querySelectorAll('.recommendation')].some(b=>b.textContent.trim().startsWith('whatweb'))"))
+                    driver.js("[...document.querySelectorAll('.recommendation')].find(b=>b.textContent.trim().startsWith('whatweb')).click()")
+                    wait_until(lambda: driver.js("return document.querySelector('.dialog select')?.value==='whatweb'"))
+                    driver.js("document.querySelector('.dialog input[type=checkbox]').click()")
+                    driver.js("[...document.querySelectorAll('.dialog button')].find(b=>b.textContent.trim()==='Start scan').click()")
+                    wait_until(lambda: any(s.get('tool')=='whatweb' and s['status']=='completed' for s in driver.graph().get('scans',[])), 90)
+                    wait_until(lambda: driver.js("return !!document.querySelector('.object-card.url')"))
+                    driver.js("document.querySelector('.object-card.url').click()")
+                    wait_until(lambda: driver.js("return document.body.textContent.includes('Source evidence · JSON')"))
+                    web_node=next(n for n in driver.graph()['nodes'] if n['kind']=='url')
+                    driver.click('Export source JSON')
+                    json_file=downloads/f"recon-{web_node['attrs']['scan_id']}.json"
+                    wait_until(lambda: json_file.exists())
+                    assert json.loads(json_file.read_text())
+                    assert json_file.stat().st_mode & 0o077 == 0
+                    assert next(n for n in driver.graph()['nodes'] if n['id']==service['id'])['attrs']['state']=='open'
+                    capture_ui(screenshots/'native-recon.png')
+                    # Review a full profile without executing the high-traffic scan.
+                    driver.click('Start scan')
+                    driver.fill('.dialog input:not([type=checkbox])','127.0.0.1')
+                    wait_until(lambda: driver.js("return !!document.querySelector('.dialog select option[value=full]')"))
+                    driver.js("const s=document.querySelector('.dialog select');s.value='full';s.dispatchEvent(new Event('change',{bubbles:true}));")
+                    wait_until(lambda: driver.js("return document.querySelectorAll('.dialog input[type=checkbox]').length===2"))
+                    driver.js("document.querySelectorAll('.dialog input[type=checkbox]')[0].click()")
+                    assert driver.js("return [...document.querySelectorAll('.dialog button')].find(b=>b.textContent.trim()==='Start scan').disabled")
+                    driver.js("document.querySelectorAll('.dialog input[type=checkbox]')[1].click()")
+                    assert not driver.js("return [...document.querySelectorAll('.dialog button')].find(b=>b.textContent.trim()==='Start scan').disabled")
+                    driver.click('Cancel')
+                    print('PASS: native WhatWeb recommendation + URL graph + JSON evidence export + separate Full Scan approval',flush=True)
                     print("Preparing native close / restart", flush=True)
                     tracked = application_tree(proc.pid, application)
                     driver.stop()
@@ -331,6 +362,14 @@ def main():
                     assert any(e["kind"] == "CUSTOM_RELATION" for e in restored["edges"])
                     assert not any(s["status"] in ("running", "queued") for s in restored["scans"])
                     print("PASS: native Tauri IPC + packaged Python + real Nmap + graph + Inspector + drag + manual link + restart")
+                    assert any(n['kind']=='url' for n in restored['nodes'])
+                    driver.click('Scans')
+                    wait_until(lambda: driver.js("return !!document.querySelector('section[aria-label=\"Scan history\"] select')"))
+                    driver.js("const s=document.querySelectorAll('section[aria-label=\"Scan history\"] select')[1];s.value='whatweb';s.dispatchEvent(new Event('change',{bubbles:true}));")
+                    wait_until(lambda: driver.js("return document.querySelectorAll('.scan-row').length===1 && document.querySelector('.scan-row').textContent.includes('whatweb')"))
+                    driver.click('Network Graph')
+                    wait_until(lambda: driver.js("return !!document.querySelector('.object-card.custom')"))
+                    print('PASS: native paginated tool filter and web-result restart persistence',flush=True)
                     if args.profile:
                         for count in (100,300):
                             result=driver.call("POST","/execute/async",{"script": """
@@ -368,11 +407,12 @@ def main():
                             print(f"Graph {count} metrics:",metrics[f"graph_{count}"],flush=True)
                         (ROOT/"docs/native-profile.json").write_text(json.dumps(metrics,indent=2)+"\n")
                     # Close with an active scan and require every owned descendant to exit.
+                    previous_scan_count=len(driver.graph().get('scans',[]))
                     driver.click("Start scan")
                     driver.fill(".dialog input:not([type=checkbox])", "127.0.0.1")
                     driver.js("document.querySelector('.dialog input[type=checkbox]').click()")
                     driver.js("[...document.querySelectorAll('.dialog button')].find(b=>b.textContent.trim()==='Start scan').click()")
-                    wait_until(lambda: len(driver.graph().get("scans", [])) >= 2)
+                    wait_until(lambda: len(driver.graph().get("scans", [])) > previous_scan_count)
                     time.sleep(.5)
                     print("Preparing native close / restart", flush=True)
                     tracked = application_tree(proc.pid, application)
