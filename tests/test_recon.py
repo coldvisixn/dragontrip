@@ -348,3 +348,62 @@ def test_only_diagnostic_nse_profiles_are_accepted(client):
         ).status_code
         == 422
     )
+
+
+def test_new_web_nodes_do_not_overlap_existing_services_or_manual_nodes(app):
+    from dragontrip.graph import ingest
+
+    with app.state.sessions() as db:
+        p = Project(name="Placement")
+        db.add(p)
+        db.flush()
+        scan = Scan(id="place", project_id=p.id, target="127.0.0.1")
+        db.add(scan)
+        db.flush()
+        ingest(
+            db,
+            scan,
+            [
+                {
+                    "ip": "127.0.0.1",
+                    "state": "up",
+                    "services": [
+                        {
+                            "port": 8080,
+                            "protocol": "tcp",
+                            "name": "http",
+                            "state": "open",
+                        }
+                    ],
+                }
+            ],
+        )
+        manual = Node(
+            id="my-position",
+            project_id=p.id,
+            kind="custom",
+            label="Keep position",
+            x=490,
+            y=165,
+            attrs="{}",
+        )
+        db.add(manual)
+        db.flush()
+        before = {node.id: (node.x, node.y) for node in db.query(Node)}
+        scan.tool = "whatweb"
+        scan.target = "http://127.0.0.1:8080/"
+        ingest_web(
+            db,
+            scan,
+            [{"url": scan.target, "status": 200, "title": "Web", "evidence": {}}],
+        )
+        db.commit()
+        nodes = list(db.query(Node))
+        for left in nodes:
+            for right in nodes:
+                if left.id != right.id:
+                    assert abs(left.x - right.x) >= 250 or abs(left.y - right.y) >= 115
+        assert all(
+            (db.get(Node, nid).x, db.get(Node, nid).y) == position
+            for nid, position in before.items()
+        )

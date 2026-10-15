@@ -154,7 +154,7 @@ async def discover(only=None):
                 stderr=asyncio.subprocess.STDOUT,
                 env=nmap.external_environment(),
             )
-            raw, _ = await asyncio.wait_for(proc.communicate(), 3)
+            raw, _ = await asyncio.wait_for(proc.communicate(), 10)
             text = re.sub(r"\x1b\[[0-9;]*[mK]", "", raw.decode(errors="replace")[:2000])
             if proc.returncode != 0:
                 info.update(
@@ -182,8 +182,12 @@ async def discover(only=None):
                         else "Version unavailable"
                     ),
                 )[:250]
-        except (OSError, asyncio.TimeoutError):
-            info.update(installed=False, version="Executable could not start")
+        except asyncio.TimeoutError:
+            info.update(
+                installed=False, version="Version check timed out after 10 seconds"
+            )
+        except OSError as exc:
+            info.update(installed=False, version=f"Executable could not start: {exc}")
         finally:
             if proc and proc.returncode is None:
                 proc.kill()

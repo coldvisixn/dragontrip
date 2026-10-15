@@ -2,8 +2,40 @@ import json
 from .db import Node, Edge, record
 
 
+class Placement:
+    """Reserve free card-sized cells without rearranging existing/manual nodes."""
+
+    def __init__(self, db, project_id):
+        self.cells = {}
+        self.cursors = {}
+        for node in db.query(Node).filter_by(project_id=project_id):
+            self.add(node.x or 0, node.y or 0)
+
+    def add(self, x, y):
+        self.cells.setdefault((int(x // 250), int(y // 115)), []).append((x, y))
+
+    def reserve(self, x, y):
+        base = (max(-500000, min(500000, x)), max(-500000, min(500000, y)))
+        cursor = self.cursors.get(base, 0)
+        for index in range(cursor, cursor + 100000):
+            x, y = base[0] + (index // 12) * 280, base[1] + (index % 12) * 125
+            column, row = int(x // 250), int(y // 115)
+            occupied = any(
+                abs(x - px) < 250 and abs(y - py) < 115
+                for dx in (-1, 0, 1)
+                for dy in (-1, 0, 1)
+                for px, py in self.cells.get((column + dx, row + dy), [])
+            )
+            if not occupied:
+                self.cursors[base] = index + 1
+                self.add(x, y)
+                return {"x": x, "y": y}
+        raise ValueError("No free graph placement cells")
+
+
 def ingest(db, scan, hosts):
     """Stable entity IDs preserve coordinates and custom objects across scans."""
+    placement = Placement(db, scan.project_id)
     scanned = next(
         (host.get("scanned_ports") for host in hosts if host.get("scanned_ports")), ""
     )
@@ -34,8 +66,7 @@ def ingest(db, scan, hosts):
                 project_id=scan.project_id,
                 kind="host",
                 label=host["ip"],
-                x=120,
-                y=180,
+                **placement.reserve(120, 180),
             )
             db.add(node)
         node.attrs = json.dumps(attrs)
@@ -49,8 +80,7 @@ def ingest(db, scan, hosts):
                     project_id=scan.project_id,
                     kind="service",
                     label=f"{service['port']}/{service['protocol']} · {service['name']}",
-                    x=490 + (i // 6) * 280,
-                    y=40 + (i % 6) * 125,
+                    **placement.reserve((node.x or 0) + 370, (node.y or 0) - 140),
                 )
                 db.add(item)
             item.label = f"{service['port']}/{service['protocol']} · {service['name']}"
@@ -89,6 +119,7 @@ def ingest_web(db, scan, results):
     if not results:
         record(db, scan.project_id, f"{scan.tool}: no HTTP responses observed")
         return
+    placement = Placement(db, scan.project_id)
     origin = urlsplit(scan.target)
     host = origin.hostname
     hid = f"{scan.project_id}:host:{host}"
@@ -99,8 +130,7 @@ def ingest_web(db, scan, results):
             project_id=scan.project_id,
             kind="host",
             label=host,
-            x=120,
-            y=180,
+            **placement.reserve(120, 180),
             attrs=json.dumps(
                 {
                     "ip": host,
@@ -122,8 +152,7 @@ def ingest_web(db, scan, results):
                 project_id=scan.project_id,
                 kind="url",
                 label=url,
-                x=490 + (i // 6) * 280,
-                y=40 + (i % 6) * 125,
+                **placement.reserve((item.x or 0) + 370, (item.y or 0) - 140),
             )
             db.add(node)
         previous = json.loads(node.attrs or "{}")

@@ -1541,3 +1541,11 @@ legend {
   font-size: 11px;
   color: #939bac;
 }
+.object-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.inspector h2 {
+  overflow-wrap: anywhere;
+}
