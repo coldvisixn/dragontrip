@@ -1,8 +1,10 @@
 # DRAGONTRIP
 
+[Builds and downloadable Debian artifacts](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml)
+
 Local security workspace for Kali Linux: Tauri 2 + React/TypeScript + Python/FastAPI + SQLite. Phase 1 implementation, with real Nmap discovery and a persistent infrastructure graph.
 
-**Delivery status:** release Debian package built successfully. The packaged Tauri/WebKitGTK application passed native tests with its bundled Python backend, real Nmap, graph editing, restart persistence and shutdown during a scan. Native verification ran on Debian 13 under Xvfb; installation through Kali's package manager/applications menu and performance on a 4 GB VirtualBox VM remain to be checked.
+**Delivery status:** release Debian package built successfully. The packaged Tauri/WebKitGTK application passed native tests with its bundled Python backend, real Nmap, graph editing, restart persistence and shutdown during a scan. Native verification also passed after a real apt installation in a clean Debian 13/XFWM container limited to 4 GB RAM and two CPUs, including the desktop launcher and uninstall/data retention. The workflow additionally tests an installed package on official Kali Rolling. A VirtualBox hardware check remains manual.
 
 ## Implemented
 
@@ -77,7 +79,7 @@ dragontrip
 sudo apt remove dragontrip
 ```
 
-The build embeds the Python interpreter and dependencies as a one-folder resource. Nmap remains a system dependency, detected at runtime. Frontend dependencies and Rust build tools are not shipped. Lockfiles are supplied for npm, Cargo and the tested Python environment. CI configuration is prepared in `.github/workflows/linux.yml`; local builds passed, but the GitHub workflow has not run as part of this delivery.
+The build embeds the Python interpreter and dependencies as a one-folder resource. Nmap remains a system dependency, detected at runtime. Frontend dependencies and Rust build tools are not shipped. Lockfiles are supplied for npm, Cargo and the tested Python environment. The GitHub workflow builds downloadable packages and checks the installed application on Kali Rolling. Its native-driver path handling was corrected after the first CI run; current results are linked above.
 
 Before a stable release, complete the remaining Kali installation checks in [docs/VALIDATION.md](docs/VALIDATION.md).
 
@@ -122,3 +124,11 @@ xvfb-run -a .venv/bin/python scripts/native-smoke.py /usr/bin/dragontrip --profi
 This uses actual Tauri IPC, the packaged frontend/backend and system Nmap. It checks node dragging and manual links, restarts the native application and closes it during a scan. Profiling creates explicitly manual test objects in temporary storage for 100/300-node measurements. It excludes WebDriver/Xvfb from application process totals and reports both summed RSS and PSS. Port 8080 must be free. Do not run this simultaneously with the browser/live-Nmap tests, which use the same test port.
 
 Linux defaults to WebKit's non-accelerated rendering policy for small VMs. On a machine with a suitable GPU, `DRAGONTRIP_HARDWARE_ACCELERATION=1 dragontrip` leaves WebKit's standard policy enabled. The default policy is set through WebKit's native settings; users do not need to set environment variables for ordinary startup.
+
+Installed-package checks (requires the XFWM window manager plus `wmctrl`, `xdotool`, `x11-utils`, `libgtk-3-bin` and `desktop-file-utils`):
+
+```bash
+xvfb-run -a dbus-run-session -- bash scripts/installed-smoke.sh
+```
+
+The check launches the actual desktop entry with `gtk-launch`, checks its icon/window class and closes it through the window manager before the full native acceptance/profile test. The isolated Docker CI job disables the nested WebKit sandbox for the test only; the application never disables its production sandbox.

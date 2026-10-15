@@ -8,6 +8,8 @@ import base64
 import http.server
 import json
 import os
+import platform
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -196,6 +198,11 @@ def main():
     parser.add_argument("--port", type=int, default=4444)
     parser.add_argument("--profile", action="store_true", help="Measure native idle/scan and 100/300 manual nodes")
     args = parser.parse_args()
+    native_driver = shutil.which(args.native_driver) or args.native_driver
+    native_driver = Path(native_driver).resolve()
+    if not native_driver.is_file():
+        raise SystemExit("WebKitWebDriver is missing; install webkit2gtk-driver or pass --native-driver /absolute/path")
+    args.native_driver = str(native_driver)
     application = args.application.resolve()
     if not application.is_file():
         raise SystemExit(f"Executable missing: {application}")
@@ -238,7 +245,8 @@ def main():
                     # Actual Tauri IPC, not a browser connection shim.
                     assert driver.js("return Boolean(window.__TAURI_INTERNALS__)")
                     print("Dashboard ready", flush=True)
-                    metrics={"environment":"Debian 13 / Xvfb / WebKitGTK / automation; not the 4 GB Kali VM",
+                    os_name=platform.freedesktop_os_release().get("PRETTY_NAME","Linux")
+                    metrics={"environment":os_name+" / Xvfb / WebKitGTK / automation; not VirtualBox",
                              "startup_seconds":round(time.monotonic()-started,3)}
                     if args.profile:
                         time.sleep(4)

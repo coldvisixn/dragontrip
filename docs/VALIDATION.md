@@ -47,15 +47,29 @@ Linux uses WebKit's native non-accelerated rendering policy by default, selected
 
 The PSS observations fall within the design's approximate goals, while summed RSS exceeds some of them. No whole-application memory guarantee is claimed.
 
-## Environment and remaining target checks
+## Initial test environment and remaining hardware checks
 
 Native tests ran on **Debian 13 under Xvfb**, not on the user's Kali/XFCE VirtualBox VM. System writes were unavailable despite task authorization, so Rust and Debian dependency packages were installed/extracted in the workspace. Two helper-path constants in the local WebKit library copy were relocated to reach its extracted helper executables. This was test-runtime relocation only; the application's Debian archive contains none of those libraries or path patches. A private D-Bus session was used. WebKit sandboxing was not disabled.
 
-The package was extracted and its executable/resources tested; `apt install`, desktop-menu registration and uninstall were not executed against the host system. Before calling the Kali release accepted:
+In the initial rootless test, the package was extracted and its executable/resources tested. Actual apt installation and launcher/uninstall checks were subsequently completed in the clean system described below. Before calling the Kali release accepted:
 
 1. Install the Debian package on Kali and launch it from the applications menu with no dev server or separately started backend.
 2. Repeat the authorized-target acceptance scenario at 1366×768 and 1920×1080.
 3. Repeat the supplied profile on the 4 GB VirtualBox VM, including sustained idle CPU, peak scan memory and real graph workloads.
 4. Verify resize handles, keyboard focus/reduced-motion, missing Nmap and package uninstall on XFCE.
 
-GitHub CI now includes the native smoke/profile recipe, but the remote workflow has not been run during this session.
+GitHub CI includes native smoke/profile and installed Kali jobs; see the run links in the repository for current status.
+
+## Installed package check in a clean system
+
+A further test used stock Debian 13 libraries, WebKitGTK 2.54, and XFWM under Xvfb in a container limited to **4 GB RAM and two CPUs**. Unlike the earlier rootless test, the actual Debian package was installed with apt; no WebKit helper paths or application files were patched.
+
+Passed: package dependency installation, desktop-file validation, `gtk-launch` startup, matching icon/window class, normal WM close, the full native Nmap/graph/export/restart scenario, and closing during a scan. Package removal deleted the executable and retained a test marker in the user data directory.
+
+See [installed-profile.json](installed-profile.json) and `screenshots/installed-graph.png`. PSS was about 378 MiB at Dashboard and 460 MiB with 300 nodes; p95 drag frame time was 25 ms at 300 nodes. These are container observations, not a VirtualBox benchmark.
+
+The isolated root container required `WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1` for its test runtime. This flag is not set by the application. The earlier unprivileged native test used the normal WebKit sandbox.
+
+The official Kali Rolling image was pulled locally, but its package repository was denied by the session's outbound network policy. The installed-package test is therefore also configured in GitHub Actions on the official Kali image, with stock Kali dependencies and the same resource limits.
+
+The first GitHub run passed backend/frontend tests, production compilation and frozen-backend smoke, then exposed a harness bug: a bare `WebKitWebDriver` name was passed to tauri-driver, which requires a filesystem path. The harness now resolves it with PATH lookup before launch; that fix passed the clean installed-system test.

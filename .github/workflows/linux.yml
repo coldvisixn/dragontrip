@@ -4,12 +4,12 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - uses: dtolnay/rust-toolchain@stable
@@ -33,12 +33,86 @@ jobs:
         run: |
           cargo install tauri-driver --locked
           dpkg-deb -x src-tauri/target/release/bundle/deb/dragontrip_0.1.0_amd64.deb "$RUNNER_TEMP/dragontrip-native"
-          xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip" --profile
+          set -o pipefail
+          xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip" --profile 2>&1 | tee native-check.log
+      - name: Native failure diagnostics
+        if: failure()
+        run: |
+          {
+            echo '### Native validation diagnostics'
+            echo '```text'
+            tail -n 100 native-check.log 2>/dev/null || true
+            tail -n 100 /tmp/dragontrip-native-driver.log 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-test-driver
+          path: ~/.cargo/bin/tauri-driver
       - uses: actions/upload-artifact@v4
         with:
           name: dragontrip-linux-amd64
           path: |
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/deb/*.sha256
+            docs/native-profile.json
+            docs/screenshots/native-graph.png
+
+  kali-installed:
+    needs: verify
+    runs-on: ubuntu-24.04
+    container:
+      image: kalilinux/kali-rolling@sha256:02f5d6c019e549b0f55da58e835cad5355ef1030c6b2645265a324e37dfc4acc
+      options: --memory=4g --cpus=2 --shm-size=256m
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install Kali test dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends ca-certificates git nmap webkit2gtk-driver xvfb xauth dbus-x11 python3 desktop-file-utils libgtk-3-bin xdotool wmctrl xfwm4 x11-utils at-spi2-core
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: dragontrip-linux-amd64
+          path: artifact
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-test-driver
+          path: test-driver
+      - name: Install actual Debian package on Kali
+        run: |
+          DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifact/src-tauri/target/release/bundle/deb/dragontrip_0.1.0_amd64.deb
+          dpkg-query -W dragontrip
+          chmod +x test-driver/tauri-driver
+      - name: Installed launcher, native acceptance and resource profile
+        env:
+          WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS: '1'
+          GSETTINGS_BACKEND: memory
+        run: |
+          set -o pipefail
+          xvfb-run -a dbus-run-session -- bash scripts/installed-smoke.sh "$GITHUB_WORKSPACE/test-driver/tauri-driver" 2>&1 | tee kali-native-check.log
+      - name: Kali validation summary
+        if: always()
+        run: |
+          {
+            echo '### Installed Kali validation'
+            echo '```text'
+            tail -n 100 kali-native-check.log 2>/dev/null || true
+            tail -n 80 /tmp/dragontrip-native-driver.log 2>/dev/null || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Uninstall retains user data
+        run: |
+          mkdir -p "$HOME/.local/share/dragontrip"
+          printf 'Package retention test\n' > "$HOME/.local/share/dragontrip/uninstall-check"
+          apt-get remove -y dragontrip
+          test -f "$HOME/.local/share/dragontrip/uninstall-check"
+          test ! -e /usr/bin/dragontrip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kali-native-validation
+          path: |
             docs/native-profile.json
             docs/screenshots/native-graph.png
