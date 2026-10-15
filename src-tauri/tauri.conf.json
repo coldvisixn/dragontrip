@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Dragontrip",
+  "version": "0.1.0",
+  "identifier": "io.dragontrip.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Dragontrip",
+        "width": 1366,
+        "height": 850,
+        "minWidth": 1000,
+        "minHeight": 650
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src ipc: http://ipc.localhost http://127.0.0.1:*; object-src 'none'; base-uri 'self'; frame-src 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "deb"
+    ],
+    "category": "DeveloperTool",
+    "shortDescription": "Personal security workspace and infrastructure graph",
+    "resources": {
+      "resources/backend/": "backend/"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/256x256.png"
+    ],
+    "linux": {
+      "deb": {
+        "desktopTemplate": "dragontrip.desktop"
+      }
+    },
+    "longDescription": "Offline desktop workspace for authorized security assessments, with Nmap discovery, source XML evidence and a persistent infrastructure graph."
+  }
+}

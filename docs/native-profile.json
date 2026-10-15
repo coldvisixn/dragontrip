@@ -1,0 +1,38 @@
+{
+  "environment": "Debian 13 / Xvfb / WebKitGTK / automation; not the 4 GB Kali VM",
+  "startup_seconds": 1.816,
+  "idle": {
+    "rss_mib": 451.5,
+    "pss_mib": 327.2,
+    "processes": 4,
+    "exited_during_cpu_sample": 0,
+    "cpu_percent_one_core": 12.5
+  },
+  "scanning": {
+    "rss_mib": 526.8,
+    "pss_mib": 398.9,
+    "processes": 5,
+    "exited_during_cpu_sample": 0,
+    "cpu_percent_one_core": 3.8
+  },
+  "graph_100": {
+    "rss_mib": 493.0,
+    "pss_mib": 368.5,
+    "processes": 4,
+    "exited_during_cpu_sample": 0,
+    "cpu_percent_one_core": 1.9,
+    "dom_nodes": 100,
+    "drag_frame_median_ms": 16,
+    "drag_frame_p95_ms": 17
+  },
+  "graph_300": {
+    "rss_mib": 547.1,
+    "pss_mib": 422.4,
+    "processes": 4,
+    "exited_during_cpu_sample": 0,
+    "cpu_percent_one_core": 8.6,
+    "dom_nodes": 300,
+    "drag_frame_median_ms": 16,
+    "drag_frame_p95_ms": 26
+  }
+}

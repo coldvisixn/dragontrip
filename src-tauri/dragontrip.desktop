@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Dragontrip
+Comment=Personal security workspace and infrastructure graph
+Exec=dragontrip
+Icon=dragontrip
+Terminal=false
+Categories=System;Security;
+StartupWMClass=dragontrip
