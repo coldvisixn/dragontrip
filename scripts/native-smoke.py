@@ -265,8 +265,13 @@ def main():
                         time.sleep(.5)
                         metrics["scanning"]=measure(proc.pid,application)
                         print("Scan metrics:",metrics["scanning"],flush=True)
-                    wait_until(lambda: driver.js("return !!document.querySelector('.object-card.service')"), 90)
-                    wait_until(lambda: driver.graph().get("scans", [{}])[0].get("status") == "completed", 90)
+                    def settled_scan():
+                        scans = driver.graph().get("scans", [])
+                        return next((scan for scan in scans if scan.get("status") in
+                                     {"completed", "failed", "cancelled", "interrupted"}), None)
+                    finished = wait_until(settled_scan, 90)
+                    assert finished["status"] == "completed", json.dumps(finished)
+                    wait_until(lambda: driver.js("return !!document.querySelector('.object-card.service')"))
                     driver.js("document.querySelector('.object-card.service').click()")
                     wait_until(lambda: driver.js("return document.body.textContent.includes('Source evidence')"))
                     time.sleep(.5)

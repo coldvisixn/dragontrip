@@ -103,7 +103,9 @@ jobs:
     runs-on: ubuntu-24.04
     container:
       image: kalilinux/kali-rolling@sha256:02f5d6c019e549b0f55da58e835cad5355ef1030c6b2645265a324e37dfc4acc
-      options: --memory=4g --cpus=2 --shm-size=256m --volume /etc/ssl/certs/ca-certificates.crt:/run/bootstrap-ca.crt:ro
+      # Stock Kali Nmap carries file capabilities including NET_ADMIN.
+      # Permit its exec inside this container's private network namespace.
+      options: --memory=4g --cpus=2 --shm-size=256m --cap-add=NET_ADMIN --volume /etc/ssl/certs/ca-certificates.crt:/run/bootstrap-ca.crt:ro
     defaults:
       run:
         shell: bash
@@ -139,6 +141,7 @@ jobs:
         run: |
           DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifact/src-tauri/target/release/bundle/deb/dragontrip_0.1.2_amd64.deb
           dpkg-query -W dragontrip
+          nmap --version
           chmod +x test-driver/tauri-driver
       - name: Installed launcher, native acceptance and resource profile
         env:
