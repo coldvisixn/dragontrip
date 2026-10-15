@@ -4,7 +4,6 @@ Run with DISPLAY set (e.g. xvfb-run) and Nmap on PATH. Uses its own loopback
 server and temporary XDG directories; never injects an IPC or API mock.
 """
 import argparse
-import base64
 import http.server
 import json
 import os
@@ -17,6 +16,8 @@ import threading
 import time
 import urllib.error
 import urllib.request
+
+from visual_check import capture_ui
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -274,7 +275,7 @@ def main():
                     assert any(n["attrs"].get("port") == 8080 for n in before["nodes"])
                     screenshots = ROOT / "docs/screenshots"
                     screenshots.mkdir(exist_ok=True)
-                    (screenshots / "native-graph.png").write_bytes(base64.b64decode(driver.call("GET", "/screenshot")))
+                    capture_ui(screenshots / "native-graph.png")
                     service = next(n for n in before["nodes"] if n["kind"] == "service")
                     driver.click("Export source XML")
                     evidence=downloads/f"nmap-{service['attrs']['scan_id']}.xml"

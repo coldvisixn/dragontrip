@@ -7,14 +7,14 @@
 - 7 frontend tests passed: projects/API, Inspector/evidence, coordinate saves, retry/errors, native export action/error reporting, command palette and bounded DOM rendering for a 1,000-row inventory.
 - TypeScript/Vite production build, Cargo check with lockfile, Rust formatting check and optimized Tauri release build passed.
 - PyInstaller one-folder distribution built and passed authenticated HTTP + migrations + restart persistence tests.
-- Debian package built: `dragontrip_0.1.0_amd64.deb`, approximately 28.2 MiB compressed / 66.9 MiB installed. It contains the Rust executable, bundled frontend, Python runtime/dependencies, launcher and icons. It contains no Nmap, Node modules or Rust toolchain.
+- Debian package built: `dragontrip_0.1.1_amd64.deb`, approximately 28.2 MiB compressed / 66.9 MiB installed. It contains the Rust executable, bundled frontend, Python runtime/dependencies, launcher and icons. It contains no Nmap, Node modules or Rust toolchain.
 - Debian control metadata and desktop launcher validated; the actual X11 window class matches the launcher. Library dependencies are WebKitGTK 4.1 and GTK 3. A SHA-256 file accompanies the artifact.
 - Browser UI integration passed using real API/Nmap and only a test bridge for connection delivery.
 - **Native packaged application test passed with actual Tauri IPC and WebKitGTK, without an IPC/API mock.**
 
 ## Native scenario exercised
 
-The executable and backend were extracted from the built Debian archive. The test:
+The executable and backend were tested both from an extracted Debian archive and after actual apt installation. The test:
 
 1. Launched the real native application and loaded Dashboard.
 2. Created a project and scanned its own 127.0.0.1:8080 HTTP server using actual Nmap.
@@ -43,7 +43,7 @@ PSS attributes shared pages proportionally. Summed RSS counts shared pages in mo
 
 Native launch to Dashboard: about 1.82 s, including the automation launch. Node drag frame samples: median 16 ms; p95 17 ms at 100 nodes and 26 ms at 300 nodes. All fixture objects used for profiling were explicitly manual hypotheses, stored only in the test's temporary data directory. Discovered service results were never fabricated.
 
-Linux uses WebKit's native non-accelerated rendering policy by default, selected after comparing compositor memory costs in this virtual-display environment. The opt-in `DRAGONTRIP_HARDWARE_ACCELERATION=1` preserves WebKit's standard policy. The normal default requires no environment flags.
+Linux configures WebKit software compositing before GTK initialization by default. Version 0.1.1 moves this setting earlier because changing it after webview creation caused a white window on stock WebKitGTK 2.54. The opt-in `DRAGONTRIP_HARDWARE_ACCELERATION=1` preserves WebKit's standard policy. The normal default requires no environment flags.
 
 The PSS observations fall within the design's approximate goals, while summed RSS exceeds some of them. No whole-application memory guarantee is claimed.
 
@@ -66,10 +66,14 @@ A further test used stock Debian 13 libraries, WebKitGTK 2.54, and XFWM under Xv
 
 Passed: package dependency installation, desktop-file validation, `gtk-launch` startup, matching icon/window class, normal WM close, the full native Nmap/graph/export/restart scenario, and closing during a scan. Package removal deleted the executable and retained a test marker in the user data directory.
 
-See [installed-profile.json](installed-profile.json) and `screenshots/installed-graph.png`. PSS was about 378 MiB at Dashboard and 460 MiB with 300 nodes; p95 drag frame time was 25 ms at 300 nodes. These are container observations, not a VirtualBox benchmark.
+See [installed-profile.json](installed-profile.json) and `screenshots/installed-graph.png`. The corrected 0.1.1 rendering path measured about 471 MiB PSS at Dashboard and 667 MiB with 300 nodes; p95 drag frame time was 210 ms at 300 nodes (100-node p95: 41 ms). These exceed the earlier rendering-path measurements and the desired smoothness budget at 300 nodes; software-rendered large-graph performance remains a limitation. These are container observations, not a VirtualBox benchmark.
 
 The isolated root container required `WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1` for its test runtime. This flag is not set by the application. The earlier unprivileged native test used the normal WebKit sandbox.
 
 The official Kali Rolling image was pulled locally, but its package repository was denied by the session's outbound network policy. The installed-package test is therefore also configured in GitHub Actions on the official Kali image, with stock Kali dependencies and the same resource limits.
 
 The first GitHub run passed backend/frontend tests, production compilation and frozen-backend smoke, then exposed a harness bug: a bare `WebKitWebDriver` name was passed to tauri-driver, which requires a filesystem path. The harness now resolves it with PATH lookup before launch; that fix passed the clean installed-system test.
+
+## Rendering regression gate in 0.1.1
+
+DOM automation initially passed on WebKitGTK 2.54 while the visible webview remained white; its WebDriver screenshot was also unusable. The native checks now capture the actual X11 display with scrot and inspect central workspace pixels, rejecting white or black unpainted surfaces. This new gate reproduced the 0.1.0 failure and passed with the installed 0.1.1 launcher and native graph. Version 0.1.1 initializes software compositing before WebKit startup and maximizes the window to fit the available desktop. The rendering opt-in remains available.

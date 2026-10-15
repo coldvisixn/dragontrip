@@ -1,12 +1,12 @@
 # Установка DRAGONTRIP на Kali Linux
 
-Готовый пакет: `dragontrip_0.1.0_amd64.deb` (около 28,2 MiB). Архитектура — x86_64.
+Готовый пакет: `dragontrip_0.1.1_amd64.deb` (около 28,2 MiB). Архитектура — x86_64.
 
 Скачайте пакет и откройте терминал в папке с ним:
 
 ```bash
 sudo apt update
-sudo apt install ./dragontrip_0.1.0_amd64.deb nmap
+sudo apt install ./dragontrip_0.1.1_amd64.deb nmap
 ```
 
 Запустите **Dragontrip** из меню приложений или командой:

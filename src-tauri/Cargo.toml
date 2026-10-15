@@ -1,6 +1,6 @@
 [package]
 name = "dragontrip"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "Local offensive security workspace"
 license = "MIT"
@@ -14,6 +14,3 @@ serde = { version = "1", features = ["derive"] }
 getrandom = "0.2"
 libc = "0.2"
 tempfile = "3"
-
-[target.'cfg(target_os = "linux")'.dependencies]
-webkit2gtk = { version = "=2.0.2", features = ["v2_16"] }

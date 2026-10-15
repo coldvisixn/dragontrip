@@ -82,23 +82,19 @@ fn stop(child: &mut Child) {
 }
 
 fn main() {
+    // WebKit must choose its renderer before GTK creates the first webview.
+    // Changing the policy later can leave a blank window on WebKitGTK 2.54.
+    #[cfg(target_os = "linux")]
+    if std::env::var("DRAGONTRIP_HARDWARE_ACCELERATION")
+        .ok()
+        .as_deref()
+        != Some("1")
+        && std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none()
+    {
+        std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+    }
     let app = tauri::Builder::default()
         .setup(|app| {
-            // Avoid costly software GPU compositing on small Kali/VirtualBox VMs.
-            // Hardware acceleration remains an explicit option for capable hosts.
-            #[cfg(target_os = "linux")]
-            if std::env::var("DRAGONTRIP_HARDWARE_ACCELERATION").ok().as_deref() != Some("1") {
-                if let Some(window) = app.get_webview_window("main") {
-                    window.with_webview(|view| {
-                        use webkit2gtk::{SettingsExt, WebViewExt};
-                        if let Some(settings) = view.inner().settings() {
-                            settings.set_hardware_acceleration_policy(
-                                webkit2gtk::HardwareAccelerationPolicy::Never,
-                            );
-                        }
-                    })?;
-                }
-            }
             let mut bytes = [0u8; 32];
             getrandom::getrandom(&mut bytes).map_err(|e| format!("Cannot generate session token: {e}"))?;
             let token: String = bytes.iter().map(|b| format!("{b:02x}")).collect();

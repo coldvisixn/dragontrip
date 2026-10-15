@@ -73,7 +73,7 @@ source .venv/bin/activate
 npm run desktop:build
 python scripts/smoke-packaged.py
 ls src-tauri/target/release/bundle/deb/*.deb
-sudo apt install ./src-tauri/target/release/bundle/deb/dragontrip_0.1.0_amd64.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/dragontrip_0.1.1_amd64.deb
 dragontrip
 # Uninstall (user projects remain):
 sudo apt remove dragontrip
@@ -123,7 +123,7 @@ xvfb-run -a .venv/bin/python scripts/native-smoke.py /usr/bin/dragontrip --profi
 
 This uses actual Tauri IPC, the packaged frontend/backend and system Nmap. It checks node dragging and manual links, restarts the native application and closes it during a scan. Profiling creates explicitly manual test objects in temporary storage for 100/300-node measurements. It excludes WebDriver/Xvfb from application process totals and reports both summed RSS and PSS. Port 8080 must be free. Do not run this simultaneously with the browser/live-Nmap tests, which use the same test port.
 
-Linux defaults to WebKit's non-accelerated rendering policy for small VMs. On a machine with a suitable GPU, `DRAGONTRIP_HARDWARE_ACCELERATION=1 dragontrip` leaves WebKit's standard policy enabled. The default policy is set through WebKit's native settings; users do not need to set environment variables for ordinary startup.
+Linux defaults to WebKit's non-accelerated rendering policy for small VMs. On a machine with a suitable GPU, `DRAGONTRIP_HARDWARE_ACCELERATION=1 dragontrip` leaves WebKit's standard policy enabled. The default is configured before GTK/WebKit initialization to avoid blank windows on WebKitGTK 2.54; ordinary startup requires no user environment settings.
 
 Installed-package checks (requires the XFWM window manager plus `wmctrl`, `xdotool`, `x11-utils`, `libgtk-3-bin` and `desktop-file-utils`):
 

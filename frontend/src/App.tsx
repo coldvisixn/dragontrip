@@ -1,3 +1,4 @@
+import packageInfo from '../../package.json';
 import {
   lazy,
   Suspense,
@@ -425,7 +426,7 @@ export default function App() {
           <div className="local-status">
             <span className="dot green" />
             <span>
-              Local environment<small>Dragontrip 0.1.0</small>
+              Local environment<small>Dragontrip {packageInfo.version}</small>
             </span>
             <ShieldCheck size={16} />
           </div>

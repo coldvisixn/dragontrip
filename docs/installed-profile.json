@@ -1,38 +1,38 @@
 {
-  "environment": "Debian 13 / Xvfb / WebKitGTK / automation; not the 4 GB Kali VM",
-  "startup_seconds": 1.261,
+  "environment": "Debian GNU/Linux 13 (trixie) / Xvfb / WebKitGTK / automation; not VirtualBox",
+  "startup_seconds": 2.906,
   "idle": {
-    "rss_mib": 597.7,
-    "pss_mib": 377.9,
+    "rss_mib": 707.8,
+    "pss_mib": 471.3,
     "processes": 4,
     "exited_during_cpu_sample": 0,
-    "cpu_percent_one_core": 2.0
+    "cpu_percent_one_core": 0.0
   },
   "scanning": {
-    "rss_mib": 664.5,
-    "pss_mib": 437.2,
+    "rss_mib": 809.9,
+    "pss_mib": 565.1,
     "processes": 5,
     "exited_during_cpu_sample": 0,
-    "cpu_percent_one_core": 1.9
+    "cpu_percent_one_core": 0.0
   },
   "graph_100": {
-    "rss_mib": 638.2,
-    "pss_mib": 420.0,
+    "rss_mib": 835.8,
+    "pss_mib": 607.5,
     "processes": 4,
     "exited_during_cpu_sample": 0,
-    "cpu_percent_one_core": 1.9,
+    "cpu_percent_one_core": 0.0,
     "dom_nodes": 100,
-    "drag_frame_median_ms": 16,
-    "drag_frame_p95_ms": 19
+    "drag_frame_median_ms": 17,
+    "drag_frame_p95_ms": 41
   },
   "graph_300": {
-    "rss_mib": 678.0,
-    "pss_mib": 459.8,
+    "rss_mib": 897.4,
+    "pss_mib": 666.5,
     "processes": 4,
     "exited_during_cpu_sample": 0,
-    "cpu_percent_one_core": 1.0,
+    "cpu_percent_one_core": 2.9,
     "dom_nodes": 300,
-    "drag_frame_median_ms": 16,
-    "drag_frame_p95_ms": 25
+    "drag_frame_median_ms": 25,
+    "drag_frame_p95_ms": 210
   }
 }

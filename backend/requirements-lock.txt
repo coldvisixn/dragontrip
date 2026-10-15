@@ -15,6 +15,7 @@ iniconfig==2.3.1
 Mako==1.4.3
 MarkupSafe==3.0.4
 packaging==26.3
+pillow==12.3.0
 pluggy==1.7.0
 pydantic==2.11.4
 pydantic_core==2.33.2

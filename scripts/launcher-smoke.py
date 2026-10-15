@@ -11,6 +11,7 @@ spec = importlib.util.spec_from_file_location("dragontrip_native_checks", Path(_
 checks = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(checks)
 process_tree, wait_until = checks.process_tree, checks.wait_until
+from visual_check import capture_ui
 
 
 def running_applications(executable):
@@ -64,6 +65,7 @@ def main():
             assert "dragontrip" in wm_class
             # Gio may reparent launched applications; follow the actual application PID.
             tracked = {pid, *process_tree(pid)}
+            capture_ui(Path(__file__).resolve().parent.parent/"docs/screenshots/installed-launcher.png")
             subprocess.run(["wmctrl", "-ic", hex(int(window))], env=env, check=True)
             wait_until(lambda: not any(alive(p) for p in tracked), 15)
             print(f"PASS: installed desktop launcher, icon/window class and normal close ({time.monotonic()-started:.2f}s)")
