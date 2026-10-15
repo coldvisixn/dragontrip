@@ -314,7 +314,9 @@ def main():
                                 ".object-card.host .react-flow__handle-left")
                     wait_until(lambda: any(e["kind"] == "CUSTOM_RELATION" for e in driver.graph().get("edges", [])))
                     # Phase 2: execute a real web adapter through its Inspector recommendation.
-                    driver.js("document.querySelector('.object-card.service').click()")
+                    web_service = next(n for n in driver.graph()['nodes']
+                                       if n['kind'] == 'service' and n['attrs'].get('port') == 8080)
+                    driver.js("document.querySelector('.react-flow__node[data-id=\"" + web_service['id'] + "\"] .object-card').click()")
                     wait_until(lambda: driver.js("return [...document.querySelectorAll('.recommendation')].some(b=>b.textContent.trim().startsWith('whatweb'))"))
                     driver.js("[...document.querySelectorAll('.recommendation')].find(b=>b.textContent.trim().startsWith('whatweb')).click()")
                     wait_until(lambda: driver.js("return document.querySelector('.dialog select')?.value==='whatweb'"))
