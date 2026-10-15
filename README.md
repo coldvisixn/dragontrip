@@ -4,7 +4,7 @@
 
 Local security workspace for Kali Linux: Tauri 2 + React/TypeScript + Python/FastAPI + SQLite. Phase 1 implementation, with real Nmap discovery and a persistent infrastructure graph.
 
-**Delivery status:** release Debian package built successfully. The packaged Tauri/WebKitGTK application passed native tests with its bundled Python backend, real Nmap, graph editing, restart persistence and shutdown during a scan. Native verification also passed after a real apt installation in a clean Debian 13/XFWM container limited to 4 GB RAM and two CPUs, including the desktop launcher and uninstall/data retention. The workflow additionally tests an installed package on official Kali Rolling. A VirtualBox hardware check remains manual.
+**Delivery status:** version 0.1.2 passed [the complete Linux CI run](https://github.com/coldvisixn/dragontrip/actions/runs/38776280992), including backend/frontend tests, native Tauri acceptance on Ubuntu, actual apt installation and desktop launch on official Kali Rolling, real Nmap, graph editing, XML export, restart persistence, shutdown during a scan, and uninstall/data retention. The Kali container was limited to 4 GB RAM and two CPUs. Download the `.deb` and matching checksum from that run’s `dragontrip-linux-amd64` artifact. A check on the user’s actual Kali/XFCE VirtualBox VM remains manual.
 
 ## Implemented
 

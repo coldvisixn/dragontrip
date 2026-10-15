@@ -2,7 +2,7 @@
 
 Готовый пакет: `dragontrip_0.1.2_amd64.deb` (около 28,2 MiB). Архитектура — x86_64.
 
-Скачайте пакет и откройте терминал в папке с ним:
+Скачайте артефакт **dragontrip-linux-amd64** из [успешной сборки GitHub Actions](https://github.com/coldvisixn/dragontrip/actions/runs/38776280992), распакуйте его и найдите `dragontrip_0.1.2_amd64.deb` в `src-tauri/target/release/bundle/deb/`. Рядом находится файл SHA-256. Откройте терминал в папке с пакетом:
 
 ```bash
 sudo apt update
@@ -31,6 +31,6 @@ dragontrip
 sudo apt remove dragontrip
 ```
 
-Пакет собран и проверен нативно на Debian 13 с WebKitGTK. Установка через apt и меню именно Kali XFCE в пользовательской VirtualBox VM ещё не проверялась. Полный отчёт и измерения: [VALIDATION.md](VALIDATION.md).
+Пакет прошёл нативные проверки Ubuntu и установку через apt, запуск из меню и полный сценарий Nmap/графа на официальном Kali Rolling с XFWM в контейнере (4 GB RAM, 2 CPU). Пользовательская VirtualBox VM ещё требует отдельной ручной проверки. Полный отчёт и измерения: [VALIDATION.md](VALIDATION.md).
 
 Сборка из исходников описана в [README.md](../README.md).

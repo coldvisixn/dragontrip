@@ -3,11 +3,11 @@
 ## Completed checks
 
 - Python 3.12, Rust 1.99.0, Linux x86_64.
-- 17 backend tests passed, including actual Nmap 7.95 against a test-owned loopback HTTP server. Coverage includes IPv4 validation, XML/entity protection, Host/Origin/token guards, persistence and idempotent ingestion, historical evidence, custom objects, process errors, cancellation before/during launch and restart recovery.
+- 19 backend tests passed, including actual Nmap 7.95 against a test-owned loopback HTTP server. Coverage includes IPv4 validation, XML/entity protection, Host/Origin/token guards, persistence and idempotent ingestion, historical evidence, custom objects, process errors, cancellation before/during launch and restart recovery.
 - 7 frontend tests passed: projects/API, Inspector/evidence, coordinate saves, retry/errors, native export action/error reporting, command palette and bounded DOM rendering for a 1,000-row inventory.
 - TypeScript/Vite production build, Cargo check with lockfile, Rust formatting check and optimized Tauri release build passed.
 - PyInstaller one-folder distribution built and passed authenticated HTTP + migrations + restart persistence tests.
-- Debian package built: `dragontrip_0.1.1_amd64.deb`, approximately 28.2 MiB compressed / 66.9 MiB installed. It contains the Rust executable, bundled frontend, Python runtime/dependencies, launcher and icons. It contains no Nmap, Node modules or Rust toolchain.
+- Debian package built: `dragontrip_0.1.2_amd64.deb`, approximately 28.2 MiB compressed / 66.9 MiB installed. It contains the Rust executable, bundled frontend, Python runtime/dependencies, launcher and icons. It contains no Nmap, Node modules or Rust toolchain.
 - Debian control metadata and desktop launcher validated; the actual X11 window class matches the launcher. Library dependencies are WebKitGTK 4.1 and GTK 3. A SHA-256 file accompanies the artifact.
 - Browser UI integration passed using real API/Nmap and only a test bridge for connection delivery.
 - **Native packaged application test passed with actual Tauri IPC and WebKitGTK, without an IPC/API mock.**
@@ -82,6 +82,14 @@ DOM automation initially passed on WebKitGTK 2.54 while the visible webview rema
 
 PyInstaller prepends its private runtime libraries to `LD_LIBRARY_PATH`. Nmap is a system executable, so inheriting this path can load incompatible libraries from the bundled Python runtime on a newer distribution. The runner now restores `LD_LIBRARY_PATH_ORIG` (or removes the injected path when there was no original value) only for external children of a frozen Linux backend. The backend process keeps its own runtime environment.
 
-Two regression cases start a real external process with a deliberately invalid private `libm.so.6`: the contaminated environment fails at the loader, while the restored environment starts correctly. Native failure diagnostics also include the graph, scan status and visible terminal output. The 0.1.1 Kali check passed installation, desktop launch and Dashboard, then failed waiting for Nmap service ingestion; the new version must pass that complete scenario before it is marked verified on Kali.
+Two regression cases start a real external process with a deliberately invalid private `libm.so.6`: the contaminated environment fails at the loader, while the restored environment starts correctly. Native failure diagnostics also include the graph, scan status and visible terminal output. The 0.1.1 Kali check passed installation, desktop launch and Dashboard, then failed waiting for Nmap service ingestion; version 0.1.2 subsequently passed the complete Kali scenario recorded below.
 
 The subsequent detailed Kali trace identified an independent container constraint: stock Kali's Nmap wrapper could not execute `/usr/lib/nmap/nmap` (`Operation not permitted`, exit 126). Its file capabilities request NET_ADMIN, which Docker omits from its default bounding set. The Kali acceptance job now permits NET_ADMIN in its private container network namespace and checks `nmap --version` before UI automation. No host networking or privileged-container mode is used. The scan test now reports a failed terminal scan immediately instead of waiting for a service node that cannot appear.
+
+## Final 0.1.2 acceptance
+
+[GitHub run 38776280992](https://github.com/coldvisixn/dragontrip/actions/runs/38776280992) completed successfully for commit `0304cba` on 15 October 2026. All three jobs passed: Linux build/native acceptance, Kali package preflight, and installed Kali acceptance.
+
+The official Kali Rolling image used stock installed application and Nmap binaries, XFWM, a private Xvfb/D-Bus session, 4 GB RAM and two CPUs. Actual apt installation, launcher/icon/window class and painted pixels, authorized loopback Nmap discovery, Inspector/source XML, native export, node dragging/manual relationships, restart persistence and shutdown during an active scan all passed. Uninstall removed the executable and retained a user-data marker. Its production archive and checksum are in `dragontrip-linux-amd64`; the Kali resource profile and actual X11 screenshot are in `kali-native-validation`.
+
+The container-only WebKit sandbox flag and Nmap capability allowance are test-environment configuration, not application startup requirements. This establishes container compatibility, not a hardware benchmark on the user's VirtualBox VM. The earlier measured software-rendering limitation at 300 nodes remains documented above.
