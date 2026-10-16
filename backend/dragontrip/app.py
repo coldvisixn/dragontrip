@@ -38,6 +38,7 @@ from .workspace import register_workspace
 from .vault import register_vault
 from .evidence import register_evidence
 from .product import register_product
+from .reporting import register_reporting
 from .archives import register_archives
 
 
@@ -270,6 +271,7 @@ def create_app(token: str, root: Path | None = None, dev=False):
         return item
 
     register_workspace(app, sessions, project)
+    register_reporting(app, sessions, project)
     register_vault(app, sessions, project)
     register_evidence(app, sessions, project, root)
     register_product(app, sessions, project, configuration, save_configuration)

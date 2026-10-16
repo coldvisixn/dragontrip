@@ -17,3 +17,7 @@ This checklist covers the four requested phases. A feature is implemented only w
 Implementation order is data contracts and migration → API and validation → UI → integration/performance verification → release documentation. Existing projects and manual content must survive upgrades. Paths remain user-authored investigation plans; no automatic exploitation is included.
 
 All four feature phases are implemented in 0.4.0. The local Debian package, browser/frozen-backend scenarios, all four real recon adapters, installed desktop launcher and expanded native workflow have passed. Release publication, a fresh Kali CI run (cloud repository access is denied), and the user’s VirtualBox hardware acceptance are separate outstanding release gates. Evidence and exact limits are in [PHASE4.md](PHASE4.md).
+
+## Next workspace additions
+
+Implemented on top of 0.4.0: persistent investigation task board, aggregated project progress/risk overview and configurable Markdown reporting. See [PLANNING.md](PLANNING.md) for current behavior and verification; desktop release acceptance remains separate.

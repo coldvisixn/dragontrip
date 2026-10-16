@@ -1,13 +1,16 @@
 """Manual investigation data. No tool execution or mutation of scan evidence."""
 
 import json
+from datetime import date
 from typing import Literal
 from fastapi import HTTPException, Query
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import select, desc, func
 from .db import Knowledge, Node, Scan, Attachment, now, record, serialize
 
-Kind = Literal["note", "finding", "path"]
+Kind = Literal["note", "finding", "path", "task"]
+TASK_STATUSES = {"todo", "in_progress", "blocked", "done", "cancelled"}
+RECORD_STATUSES = {"draft", "open", "confirmed", "resolved", "dismissed"}
 
 
 class Step(BaseModel):
@@ -29,7 +32,21 @@ class Content(BaseModel):
     scan_ids: list[str] = Field(default_factory=list, max_length=20)
     attachment_ids: list[str] = Field(default_factory=list, max_length=30)
     severity: Literal["info", "low", "medium", "high", "critical"] = "info"
-    status: Literal["draft", "open", "confirmed", "resolved", "dismissed"] = "draft"
+    status: Literal[
+        "draft",
+        "open",
+        "confirmed",
+        "resolved",
+        "dismissed",
+        "todo",
+        "in_progress",
+        "blocked",
+        "done",
+        "cancelled",
+    ] = "draft"
+    priority: Literal["low", "medium", "high", "urgent"] = "medium"
+    assignee: str = Field(default="", max_length=100)
+    due_date: date | None = None
     remediation: str = Field(default="", max_length=6000)
     steps: list[Step] = Field(default_factory=list, max_length=50)
 
@@ -48,6 +65,9 @@ class KnowledgeInput(BaseModel):
 
     @model_validator(mode="after")
     def path_steps(self):
+        allowed = TASK_STATUSES if self.kind == "task" else RECORD_STATUSES
+        if self.content.status not in allowed:
+            raise ValueError("Status is not valid for this record type")
         if self.kind == "path" and not self.content.steps:
             raise ValueError("Add at least one path step")
         if self.kind != "path" and self.content.steps:
@@ -86,7 +106,17 @@ def register_workspace(app, sessions, project):
         kind: Kind,
         q: str = Query(default="", max_length=100),
         status: Literal[
-            "all", "draft", "open", "confirmed", "resolved", "dismissed"
+            "all",
+            "draft",
+            "open",
+            "confirmed",
+            "resolved",
+            "dismissed",
+            "todo",
+            "in_progress",
+            "blocked",
+            "done",
+            "cancelled",
         ] = "all",
         offset: int = Query(default=0, ge=0),
         limit: int = Query(default=100, ge=1, le=100),

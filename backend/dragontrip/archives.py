@@ -520,7 +520,7 @@ def register_archives(app, sessions, project, root):
                                     project_id=pid,
                                     kind=row.kind,
                                     title=row.title,
-                                    content=json.dumps(remap(row.content.model_dump())),
+                                    content=json.dumps(remap(row.content.model_dump(mode="json"))),
                                     created=row.created,
                                     updated=row.updated,
                                 )

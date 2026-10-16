@@ -14,6 +14,8 @@ import {
 } from 'react';
 import {
   Activity,
+  ListChecks,
+  ClipboardList,
   ArrowLeft,
   Clock3,
   Paperclip,
@@ -59,11 +61,19 @@ import Preferences, { useAppearance, type Appearance } from './Preferences';
 import ProjectTransfer from './ProjectTransfer';
 import { ProjectSearch, SearchResults, Timeline, type SearchResult } from './ProjectActivity';
 import { useNavigation } from './navigation';
+const Tasks = lazy(() => import('./Tasks'));
+const Reports = lazy(() => import('./Reporting'));
+const ProjectOverview = lazy(() =>
+  import('./Reporting').then((module) => ({ default: module.ProjectOverview })),
+);
 const Evidence = lazy(() => import('./Evidence'));
 const Graph = lazy(() => import('./Graph'));
 const Knowledge = lazy(() => import('./Knowledge'));
 const Vault = lazy(() => import('./Vault'));
 const knowledgeNav = [
+  ['Project overview', ClipboardList],
+  ['Task board', ListChecks],
+  ['Reports', FileText],
   ['Attack Paths', GitBranch],
   ['Findings', ShieldAlert],
   ['Notes', FileText],
@@ -396,11 +406,13 @@ export default function App() {
     } else if (item.kind === 'knowledge') {
       setKnowledgeSeed({ recordId: item.id, nonce: Date.now() });
       setPage(
-        item.subtype === 'finding'
-          ? 'Findings'
-          : item.subtype === 'path'
-            ? 'Attack Paths'
-            : 'Notes',
+        item.subtype === 'task'
+          ? 'Task board'
+          : item.subtype === 'finding'
+            ? 'Findings'
+            : item.subtype === 'path'
+              ? 'Attack Paths'
+              : 'Notes',
       );
     } else if (item.kind === 'scan') {
       setPage('Scans');
@@ -1082,6 +1094,35 @@ export default function App() {
                         setBottom(true);
                       }}
                       onChanged={() => refresh(detail.project.id)}
+                    />
+                  </Suspense>
+                )}
+                {detail && page === 'Task board' && (
+                  <Suspense fallback={<div className="loading">Loading tasks…</div>}>
+                    <Tasks
+                      key={detail.project.id + (knowledgeSeed?.nonce || '')}
+                      detail={detail}
+                      focusId={knowledgeSeed?.recordId}
+                      onChanged={() => refresh(detail.project.id)}
+                      onNode={(id) => {
+                        setPage('Network Graph');
+                        setSelected(id);
+                      }}
+                    />
+                  </Suspense>
+                )}
+                {detail && page === 'Reports' && (
+                  <Suspense fallback={<div className="loading">Loading reports…</div>}>
+                    <Reports key={detail.project.id} project={detail.project} />
+                  </Suspense>
+                )}
+                {detail && page === 'Project overview' && (
+                  <Suspense fallback={<div className="loading">Loading overview…</div>}>
+                    <ProjectOverview
+                      key={detail.project.id}
+                      project={detail.project}
+                      onTasks={() => setPage('Task board')}
+                      onFindings={() => setPage('Findings')}
                     />
                   </Suspense>
                 )}

@@ -6,6 +6,10 @@ Local security workspace for Kali Linux: Tauri 2 + React/TypeScript + Python/Fas
 
 **Current implementation: 0.4.0.** Phases 1–4 are implemented: recon automation, an investigation knowledge graph, Markdown/evidence/Timeline/search, encrypted credentials, portable projects, appearance/tool settings and graph/navigation improvements. [Phase 4](docs/PHASE4.md) records current validation and package details; [ROADMAP](docs/ROADMAP.md) maps the requested scope. Local build output is not a published release. The earlier [0.2.0 release run](https://github.com/coldvisixn/dragontrip/actions/runs/38792713976) contains only Phase 2.
 
+## Investigation planning and reporting additions
+
+This branch extends the completed 0.4.0 workspace with a persistent task board (owners, deadlines, priorities and object links), a project progress/risk overview, and configurable Markdown reports with preview and private Downloads export. Tasks participate in search, Timeline and portable project archives. See [planning and reporting](docs/PLANNING.md) for usage, verification and compatibility limits. These additions are not a published desktop release.
+
 ## Implemented
 
 - Dashboard, project creation/switching, last-project restoration, activity history.
