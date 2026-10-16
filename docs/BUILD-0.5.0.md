@@ -2,7 +2,20 @@
 
 This package includes the task board, project overview and Markdown reports from planning commit `3a8023f`, with synchronized 0.5.0 version metadata. This record describes the local build. Tagged CI releases rebuild from source and attach their own installer/checksum; those artifacts can differ from this local package.
 
-## Artifact
+## Published release
+
+[GitHub Release v0.5.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.5.0) is now public as an early preview, with the `.deb` and matching `.deb.sha256` in Assets. The [tagged workflow](https://github.com/coldvisixn/dragontrip/actions/runs/38942279890) passed backend/UI/frozen-backend checks and packaged Tauri/WebKit planning/reporting acceptance before publication.
+
+The public installer was downloaded without GitHub authentication and verified against its attached checksum:
+
+- File: `dragontrip_0.5.0_amd64.deb`
+- Size: 56,053,250 bytes
+- SHA-256: `1f89c16a3da6c8b7b6295106c8f938c1f223704a3aeb45fe804e3154cb797f83`
+- Package metadata: `dragontrip 0.5.0 amd64`
+
+This CI-built Ubuntu 24.04 artifact differs from the earlier local Debian build below. Use the checksum attached to the release when verifying a downloaded installer.
+
+## Earlier local artifact
 
 - File: `src-tauri/target/release/bundle/deb/dragontrip_0.5.0_amd64.deb`
 - Version/architecture: `dragontrip 0.5.0 amd64`
