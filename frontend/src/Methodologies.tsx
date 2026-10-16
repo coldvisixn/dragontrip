@@ -620,7 +620,7 @@ export function Workflows({
                         disabled={busy || !canLaunch || !authorized}
                         onClick={() =>
                           void work(async () => {
-                            const scan = await api<Scan>(
+                            await api<Scan>(
                               `/projects/${pid}/workflow-runs/${runId}/next`,
                               'POST',
                               { preview_token: plan.preview_token, authorized: true, confirmed },

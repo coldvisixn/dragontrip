@@ -1,5 +1,4 @@
 """Run inside the build virtualenv. One-folder distribution; no runtime pip."""
-import os
 import shutil
 import subprocess
 import sys

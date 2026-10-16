@@ -13,7 +13,7 @@ Use a minimal lab project or redacted screenshot. Do not publish credentials, AP
 1. Open a focused issue for a substantial behavior change so its scope can be discussed.
 2. Fork/branch and follow [development setup](docs/DEVELOPMENT.md).
 3. Keep the change small enough to review; explain the user-visible behavior and relevant limits.
-4. Run the checks appropriate to your change. Backend/UI changes normally use `pytest`, `npm test` and `npm run build`; documentation changes should have valid links and accurate commands.
+4. Run `npm run check` after setup for lint, formatting, backend/UI tests, the frontend build and Rust formatting. Documentation changes should also have valid links and accurate commands. Native acceptance runs separately in CI for code changes.
 5. Include meaningful tests for changed behavior and update the user guide/changelog when needed.
 
 Preserve existing projects, scan evidence, manual object positions and archive compatibility. Durable schema changes need an Alembic migration. Recon adapters must use the bounded queue and validated argv, with tests against owned loopback targets. Keep automatically observed evidence distinct from manually authored hypotheses. [Extension contracts](docs/EXTENSIONS.md) explain the boundaries.

@@ -5,7 +5,7 @@ import zipfile
 from pathlib import Path
 import pytest
 from PIL import Image
-from dragontrip.db import Scan, Node, Credential
+from dragontrip.db import Scan, Node
 
 
 def new_project(client):
@@ -336,7 +336,7 @@ def test_settings_search_timeline_and_compact_graph(client, app):
         f"/projects/{pid}/nodes",
         json={"label": "Unique boundary", "description": "searchable metadata"},
     ).json()
-    knowledge = client.post(
+    client.post(
         f"/projects/{pid}/knowledge",
         json={
             "kind": "note",

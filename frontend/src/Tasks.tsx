@@ -61,8 +61,8 @@ const presets = [
 const overdue = (task: Task) =>
   Boolean(
     task.content.due_date &&
-      task.content.due_date < new Date().toISOString().slice(0, 10) &&
-      !['done', 'cancelled'].includes(task.content.status),
+    task.content.due_date < new Date().toISOString().slice(0, 10) &&
+    !['done', 'cancelled'].includes(task.content.status),
   );
 
 export default function Tasks({

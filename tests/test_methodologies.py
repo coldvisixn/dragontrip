@@ -1,7 +1,4 @@
-import io
-import json
-import zipfile
-from dragontrip.db import Knowledge, Scan, now
+from dragontrip.db import Scan, now
 
 
 def project(client):

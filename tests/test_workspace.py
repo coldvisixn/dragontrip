@@ -1,11 +1,10 @@
-import json
 from pathlib import Path
 import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from dragontrip.app import create_app
-from dragontrip.db import Credential, Node, Scan, Configuration, database
+from dragontrip.db import Credential, Scan, Configuration, database
 from conftest import TOKEN
 
 
