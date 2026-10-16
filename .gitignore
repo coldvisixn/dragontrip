@@ -3,6 +3,7 @@ dist/
 .venv/
 __pycache__/
 .pytest_cache/
+.ruff_cache/
 *.egg-info/
 src-tauri/target/
 src-tauri/resources/

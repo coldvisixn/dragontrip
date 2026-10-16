@@ -149,6 +149,6 @@ export async function saveArtifact(id: string, format: 'xml' | 'json' = 'xml') {
       content,
     });
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : String(error));
+    throw new Error(error instanceof Error ? error.message : String(error), { cause: error });
   }
 }

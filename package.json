@@ -8,7 +8,11 @@
     "build": "tsc --noEmit && vite build --config frontend/vite.config.ts",
     "test": "vitest run",
     "desktop:dev": "tauri dev",
-    "desktop:build": "python3 scripts/bundle-backend.py && tauri build --bundles deb && python3 scripts/normalize-bundle.py"
+    "desktop:build": "python3 scripts/bundle-backend.py && tauri build --bundles deb && python3 scripts/normalize-bundle.py",
+    "lint": "eslint . --max-warnings 0 && .venv/bin/python -m ruff check .",
+    "format": "prettier --write frontend \"*.{json,ts,mjs}\" \".github/**/*.{yml,md}\"",
+    "format:check": "prettier --check frontend \"*.{json,ts,mjs}\" \".github/**/*.{yml,md}\"",
+    "check": "bash scripts/check.sh"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.5",
@@ -22,6 +26,7 @@
     "remark-gfm": "4.0.1"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "@tailwindcss/vite": "^4.1.5",
     "@tauri-apps/cli": "^2.5.0",
     "@testing-library/jest-dom": "^6.6.3",
@@ -29,10 +34,15 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.4.1",
+    "eslint": "10.13.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "16.5.0",
     "jsdom": "^26.1.0",
     "playwright-core": "^1.62.1",
+    "prettier": "3.9.10",
     "tailwindcss": "^4.1.5",
     "typescript": "^5.8.3",
+    "typescript-eslint": "8.71.2",
     "vite": "^6.3.5",
     "vitest": "^3.1.3"
   }

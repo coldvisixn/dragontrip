@@ -305,7 +305,7 @@ export default function App() {
     if (!pid || !hasActiveScan) return;
     const timer = setInterval(() => {
       void refresh(pid)
-        .then((d) => {
+        .then(() => {
           void refreshProjects();
         })
         .catch((e) => setError(e.message));
@@ -317,7 +317,6 @@ export default function App() {
     setScan(null);
     if (!viewedScan) return;
     let disposed = false;
-    let timer: ReturnType<typeof setInterval>;
     const update = () =>
       void api<Scan>('/scans/' + viewedScan)
         .then((s) => {
@@ -330,7 +329,7 @@ export default function App() {
           if (!disposed) setError(e.message);
         });
     update();
-    timer = setInterval(update, 1500);
+    const timer = setInterval(update, 1500);
     return () => {
       disposed = true;
       clearInterval(timer);

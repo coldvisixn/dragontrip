@@ -14,10 +14,7 @@ it('groups project pages into five links and remembers the last destination', ()
     />,
   );
   expect(screen.getAllByRole('button')).toHaveLength(7);
-  expect(screen.getByRole('button', { name: 'Assets' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  );
+  expect(screen.getByRole('button', { name: 'Assets' })).toHaveAttribute('aria-current', 'page');
   fireEvent.click(screen.getByRole('button', { name: 'Assets' }));
   expect(navigate).toHaveBeenCalledWith('Web applications');
   expect(screen.queryByRole('button', { name: 'Findings' })).toBeNull();

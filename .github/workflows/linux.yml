@@ -2,29 +2,68 @@ name: Linux build and verification
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - 'docs/**'
-      - 'README*.md'
-      - 'CHANGELOG.md'
-      - 'CONTRIBUTING.md'
-      - 'SECURITY.md'
-      - 'LICENSE'
-      - '.github/ISSUE_TEMPLATE/**'
-      - '.github/PULL_REQUEST_TEMPLATE.md'
   pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - 'README*.md'
-      - 'CHANGELOG.md'
-      - 'CONTRIBUTING.md'
-      - 'SECURITY.md'
-      - 'LICENSE'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 jobs:
+  quick:
+    name: Quick checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      native_required: ${{ steps.changes.outputs.native_required }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Determine whether desktop verification is needed
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          python3 - <<'PYTHON'
+          import os, subprocess
+          base = os.environ.get('BASE_SHA', '')
+          required = True
+          if base and set(base) != {'0'}:
+              changed = subprocess.check_output(
+                  ['git', 'diff', '--name-only', '-z', base, os.environ['GITHUB_SHA']]
+              ).decode().split('\0')
+              def documentation(path):
+                  return (path.startswith(('docs/', '.github/ISSUE_TEMPLATE/'))
+                          or path in {'README.md', 'README.ru.md', 'CHANGELOG.md',
+                                      'CONTRIBUTING.md', 'SECURITY.md', 'LICENSE',
+                                      '.github/PULL_REQUEST_TEMPLATE.md'})
+              required = any(path and not documentation(path) for path in changed)
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              print('native_required=' + str(required).lower(), file=output)
+          PYTHON
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements-lock.txt
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.0'
+          components: rustfmt
+      - run: bash scripts/setup.sh
+      - run: npm run check
+
   verify:
+    needs: quick
+    if: needs.quick.outputs.native_required == 'true'
+    timeout-minutes: 45
     runs-on: ubuntu-24.04
     outputs:
       package_built: ${{ steps.package.outcome == 'success' }}
@@ -41,6 +80,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements-lock.txt
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: '1.99.0'
@@ -76,10 +117,10 @@ jobs:
             ~/go/bin/httpx
           key: ${{ runner.os }}-${{ runner.arch }}-go1.24.9-httpx1.7.1
       - run: bash scripts/setup.sh
-      - name: Backend tests
+      - name: Live Nmap integration test
         run: |
           set -o pipefail
-          .venv/bin/python -m pytest -q 2>&1 | tee backend-check.log || {
+          .venv/bin/python -m pytest tests/test_nmap_live.py -q 2>&1 | tee backend-check.log || {
             message="$(tail -n 85 backend-check.log)"
             message="${message//'%'/'%25'}"
             message="${message//$'\n'/'%0A'}"
@@ -89,9 +130,6 @@ jobs:
           }
         env:
           DRAGONTRIP_LIVE_TEST: '1'
-      - run: npm test
-      - run: npm run build
-      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --check
       - name: Package desktop
         id: package
         run: |
@@ -127,7 +165,7 @@ jobs:
           CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
             PROFILE_OUTPUT=docs/product-browser-profile.json node scripts/profile-graph.cjs
       - name: Prepare native test driver
-        run: cargo install tauri-driver --locked
+        run: cargo install tauri-driver --version 2.1.0 --locked
       - name: System WhatWeb runtime diagnostic
         run: |
           {
@@ -199,6 +237,9 @@ jobs:
             docs/screenshots/native-appearance.png
 
   kali-preflight:
+    needs: quick
+    if: needs.quick.outputs.native_required == 'true'
+    timeout-minutes: 10
     runs-on: ubuntu-24.04
     container:
       image: kalilinux/kali-rolling@sha256:02f5d6c019e549b0f55da58e835cad5355ef1030c6b2645265a324e37dfc4acc
@@ -224,6 +265,7 @@ jobs:
           cat /tmp/kali-repository.log
 
   kali-installed:
+    timeout-minutes: 20
     needs: [verify, kali-preflight]
     if: ${{ always() && needs.verify.outputs.package_built == 'true' && needs['kali-preflight'].result == 'success' }}
     runs-on: ubuntu-24.04
@@ -322,3 +364,25 @@ jobs:
             docs/native-profile.json
             docs/screenshots/native-graph.png
             docs/screenshots/native-recon.png
+
+  ci:
+    name: CI checks
+    if: always()
+    needs: [quick, verify, kali-preflight, kali-installed]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require all applicable checks to pass
+        env:
+          QUICK_RESULT: ${{ needs.quick.result }}
+          NATIVE_REQUIRED: ${{ needs.quick.outputs.native_required }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          PREFLIGHT_RESULT: ${{ needs['kali-preflight'].result }}
+          INSTALLED_RESULT: ${{ needs['kali-installed'].result }}
+        run: |
+          test "$QUICK_RESULT" = success
+          if [[ "$NATIVE_REQUIRED" == true ]]; then
+            test "$VERIFY_RESULT" = success
+            test "$PREFLIGHT_RESULT" = success
+            test "$INSTALLED_RESULT" = success
+          fi

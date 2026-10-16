@@ -3,11 +3,10 @@ import asyncio
 import sys
 import os
 import subprocess
-from pathlib import Path
 import pytest
 from defusedxml.common import DefusedXmlException
 
-from dragontrip.db import Scan, Node
+from dragontrip.db import Scan
 from dragontrip.graph import ingest
 from dragontrip.nmap import ipv4, parse, arguments
 
@@ -118,12 +117,14 @@ def test_process_output_and_cancellation(app, tmp_path):
         with app.state.sessions() as db:
             from dragontrip.db import Project
             p=Project(name="Process tests")
-            db.add(p);db.flush()
+            db.add(p)
+            db.flush()
             success=Scan(id="process-output",project_id=p.id,target="127.0.0.1",
                          command=json.dumps([sys.executable,"-c","import sys;print('actual tool output');sys.exit(2)"]))
             cancel=Scan(id="process-cancel",project_id=p.id,target="127.0.0.1",
                         command=json.dumps([sys.executable,"-c","import time;print('started',flush=True);time.sleep(60)"]))
-            db.add_all([success,cancel]);db.commit()
+            db.add_all([success,cancel])
+            db.commit()
         await manager.run("process-output")
         with app.state.sessions() as db:
             s=db.get(Scan,"process-output")
@@ -147,7 +148,9 @@ def test_interrupted_scans_recovered(app):
     from dragontrip.db import Project
     from dragontrip.tasks import TaskManager
     with app.state.sessions() as db:
-        p=Project(name="Recovery");db.add(p);db.flush()
+        p=Project(name="Recovery")
+        db.add(p)
+        db.flush()
         db.add(Scan(id="old",project_id=p.id,target="127.0.0.1",status="running"))
         db.commit()
     TaskManager(app.state.sessions,app.state.manager.artifacts)
@@ -170,7 +173,9 @@ def test_cancel_before_coroutine_start(app):
     async def scenario():
         from dragontrip.db import Project
         with app.state.sessions() as db:
-            p=Project(name="Queued cancellation");db.add(p);db.flush()
+            p=Project(name="Queued cancellation")
+            db.add(p)
+            db.flush()
             db.add(Scan(id="queued",project_id=p.id,target="127.0.0.1",command="[]"))
             db.commit()
         manager=app.state.manager
@@ -186,7 +191,9 @@ def test_process_launch_failure(app):
     async def scenario():
         from dragontrip.db import Project
         with app.state.sessions() as db:
-            p=Project(name="Launch failure");db.add(p);db.flush()
+            p=Project(name="Launch failure")
+            db.add(p)
+            db.flush()
             db.add(Scan(id="missing-binary",project_id=p.id,target="127.0.0.1",command=json.dumps(["/nonexistent/dragontrip-tool"])))
             db.commit()
         await app.state.manager.run("missing-binary")
@@ -199,13 +206,17 @@ def test_process_launch_failure(app):
 
 def test_rescan_preserves_historical_evidence(client, app, tmp_path):
     pid=client.post("/projects",json={"name":"Rescan"}).json()["id"]
-    path=tmp_path/"input.xml";path.write_text(XML)
+    path=tmp_path/"input.xml"
+    path.write_text(XML)
     with app.state.sessions() as db:
         first=Scan(id="first",project_id=pid,target="127.0.0.1",status="completed")
         second=Scan(id="second",project_id=pid,target="127.0.0.1",status="completed")
-        db.add_all([first,second]);db.flush()
-        ingest(db,first,parse(path,"127.0.0.1"));db.commit()
-        ingest(db,second,[{"ip":"127.0.0.1","state":"up","services":[],"evidence_xml":"<host/>"}]);db.commit()
+        db.add_all([first,second])
+        db.flush()
+        ingest(db,first,parse(path,"127.0.0.1"))
+        db.commit()
+        ingest(db,second,[{"ip":"127.0.0.1","state":"up","services":[],"evidence_xml":"<host/>"}])
+        db.commit()
     detail=client.get(f"/projects/{pid}").json()
     service=next(n for n in detail["nodes"] if n["kind"]=="service")
     assert service["attrs"]["state"]=="not observed in latest scan"

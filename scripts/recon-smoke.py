@@ -204,11 +204,8 @@ def main():
                 )
             for scan in pending:
                 done = wait(scan)
-                evidence = (
+                if scan["tool"] != "httpx":
                     api("/scans/" + scan["id"] + "/artifact")
-                    if scan["tool"] != "httpx"
-                    else None
-                )
                 assert done["tool"] == scan["tool"]
                 print(
                     "PASS:",

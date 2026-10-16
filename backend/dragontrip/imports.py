@@ -7,7 +7,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from .db import (
     Node,
-    Edge,
     Knowledge,
     Attachment,
     ScopeRule,

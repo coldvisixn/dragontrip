@@ -1,14 +1,13 @@
 """Scope, real export structures, transactional imports and portable provenance."""
 
 import base64
-import hashlib
 import io
 import json
 from pathlib import Path
 from types import SimpleNamespace
 import zipfile
 import pytest
-from dragontrip.db import ImportRun, Observation, Node, Knowledge, Project, database
+from dragontrip.db import Node, Project, database
 from dragontrip.import_formats import parse_source, MAX_SOURCE
 from dragontrip.scope import web_url, canonical_rule, classify
 
@@ -123,7 +122,7 @@ def test_preview_no_mutation_vhosts_methods_and_parameters(client, app):
     assert plan["summary"]["endpoints"] == 3
     assert client.get(f"/projects/{pid}").json()["nodes"] == []
     assert client.get(f"/projects/{pid}/tool-imports").json() == []
-    result = apply(client, pid, BURP)
+    apply(client, pid, BURP)
     detail = client.get(f"/projects/{pid}").json()
     apps = [n for n in detail["nodes"] if n["kind"] == "application"]
     endpoints = [n for n in detail["nodes"] if n["kind"] == "endpoint"]

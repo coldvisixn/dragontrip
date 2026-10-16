@@ -1,6 +1,5 @@
 import asyncio
 import hmac
-import ipaddress
 import json
 import os
 import signal
@@ -32,7 +31,7 @@ from .db import (
     now,
 )
 from .tasks import TaskManager
-from . import nmap, recon
+from . import recon
 from .graph import Placement
 from .workspace import register_workspace
 from .vault import register_vault

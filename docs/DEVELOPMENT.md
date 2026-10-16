@@ -5,7 +5,7 @@
 ## Toolchain
 
 - Linux x86_64 with GTK 3 / WebKitGTK 4.1 development packages.
-- Node.js 22+ and npm.
+- Node.js 22.13+ and npm (ESLint requires a supported Node release).
 - Python 3.12, including `venv` and development headers, as used by the verified build.
 - The Rust version pinned in `rust-toolchain.toml` (currently 1.99.0).
 
@@ -28,11 +28,30 @@ Tauri manages Vite and backend lifecycle during development. `npm run dev` alone
 
 ## Checks
 
+After `bash scripts/setup.sh`, run the same fast checks used by CI with one command:
+
 ```bash
-.venv/bin/python -m pytest -q
-npm test
-npm run build
+npm run check
 ```
+
+This runs ESLint (including React hook ordering), Ruff, Prettier, backend tests,
+frontend tests, the TypeScript/production build and Rust formatting. It needs no
+desktop libraries or recon tools. The live Nmap test is skipped unless explicitly
+enabled. `npm run lint` runs just the JavaScript/TypeScript and Python linters;
+`npm run format` formats frontend sources, root JSON/TypeScript/JavaScript configs
+and GitHub YAML/templates. `npm run format:check` checks those files without editing.
+Ruff checks Python correctness and basic style; Python formatting is not enforced.
+
+GitHub Actions runs **Quick checks** before packaging and native acceptance. The
+final **CI checks** status requires every applicable job to succeed. Documentation-only
+changes still run quick checks and skip native packaging, so a required CI status
+never waits for a workflow excluded by path filters. New pushes cancel older runs
+for the same branch or PR. npm and pip use their standard caches, also cached by CI.
+
+Dependabot checks npm, Python, Cargo and GitHub Actions dependencies weekly. Review
+its PRs and let CI verify them before merging. Python direct dependencies are in
+`backend/requirements.txt` and `backend/requirements-dev.txt`; update the complete
+`backend/requirements-lock.txt` consistently when changing them.
 
 The live Nmap test starts its own loopback HTTP server:
 
@@ -76,3 +95,20 @@ Native tests require `tauri-driver`, the distribution's WebKit WebDriver package
 | `docs/` | User guides, architecture contracts and dated build evidence. |
 
 [Contributing](../CONTRIBUTING.md) · [Extension contracts](EXTENSIONS.md) · [Publishing a release](RELEASING.md)
+
+## Protect the main branch
+
+An administrator can configure this in **Settings → Branches → Add branch
+protection rule** for `main`:
+
+- Require a pull request before merging; for a solo maintainer, leave required
+  approvals at zero.
+- Require status checks to pass: select **CI checks** after its first run and
+  require the branch to be up to date before merging.
+- Require conversation resolution and apply the rule to administrators
+  (**Do not allow bypassing the above settings**).
+- Leave force pushes and branch deletions disabled.
+
+These are repository settings, not settings enabled by committing workflow files.
+The single required status covers quick checks plus Ubuntu/Kali native validation
+for code changes and quick checks alone for documentation changes.

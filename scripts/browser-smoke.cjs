@@ -3,7 +3,7 @@ const { navigate } = require('./navigation.cjs');
 const {chromium}=require('playwright-core');
 const {spawn}=require('node:child_process');
 const {createServer}=require('node:http');
-const {mkdtempSync,readFileSync,rmSync,mkdirSync}=require('node:fs');
+const {mkdtempSync,rmSync,mkdirSync}=require('node:fs');
 const {tmpdir}=require('node:os');
 const {join,resolve}=require('node:path');
 const {randomBytes}=require('node:crypto');
@@ -77,8 +77,6 @@ const {once}=require('node:events');
       const node=document.querySelector('.react-flow__node[data-id="'+id+'"]');
       return node&&node.style.transform.includes(x+'px')&&node.style.transform.includes(y+'px');
     },{id:afterService.id,x:manualX,y:manualY});
-    const host=saved.nodes.find(n=>n.kind==='host');
-    const custom=saved.nodes.find(n=>n.kind==='custom');
     // Draw a relation using XYFlow handles.
     const hostElement=page.locator('.react-flow__node').filter({has:page.locator('.object-card.host')});
     const customElement=page.locator('.react-flow__node').filter({has:page.locator('.object-card.custom')});

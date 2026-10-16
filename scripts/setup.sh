@@ -2,5 +2,5 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 python3 -m venv .venv
-.venv/bin/python -m pip install --cache-dir .cache/pip -r backend/requirements-lock.txt
-npm ci --cache .cache/npm
+.venv/bin/python -m pip install -r backend/requirements-lock.txt
+npm ci

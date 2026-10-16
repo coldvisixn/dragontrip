@@ -1,6 +1,6 @@
 name: Feature request
 description: Suggest an improvement to an investigation workflow.
-title: "[Feature] "
+title: '[Feature] '
 body:
   - type: textarea
     id: problem
