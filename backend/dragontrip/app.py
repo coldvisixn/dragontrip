@@ -33,6 +33,12 @@ from .db import (
 )
 from .tasks import TaskManager
 from . import nmap, recon
+from .graph import Placement
+from .workspace import register_workspace
+from .vault import register_vault
+from .evidence import register_evidence
+from .product import register_product
+from .archives import register_archives
 
 
 class ProjectInput(BaseModel):
@@ -69,8 +75,36 @@ class QueueInput(BaseModel):
     concurrency: int = Field(ge=1, le=3)
 
 
-class NodeInput(BaseModel):
+class NodeContent(BaseModel):
     label: str = Field(min_length=1, max_length=120)
+    category: Literal["note", "asset", "hypothesis", "task", "reference"] = "hypothesis"
+    description: str = Field(default="", max_length=8000)
+    status: Literal["idea", "investigating", "confirmed", "dismissed", "done"] = "idea"
+    tags: list[str] = Field(default_factory=list, max_length=10)
+
+    @field_validator("label")
+    @classmethod
+    def not_blank(cls, value):
+        if not value.strip():
+            raise ValueError("Label cannot be blank")
+        return value.strip()
+
+    @field_validator("tags")
+    @classmethod
+    def valid_tags(cls, values):
+        if any(not value.strip() or len(value.strip()) > 30 for value in values):
+            raise ValueError("Tags must contain 1–30 characters")
+        return list(dict.fromkeys(value.strip() for value in values))
+
+    def attrs(self):
+        return {
+            "source": "manual",
+            "state": "hypothesis",
+            **self.model_dump(include={"category", "description", "status", "tags"}),
+        }
+
+
+class NodeInput(NodeContent):
     x: float = Field(default=200, ge=-1000000, le=1000000, allow_inf_nan=False)
     y: float = Field(default=200, ge=-1000000, le=1000000, allow_inf_nan=False)
 
@@ -83,6 +117,17 @@ class Position(BaseModel):
 class EdgeInput(BaseModel):
     source: str
     target: str
+
+
+class EdgeContent(BaseModel):
+    kind: str = Field(min_length=1, max_length=80)
+
+    @field_validator("kind")
+    @classmethod
+    def not_blank(cls, value):
+        if not value.strip():
+            raise ValueError("Relationship label cannot be blank")
+        return value.strip()
 
 
 def create_app(token: str, root: Path | None = None, dev=False):
@@ -114,6 +159,14 @@ def create_app(token: str, root: Path | None = None, dev=False):
     def profiles():
         return recon.DEFAULTS + configuration("profiles", [])
 
+    async def discover_tools(only=None):
+        paths = configuration("tool_paths", {})
+        return (
+            await recon.discover(only, overrides=paths)
+            if paths
+            else await recon.discover(only)
+        )
+
     manager = TaskManager(sessions, root / "artifacts")
     manager.concurrency = configuration("concurrency", 1)
     origins = {"tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"}
@@ -133,10 +186,23 @@ def create_app(token: str, root: Path | None = None, dev=False):
                     return
 
         watchdog = asyncio.create_task(watch_parent())
+
+        async def expire_vault():
+            while True:
+                await asyncio.sleep(1)
+                with app.state.vault.lock:
+                    try:
+                        app.state.vault.require(touch=False)
+                    except HTTPException:
+                        pass
+
+        vault_timer = asyncio.create_task(expire_vault())
         yield
         watchdog.cancel()
-        await asyncio.gather(watchdog, return_exceptions=True)
+        vault_timer.cancel()
+        await asyncio.gather(watchdog, vault_timer, return_exceptions=True)
         await manager.close()
+        app.state.vault.clear()
         engine.dispose()
 
     app = FastAPI(
@@ -173,7 +239,23 @@ def create_app(token: str, root: Path | None = None, dev=False):
             request.headers.get("authorization", ""), f"Bearer {token}"
         ):
             return Response(status_code=401, headers=cors)
-        if int(request.headers.get("content-length", "0")) > 32768:
+        upload = request.method == "POST" and (
+            request.url.path.endswith("/attachments") or request.url.path == "/imports"
+        )
+        limit = (
+            140 * 1024 * 1024
+            if request.url.path == "/imports"
+            else 11 * 1024 * 1024 if upload else 256 * 1024
+        )
+        try:
+            length = int(request.headers.get("content-length", "0"))
+        except ValueError:
+            return Response(status_code=400, headers=cors)
+        if length < 0:
+            return Response(status_code=400, headers=cors)
+        if upload and "content-length" not in request.headers:
+            return Response(status_code=411, headers=cors)
+        if length > limit:
             return Response(status_code=413, headers=cors)
         response = await call_next(request)
         response.headers.update(cors)
@@ -187,13 +269,19 @@ def create_app(token: str, root: Path | None = None, dev=False):
             raise HTTPException(404, "Project not found")
         return item
 
+    register_workspace(app, sessions, project)
+    register_vault(app, sessions, project)
+    register_evidence(app, sessions, project, root)
+    register_product(app, sessions, project, configuration, save_configuration)
+    register_archives(app, sessions, project, root)
+
     @app.get("/health")
     def health():
         return {"status": "ready"}
 
     @app.get("/tools")
     async def tools():
-        return await recon.discover()
+        return await discover_tools()
 
     @app.get("/profiles")
     def get_profiles():
@@ -262,11 +350,30 @@ def create_app(token: str, root: Path | None = None, dev=False):
             return serialize(p)
 
     @app.get("/projects/{pid}")
-    def detail(pid: str):
+    def detail(pid: str, compact: bool = False):
         with sessions() as db:
             p = project(db, pid)
 
             def rows(model):
+                if compact and model is Node:
+                    query = select(
+                        Node.id,
+                        Node.project_id,
+                        Node.kind,
+                        Node.label,
+                        Node.x,
+                        Node.y,
+                        func.json_remove(
+                            Node.attrs,
+                            "$.evidence_xml",
+                            "$.evidence_json",
+                            "$.observations",
+                        ).label("attrs"),
+                    ).where(Node.project_id == pid)
+                    return [
+                        {**dict(row._mapping), "attrs": json.loads(row.attrs)}
+                        for row in db.execute(query)
+                    ]
                 return [
                     serialize(v)
                     for v in db.scalars(select(model).where(model.project_id == pid))
@@ -305,6 +412,14 @@ def create_app(token: str, root: Path | None = None, dev=False):
                     )
                 ],
             }
+
+    @app.get("/projects/{pid}/nodes/{nid}")
+    def get_node(pid: str, nid: str):
+        with sessions() as db:
+            row = db.get(Node, nid)
+            if row is None or row.project_id != pid:
+                raise HTTPException(404, "Object not found")
+            return serialize(row)
 
     @app.get("/projects/{pid}/scan-history")
     def scan_history(
@@ -351,11 +466,27 @@ def create_app(token: str, root: Path | None = None, dev=False):
                 id=uid(),
                 project_id=pid,
                 kind="custom",
-                attrs='{"source":"manual","state":"hypothesis"}',
-                **body.model_dump(),
+                label=body.label,
+                attrs=json.dumps(body.attrs()),
+                **Placement(db, pid).reserve(body.x, body.y),
             )
             db.add(node)
             record(db, pid, f"Custom node added: {body.label}")
+            db.commit()
+            return serialize(node)
+
+    @app.put("/projects/{pid}/nodes/{nid}")
+    def edit_node(pid: str, nid: str, body: NodeContent):
+        with sessions() as db:
+            node = db.get(Node, nid)
+            if node is None or node.project_id != pid:
+                raise HTTPException(404, "Object not found")
+            if node.kind != "custom":
+                raise HTTPException(
+                    403, "Observed objects are read-only; attach a note instead"
+                )
+            node.label, node.attrs = body.label, json.dumps(body.attrs())
+            record(db, pid, "Custom node updated")
             db.commit()
             return serialize(node)
 
@@ -418,6 +549,19 @@ def create_app(token: str, root: Path | None = None, dev=False):
             db.commit()
             return {"deleted": True}
 
+    @app.put("/projects/{pid}/edges/{eid}")
+    def edit_edge(pid: str, eid: str, body: EdgeContent):
+        with sessions() as db:
+            edge = db.get(Edge, eid)
+            if edge is None or edge.project_id != pid:
+                raise HTTPException(404, "Relationship not found")
+            if edge.evidence:
+                raise HTTPException(403, "Observed relationships are read-only")
+            edge.kind = body.kind
+            record(db, pid, "Manual relationship updated")
+            db.commit()
+            return serialize(edge)
+
     @app.post("/projects/{pid}/scans", status_code=201)
     async def scan(pid: str, body: ScanInput):
         if len(manager.tasks) >= 32:
@@ -460,7 +604,7 @@ def create_app(token: str, root: Path | None = None, dev=False):
             intrusive = intrusive or count > 1000
         if intrusive and not body.confirmed:
             raise HTTPException(422, "Confirm the higher-traffic scan explicitly")
-        tool = (await recon.discover(profile["tool"]))[0]
+        tool = (await discover_tools(profile["tool"]))[0]
         if not tool["installed"]:
             raise HTTPException(
                 409,

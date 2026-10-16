@@ -19,6 +19,32 @@ struct Backend {
 }
 
 #[tauri::command]
+fn open_external(url: String) -> Result<(), String> {
+    if url.len() > 2048 {
+        return Err("Link is too long".into());
+    }
+    let parsed = tauri::Url::parse(&url).map_err(|_| "Invalid link")?;
+    if !["http", "https"].contains(&parsed.scheme())
+        || parsed.host_str().is_none()
+        || !parsed.username().is_empty()
+        || parsed.password().is_some()
+    {
+        return Err("Only HTTP(S) links without credentials may be opened".into());
+    }
+    let mut child = Command::new("xdg-open")
+        .arg(parsed.as_str())
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    std::thread::spawn(move || {
+        let _ = child.wait();
+    });
+    Ok(())
+}
+
+#[tauri::command]
 async fn export_xml(
     app: tauri::AppHandle,
     scan_id: String,
@@ -156,7 +182,7 @@ fn main() {
             app.manage(Backend { connection: Connection {port, token}, child: Mutex::new(child) });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![backend_connection, export_xml, export_json])
+        .invoke_handler(tauri::generate_handler![backend_connection, export_xml, export_json, open_external])
         .build(tauri::generate_context!())
         .expect("Dragontrip failed to initialize");
     app.run(|handle, event| {

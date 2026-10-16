@@ -65,7 +65,7 @@ def main():
             assert "dragontrip" in wm_class
             # Gio may reparent launched applications; follow the actual application PID.
             tracked = {pid, *process_tree(pid)}
-            capture_ui(Path(__file__).resolve().parent.parent/"docs/screenshots/installed-launcher.png")
+            capture_ui(checks.VALIDATION/"screenshots/installed-launcher.png")
             subprocess.run(["wmctrl", "-ic", hex(int(window))], env=env, check=True)
             wait_until(lambda: not any(alive(p) for p in tracked), 15)
             print(f"PASS: installed desktop launcher, icon/window class and normal close ({time.monotonic()-started:.2f}s)")

@@ -90,6 +90,35 @@ export async function api<T>(path: string, method = 'GET', body?: unknown): Prom
   }
   return response.json();
 }
+export async function uploadFile<T>(
+  path: string,
+  file: File,
+  fields: Record<string, string> = {},
+): Promise<T> {
+  const c = await connect();
+  const body = new FormData();
+  body.append('file', file);
+  for (const [name, value] of Object.entries(fields)) body.append(name, value);
+  const response = await fetch(`http://127.0.0.1:${c.port}${path}`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + c.token },
+    body,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'File operation failed' }));
+    throw new Error(typeof error.detail === 'string' ? error.detail : 'Invalid file');
+  }
+  return response.json();
+}
+export async function fetchEvidence(pid: string, id: string): Promise<Blob> {
+  const c = await connect();
+  const response = await fetch(
+    `http://127.0.0.1:${c.port}/projects/${pid}/attachments/${id}/content`,
+    { headers: { Authorization: 'Bearer ' + c.token } },
+  );
+  if (!response.ok) throw new Error('Evidence is unavailable or its integrity check failed');
+  return response.blob();
+}
 export async function downloadArtifact(id: string) {
   const c = await connect();
   const r = await fetch('http://127.0.0.1:' + c.port + '/scans/' + id + '/artifact', {

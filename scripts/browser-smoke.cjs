@@ -40,8 +40,9 @@ const {once}=require('node:events');
     await page.waitForTimeout(400);
     await page.locator('.terminal-heading .badge').filter({hasText:'completed'}).waitFor();
     if(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth))throw new Error('Horizontal overflow');
-    mkdirSync('docs/screenshots',{recursive:true});
-    await page.screenshot({animations:'disabled',path:'docs/screenshots/graph-1366.png'});
+    const screenshotDir=process.env.SCREENSHOT_DIR || 'docs/screenshots';
+    mkdirSync(screenshotDir,{recursive:true});
+    await page.screenshot({animations:'disabled',path:join(screenshotDir,'graph-1366.png')});
     // Persist a dragged service position through the actual graph callback and API.
     const projectId=await page.evaluate(()=>localStorage.getItem('dragontrip.project'));
     const beforeGraph=await fetch('http://127.0.0.1:'+port+'/projects/'+projectId,{headers:{Authorization:'Bearer '+token}}).then(r=>r.json());
@@ -62,6 +63,19 @@ const {once}=require('node:events');
     },{port,token});
     const afterService=saved.nodes.find(n=>n.id===beforeService.id);
     if(afterService.x===beforeService.x&&afterService.y===beforeService.y)throw new Error('Dragged position was not saved');
+    // Keyboard positioning must override a previously dragged position, including its local cache.
+    await page.getByLabel('Find graph object').fill(beforeService.label);
+    await page.locator('.search-results').getByRole('button',{name:beforeService.label,exact:true}).click();
+    await page.locator('.object-card.service').first().waitFor();
+    await page.getByText('Position on map',{exact:true}).click();
+    const manualX=Math.round(afterService.x)+25,manualY=Math.round(afterService.y)+20;
+    await page.getByLabel('X coordinate',{exact:true}).fill(String(manualX));
+    await page.getByLabel('Y coordinate',{exact:true}).fill(String(manualY));
+    await page.getByRole('button',{name:'Save position',exact:true}).click();
+    await page.waitForFunction(({id,x,y})=>{
+      const node=document.querySelector('.react-flow__node[data-id="'+id+'"]');
+      return node&&node.style.transform.includes(x+'px')&&node.style.transform.includes(y+'px');
+    },{id:afterService.id,x:manualX,y:manualY});
     const host=saved.nodes.find(n=>n.kind==='host');
     const custom=saved.nodes.find(n=>n.kind==='custom');
     // Draw a relation using XYFlow handles.
@@ -89,12 +103,12 @@ const {once}=require('node:events');
     await page.getByRole('button',{name:'Dashboard',exact:true}).click();
     const collapse=page.getByRole('button',{name:'Collapse task panel',exact:true});
     if(await collapse.isVisible())await collapse.click();
-    await page.screenshot({animations:'disabled',path:'docs/screenshots/dashboard-1366.png'});
+    await page.screenshot({animations:'disabled',path:join(screenshotDir,'dashboard-1366.png')});
     await page.setViewportSize({width:1920,height:1080});
-    await page.screenshot({animations:'disabled',path:'docs/screenshots/dashboard-1920.png'});
+    await page.screenshot({animations:'disabled',path:join(screenshotDir,'dashboard-1920.png')});
     if(errors.length)throw new Error(errors.join('\n'));
     console.log('PASS: actual Nmap → SQLite → React graph → Inspector → drag → manual node/edge → reload persistence');
-    console.log('Browser screenshots saved under docs/screenshots. Tauri IPC bridge was injected for browser testing.');
+    console.log('Browser screenshots saved under '+screenshotDir+'. Tauri IPC bridge was injected for browser testing.');
   }finally{
     if(browser)await browser.close();
     if(server)await new Promise(r=>server.close(r));

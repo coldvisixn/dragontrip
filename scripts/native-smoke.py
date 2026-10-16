@@ -20,6 +20,8 @@ import urllib.request
 from visual_check import capture_ui
 
 ROOT = Path(__file__).resolve().parent.parent
+VALIDATION = Path(os.environ.get("DRAGONTRIP_VALIDATION_DIR", ROOT / "docs"))
+VALIDATION.mkdir(parents=True, exist_ok=True)
 
 
 def wait_until(check, timeout=30):
@@ -104,8 +106,11 @@ def measure(parent, application):
 
 
 class Driver:
-    def __init__(self, port):
-        self.base = f"http://127.0.0.1:{port}"
+    def __init__(self, port, native_port=None):
+        # Use WebKit's standard endpoint directly once tauri-driver has launched it.
+        # tauri-driver 2.1's forwarding pool intermittently reuses a reset connection.
+        self.direct_native = native_port is not None
+        self.base = f"http://127.0.0.1:{native_port or port}"
         self.session = None
 
     def request(self, method, path, body=None):
@@ -123,8 +128,9 @@ class Driver:
         return value
 
     def start(self, application):
+        options = {"webkitgtk:browserOptions": {"binary": str(application)}} if self.direct_native else {"tauri:options": {"application": str(application)}}
         value = self.request("POST", "/session", {"capabilities": {
-            "alwaysMatch": {"tauri:options": {"application": str(application)}}}})
+            "alwaysMatch": options}})
         self.session = value["sessionId"]
 
     def call(self, method, path, body=None):
@@ -147,7 +153,22 @@ class Driver:
         time.sleep(.2)
         element = self.call("POST", "/element", {"using": "css selector", "value": selector})
         eid = element["element-6066-11e4-a52e-4f735466cecf"]
+        # WebKit's native send-keys ignores literal LF; use the standard Enter key.
+        if "\n" in text and self.call("GET", f"/element/{eid}/name").lower() == "textarea":
+            text = text.replace("\n", "\ue007")
         self.call("POST", f"/element/{eid}/value", {"text": text, "value": list(text)})
+
+    def navigate(self, label, selector):
+        # WebKit can replace the document's active context while React changes pages.
+        # Navigation is idempotent; confirm its destination before another click.
+        def arrived():
+            return self.js("""
+                if(document.querySelector(arguments[1]))return true;
+                const button=[...document.querySelectorAll('nav button')].find(b=>b.textContent.trim()===arguments[0]);
+                if(button&&!button.disabled)button.click();
+                return false;
+            """, label, selector)
+        wait_until(arrived)
 
     def graph(self):
         return self.call("POST", "/execute/async", {"script": """
@@ -236,7 +257,7 @@ def main():
             with open("/tmp/dragontrip-native-driver.log", "w") as log:
                 proc = subprocess.Popen([args.driver, "--port", str(args.port), "--native-port", str(args.port+1),
                                          "--native-driver", args.native_driver], env=env, stdout=log, stderr=log)
-                driver = Driver(args.port)
+                driver = Driver(args.port, native_port=args.port + 1)
                 try:
                     wait_until(lambda: driver.request("GET", "/status"))
                     started=time.monotonic()
@@ -278,7 +299,7 @@ def main():
                     print("Real Nmap and Inspector ready", flush=True)
                     before = driver.graph()
                     assert any(n["attrs"].get("port") == 8080 for n in before["nodes"])
-                    screenshots = ROOT / "docs/screenshots"
+                    screenshots = VALIDATION / "screenshots"
                     screenshots.mkdir(exist_ok=True)
                     capture_ui(screenshots / "native-graph.png")
                     service = next(n for n in before["nodes"] if n["kind"] == "service")
@@ -346,6 +367,82 @@ def main():
                     assert not driver.js("return [...document.querySelectorAll('.dialog button')].find(b=>b.textContent.trim()==='Start scan').disabled")
                     driver.click('Cancel')
                     print('PASS: native WhatWeb recommendation + URL graph + JSON evidence export + separate Full Scan approval',flush=True)
+                    # Phase 3/4 acceptance in actual WebKit, with real IPC and file inputs.
+                    original_pid = driver.graph()['project']['id']
+                    unicode_result = driver.call("POST", "/execute/async", {"script": """
+                        const done=arguments[arguments.length-1];
+                        window.__TAURI_INTERNALS__.invoke('backend_connection').then(async connection=>{
+                            const pid=localStorage.getItem('dragontrip.project');
+                            const response=await fetch('http://127.0.0.1:'+connection.port+'/projects/'+pid+'/knowledge', {
+                                method:'POST', headers:{Authorization:'Bearer '+connection.token,'Content-Type':'application/json'},
+                                body:JSON.stringify({kind:'finding',title:'Native Unicode finding',content:{body:'я'.repeat(12000),remediation:'ф'.repeat(6000)}})
+                            });
+                            const value=await response.json();
+                            return {status:response.status,body:value.content?.body.length,remediation:value.content?.remediation.length};
+                        }).then(done).catch(error=>done({testError:error.message}));
+                    """, "args": []})
+                    assert unicode_result == {"status":201,"body":12000,"remediation":6000}, unicode_result
+                    driver.js("document.querySelector('button[aria-label=\"Close inspector\"]')?.click()")
+                    driver.click('Notes')
+                    wait_until(lambda: driver.js("return document.body.textContent.includes('New note')"))
+                    driver.click('New note')
+                    driver.fill('.knowledge-editor input', 'Native Markdown evidence')
+                    driver.fill('.knowledge-editor textarea', '# Native knowledge\n\n**Verified** in the installed application.')
+                    proof = Path(storage) / 'native-evidence.png'
+                    capture_ui(proof)
+                    driver.fill('input[aria-label="Upload evidence"]', str(proof))
+                    wait_until(lambda: driver.js("return document.querySelector('.reference-options')?.textContent.includes('native-evidence.png')"))
+                    driver.click('Save note')
+                    wait_until(lambda: driver.js("return !!document.querySelector('.markdown-body h1') && document.querySelector('.markdown-body strong')?.textContent==='Verified'"))
+                    driver.js("document.querySelector('button[aria-label=\"Preview native-evidence.png\"]').click()")
+                    wait_until(lambda: driver.js("return document.querySelector('.evidence-image')?.complete && document.querySelector('.evidence-image')?.naturalWidth>0"))
+                    driver.click('Timeline')
+                    wait_until(lambda: driver.js("return document.querySelector('.timeline')?.textContent.includes('Evidence attachment added')"))
+                    driver.navigate('Project search', 'input[aria-label="Search project knowledge"]')
+                    driver.fill('input[aria-label="Search project knowledge"]', 'Native knowledge')
+                    wait_until(lambda: driver.js("return document.querySelector('.project-search-results .search-result')?.textContent.includes('Native Markdown evidence')"))
+                    driver.js("document.querySelector('.project-search-results .search-result').click()")
+                    wait_until(lambda: driver.js("return document.querySelector('.markdown-body h1')?.textContent==='Native knowledge'"))
+                    driver.click('Settings')
+                    wait_until(lambda: driver.js("return !!document.querySelector('select[aria-label=\"Theme\"]')"))
+                    driver.js("const s=document.querySelector('select[aria-label=\"Theme\"]');s.value='light';s.dispatchEvent(new Event('change',{bubbles:true}));")
+                    driver.click('Save appearance')
+                    wait_until(lambda: driver.js("return document.documentElement.dataset.theme==='light'"))
+                    capture_ui(screenshots / 'native-appearance.png', theme="light")
+                    driver.js("const s=document.querySelector('select[aria-label=\"Theme\"]');s.value='dark';s.dispatchEvent(new Event('change',{bubbles:true}));")
+                    driver.click('Save appearance')
+                    wait_until(lambda: driver.js("return document.documentElement.dataset.theme==='dark'"))
+                    driver.click('Credentials Vault')
+                    wait_until(lambda: driver.js("return document.body.textContent.includes('Create your encrypted vault')"))
+                    driver.fill('.vault-unlock label:first-of-type input', 'native-master-password')
+                    driver.fill('.vault-unlock label:nth-of-type(2) input', 'native-master-password')
+                    driver.click('Create vault')
+                    wait_until(lambda: driver.js("return document.body.textContent.includes('New credential')"))
+                    driver.click('New credential')
+                    driver.fill('.knowledge-editor input', 'Native credential')
+                    driver.fill('.knowledge-editor input[type=password]', 'native-test-secret')
+                    driver.click('Save credential')
+                    wait_until(lambda: driver.js("return !!document.querySelector('.secret-box')"))
+                    assert not driver.js("return document.body.textContent.includes('native-test-secret')")
+                    driver.js("document.querySelector('button[aria-label=\"Reveal secret\"]').click()")
+                    wait_until(lambda: driver.js("return document.querySelector('.secret-box')?.textContent.includes('native-test-secret')"))
+                    driver.js("document.querySelector('button[aria-label=\"Hide secret\"]').click()")
+                    driver.click('Projects')
+                    driver.js("document.querySelector('.project-transfer input[type=checkbox]').click()")
+                    driver.fill('.project-transfer input[autocomplete=new-password]', 'native-archive-password')
+                    driver.click('Export project')
+                    exported = wait_until(lambda: next(downloads.glob('*.dtproj'), None))
+                    driver.fill('.project-transfer input[type=file]', str(exported))
+                    driver.fill('.project-transfer input[autocomplete=off]', 'native-archive-password')
+                    driver.click('Import project')
+                    wait_until(lambda: driver.js("return document.querySelector('.graph-toolbar')?.textContent.includes('(imported)')"))
+                    imported = driver.graph()
+                    assert imported['project']['id'] != original_pid
+                    assert len(imported['nodes']) >= 3 and not any(s['status'] in ('running','queued') for s in imported['scans'])
+                    driver.click('Projects')
+                    driver.js("[...document.querySelectorAll('.project-card')].find(b=>b.querySelector('h3')?.textContent.trim()==='HTB Native Lab').click()")
+                    wait_until(lambda: driver.js("return document.querySelector('.graph-toolbar')?.textContent.includes('HTB Native Lab') && !document.querySelector('.graph-toolbar')?.textContent.includes('(imported)')"))
+                    print('PASS: native Markdown + screenshot upload/preview + Timeline + project search + theme + vault reveal/hide + encrypted project export/import', flush=True)
                     print("Preparing native close / restart", flush=True)
                     tracked = application_tree(proc.pid, application)
                     driver.stop()
@@ -407,7 +504,7 @@ def main():
                                 metrics[f"graph_{count}"]["drag_frame_median_ms"]=round(frames[len(frames)//2],1)
                                 metrics[f"graph_{count}"]["drag_frame_p95_ms"]=round(frames[min(len(frames)-1,int(len(frames)*.95))],1)
                             print(f"Graph {count} metrics:",metrics[f"graph_{count}"],flush=True)
-                        (ROOT/"docs/native-profile.json").write_text(json.dumps(metrics,indent=2)+"\n")
+                        (VALIDATION/"native-profile.json").write_text(json.dumps(metrics,indent=2)+"\n")
                     # Close with an active scan and require every owned descendant to exit.
                     previous_scan_count=len(driver.graph().get('scans',[]))
                     driver.click("Start scan")

@@ -4,7 +4,7 @@
 
 Local security workspace for Kali Linux: Tauri 2 + React/TypeScript + Python/FastAPI + SQLite. Phase 2 recon automation: Nmap, WhatWeb, ProjectDiscovery httpx and ffuf, with a persistent infrastructure graph and bounded task queue.
 
-**Delivery status:** Phase 2 is complete in 0.2.0; Ubuntu and installed Kali acceptance passed. See [workflows and limits](docs/PHASE2.md) and [validation results](docs/VALIDATION.md). The [release CI run](https://github.com/coldvisixn/dragontrip/actions/runs/38792713976) contains the `.deb` and matching checksum in **dragontrip-linux-amd64**, plus native test evidence. The user's Kali/XFCE VirtualBox performance check remains manual.
+**Current implementation: 0.4.0.** Phases 1–4 are implemented: recon automation, an investigation knowledge graph, Markdown/evidence/Timeline/search, encrypted credentials, portable projects, appearance/tool settings and graph/navigation improvements. [Phase 4](docs/PHASE4.md) records current validation and package details; [ROADMAP](docs/ROADMAP.md) maps the requested scope. Local build output is not a published release. The earlier [0.2.0 release run](https://github.com/coldvisixn/dragontrip/actions/runs/38792713976) contains only Phase 2.
 
 ## Implemented
 
@@ -20,7 +20,7 @@ Local security workspace for Kali Linux: Tauri 2 + React/TypeScript + Python/Fas
 - Alembic migrations, XDG storage, loopback API, fresh per-launch token, strict Host/Origin checks.
 - Tauri-managed backend startup/shutdown; PyInstaller one-folder distribution; Linux launcher, icons and CI build recipe.
 
-No sample discoveries are injected into user projects. Screenshots under `docs/screenshots/` come from real local recon tests; `native-graph.png` is from the packaged WebKitGTK application. Attack Paths, Findings and Notes are disabled future features.
+No sample discoveries are injected into user projects. Screenshots under `docs/screenshots/` come from real local recon tests; `native-graph.png` is from the packaged WebKitGTK application. Phase 3 adds editable custom objects, linked Notes and Findings, ordered manual Attack Paths and an encrypted Credentials Vault; see [docs/PHASE3.md](docs/PHASE3.md).
 
 For installing the ready-made package, see [Инструкция для Kali](docs/INSTALL-KALI.md).
 
@@ -74,7 +74,7 @@ source .venv/bin/activate
 npm run desktop:build
 python scripts/smoke-packaged.py
 ls src-tauri/target/release/bundle/deb/*.deb
-sudo apt install ./src-tauri/target/release/bundle/deb/dragontrip_0.2.0_amd64.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/dragontrip_0.4.0_amd64.deb
 dragontrip
 # Uninstall (user projects remain):
 sudo apt remove dragontrip
@@ -108,9 +108,9 @@ The backend supervises each recon tool in a separate process group. Shutdown can
 
 1. Install the built Debian package on Kali XFCE and complete the applications-menu acceptance check.
 2. Repeat the supplied whole-application memory/CPU and 100–300-node profile on the 4 GB VirtualBox VM.
-3. Add graph viewport persistence and paginated data APIs before large engagements. Host/scan rows are virtualized and visible graph elements are culled; project metadata is currently loaded together.
-4. Add evidence retention controls and project export/backup UX.
-5. Continue Phase 2 only after desktop acceptance.
+3. Graph overview metadata is still loaded together; benchmark engagements larger than the documented 1,000-object fixture before increasing archive/data limits.
+4. Scan artifact retention remains manual; project archives and attachment deletion are available.
+5. Run the updated installed-Kali CI scenario and the user’s 4 GB VirtualBox hardware acceptance before labeling the package a stable Kali release.
 
 The current scan profile is intentionally fixed: `-sT -sV --version-light -n -Pn --top-ports 100 --max-retries 1 --host-timeout 180s --stats-every 2s -v -oX <artifact> <IPv4>`. There are no custom commands, exploit actions, credential storage or automatic follow-up tools. Permission is confirmed for each target before launch.
 
@@ -133,3 +133,5 @@ xvfb-run -a dbus-run-session -- bash scripts/installed-smoke.sh
 ```
 
 The check launches the actual desktop entry with `gtk-launch`, checks its icon/window class and visible X11 pixels, and closes it through the window manager before the full native acceptance/profile test. Native checks use Pillow from the development lockfile; installed-system checks additionally need XFWM, wmctrl, desktop-file-utils and python3-pil. The isolated Docker CI job disables the nested WebKit sandbox for the test only; the application never disables its production sandbox.
+
+Extension and adapter contracts: [EXTENSIONS.md](docs/EXTENSIONS.md). Full user-facing features and shortcuts: [PHASE4.md](docs/PHASE4.md).

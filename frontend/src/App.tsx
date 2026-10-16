@@ -5,6 +5,7 @@ import {
   lazy,
   Suspense,
   useCallback,
+  useMemo,
   useEffect,
   useRef,
   useState,
@@ -13,6 +14,13 @@ import {
 } from 'react';
 import {
   Activity,
+  ArrowLeft,
+  Clock3,
+  Paperclip,
+  FileText,
+  GitBranch,
+  KeyRound,
+  ShieldAlert,
   ArrowDownToLine,
   ArrowRight,
   Check,
@@ -46,7 +54,25 @@ import {
   type Tool,
 } from './api';
 import VirtualList from './VirtualList';
+import { NodeEditor, CustomObjectDetails, RelationshipEditor, PositionEditor } from './NodeEditor';
+import Preferences, { useAppearance, type Appearance } from './Preferences';
+import ProjectTransfer from './ProjectTransfer';
+import { ProjectSearch, SearchResults, Timeline, type SearchResult } from './ProjectActivity';
+import { useNavigation } from './navigation';
+const Evidence = lazy(() => import('./Evidence'));
 const Graph = lazy(() => import('./Graph'));
+const Knowledge = lazy(() => import('./Knowledge'));
+const Vault = lazy(() => import('./Vault'));
+const knowledgeNav = [
+  ['Attack Paths', GitBranch],
+  ['Findings', ShieldAlert],
+  ['Notes', FileText],
+  ['Credentials Vault', KeyRound],
+  ['Evidence', Paperclip],
+  ['Timeline', Clock3],
+  ['Project search', Search],
+] as const;
+const knowledgeKinds = { 'Attack Paths': 'path', Findings: 'finding', Notes: 'note' } as const;
 const nav = [
   ['Dashboard', LayoutDashboard],
   ['Projects', Folder],
@@ -56,7 +82,7 @@ const nav = [
   ['Tools', Wrench],
   ['Settings', Settings],
 ] as const;
-type Page = (typeof nav)[number][0];
+type Page = (typeof nav)[number][0] | (typeof knowledgeNav)[number][0];
 const active = (s: Scan) => s.status === 'running' || s.status === 'queued';
 const date = (s: string) => new Date(s).toLocaleString();
 function Empty({
@@ -137,10 +163,25 @@ function Dialog({
   );
 }
 export default function App() {
-  const [page, setPage] = useState<Page>('Dashboard');
+  const {
+    page,
+    navigate: setPage,
+    back,
+    forward,
+    canBack,
+    canForward,
+  } = useNavigation<Page>('Dashboard');
+  const [appearance, setAppearance] = useAppearance();
+  const [knowledgeSeed, setKnowledgeSeed] = useState<{
+    nodeId?: string;
+    recordId?: string;
+    nonce: number;
+  }>();
   const [projects, setProjects] = useState<Project[]>([]);
   const [pid, setPid] = useState<string | null>(() => localStorage.getItem('dragontrip.project'));
   const [detail, setDetail] = useState<Detail | null>(null);
+  const [evidenceFocus, setEvidenceFocus] = useState<string>();
+  const [inspected, setInspected] = useState<ObjectNode | null>(null);
   const [tools, setTools] = useState<Tool[]>([]);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -162,7 +203,13 @@ export default function App() {
   const [scan, setScan] = useState<Scan | null>(null);
   const [context, setContext] = useState<{ id: string; x: number; y: number } | null>(null);
   const generation = useRef(0);
-  const object = detail?.nodes.find((n) => n.id === selected);
+  const activeProject = useRef(pid);
+  activeProject.current = pid;
+  const nodeMap = useMemo(
+    () => new Map(detail?.nodes.map((node) => [node.id, node]) || []),
+    [detail?.nodes],
+  );
+  const object = inspected?.id === selected ? inspected : nodeMap.get(selected || '');
   const selectedEdge = detail?.edges.find((e) => e.id === selected);
   const current = projects.find((p) => p.id === pid);
   const hasActiveScan = detail?.scans.some(active) ?? false;
@@ -179,8 +226,8 @@ export default function App() {
   }, []);
   const refresh = useCallback(async (id: string) => {
     const expected = generation.current;
-    const d = await api<Detail>('/projects/' + id);
-    if (expected === generation.current)
+    const d = await api<Detail>('/projects/' + id + '?compact=true');
+    if (expected === generation.current && activeProject.current === id)
       setDetail((previous) => (JSON.stringify(previous) === JSON.stringify(d) ? previous : d));
     return d;
   }, []);
@@ -188,13 +235,19 @@ export default function App() {
     setLoading(true);
     setError('');
     try {
-      await Promise.all([refreshProjects(), api<Tool[]>('/tools').then(setTools)]);
+      await Promise.all([
+        refreshProjects(),
+        api<Tool[]>('/tools').then(setTools),
+        api<{ appearance: Appearance }>('/settings').then((value) => {
+          if (value.appearance) setAppearance(value.appearance);
+        }),
+      ]);
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [refreshProjects]);
+  }, [refreshProjects, setAppearance]);
   useEffect(() => {
     void initialize();
   }, [initialize]);
@@ -246,17 +299,77 @@ export default function App() {
     };
   }, [viewedScan]);
   useEffect(() => {
+    setInspected(null);
+    if (!pid || !selected || !nodeMap.has(selected)) return;
+    let disposed = false;
+    api<ObjectNode>('/projects/' + pid + '/nodes/' + encodeURIComponent(selected))
+      .then((node) => {
+        if (!disposed && node.id === selected) setInspected(node);
+      })
+      .catch((e) => {
+        if (!disposed) setError(e.message);
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [pid, selected, detail?.project.updated]);
+  useEffect(() => {
+    document.title = `${page} · Dragontrip`;
+    if (!modal && !document.activeElement?.matches('input,textarea,select'))
+      document.querySelector<HTMLElement>('.main')?.focus({ preventScroll: true });
+  }, [page]);
+  useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setQuery('');
         setModal((v) => (v === 'command' ? null : 'command'));
       }
-      if (e.key === 'Escape') setContext(null);
+      const typing =
+        e.target instanceof Element
+          ? e.target.closest('input,textarea,select,[contenteditable=true]')
+          : null;
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+        if (e.key.toLowerCase() === 'f') {
+          e.preventDefault();
+          setPage('Project search');
+        }
+        if (pid && e.key.toLowerCase() === 'n') {
+          e.preventDefault();
+          setModal('node');
+        }
+        if (pid && e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          startScan();
+        }
+      }
+      if (e.altKey && !typing && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        back();
+      }
+      if (e.altKey && !typing && e.key === 'ArrowRight') {
+        e.preventDefault();
+        forward();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        const form = (document.activeElement as HTMLElement)?.closest('form');
+        if (form) {
+          e.preventDefault();
+          form.requestSubmit();
+        }
+      }
+      if (e.key === 'Delete' && !typing && !modal && object?.kind === 'custom') {
+        e.preventDefault();
+        void removeNode(object);
+      }
+      if (e.key === 'Escape') {
+        setContext(null);
+        if (!modal) setSelected(null);
+      }
     };
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
-  }, []);
+  }, [pid, modal, back, forward, setPage, object]);
   async function perform(action: () => Promise<void>) {
     setBusy(true);
     setError('');
@@ -271,6 +384,33 @@ export default function App() {
   function openProject(id: string) {
     setPid(id);
     setPage('Network Graph');
+  }
+  function openSearchResult(item: SearchResult) {
+    setSelected(null);
+    setModal(null);
+    setQuery('');
+    if (item.kind === 'object') {
+      setNodeKind('all');
+      setPage('Network Graph');
+      setSelected(item.id);
+    } else if (item.kind === 'knowledge') {
+      setKnowledgeSeed({ recordId: item.id, nonce: Date.now() });
+      setPage(
+        item.subtype === 'finding'
+          ? 'Findings'
+          : item.subtype === 'path'
+            ? 'Attack Paths'
+            : 'Notes',
+      );
+    } else if (item.kind === 'scan') {
+      setPage('Scans');
+      setScanId(item.id);
+      setBottom(true);
+      setTab('Terminal Output');
+    } else if (item.kind === 'attachment') {
+      setEvidenceFocus(item.id);
+      setPage('Evidence');
+    } else setPage('Timeline');
   }
   function newProject() {
     setName('');
@@ -303,21 +443,6 @@ export default function App() {
       await refresh(pid);
       setModal(null);
       notify('Recon task queued');
-    });
-  }
-  async function submitNode(e: FormEvent) {
-    e.preventDefault();
-    if (!pid) return;
-    await perform(async () => {
-      const n = await api<ObjectNode>('/projects/' + pid + '/nodes', 'POST', {
-        label: name,
-        x: 200,
-        y: 450,
-      });
-      await refresh(pid);
-      setSelected(n.id);
-      setModal(null);
-      notify('Manual hypothesis added');
     });
   }
   async function removeNode(n: ObjectNode) {
@@ -358,6 +483,9 @@ export default function App() {
   );
   return (
     <div className="app">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <aside className="sidebar">
         <div className="brand">
           <svg width="30" height="34" viewBox="0 0 30 34" fill="none" aria-hidden="true">
@@ -404,13 +532,19 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <div className="nav-label future-label">
-          KNOWLEDGE <span>COMING LATER</span>
-        </div>
+        <div className="nav-label future-label">KNOWLEDGE</div>
         <nav>
-          {['Attack Paths', 'Findings', 'Notes'].map((n) => (
-            <button key={n} disabled title="Planned for Phase 3">
-              <Pentagon size={16} />
+          {knowledgeNav.map(([n, Icon]) => (
+            <button
+              key={n}
+              className={page === n ? 'active' : ''}
+              onClick={() => {
+                setKnowledgeSeed(undefined);
+                setSelected(null);
+                setPage(n);
+              }}
+            >
+              <Icon size={16} />
               {n}
             </button>
           ))}
@@ -440,6 +574,17 @@ export default function App() {
       <div className="workspace">
         <header className="topbar">
           <div className="breadcrumb">
+            <button className="icon-button" aria-label="Go back" disabled={!canBack} onClick={back}>
+              <ArrowLeft size={15} />
+            </button>
+            <button
+              className="icon-button"
+              aria-label="Go forward"
+              disabled={!canForward}
+              onClick={forward}
+            >
+              <ArrowRight size={15} />
+            </button>
             <span>Workspace</span>
             <ChevronRight size={13} />
             <strong>{page}</strong>
@@ -476,7 +621,11 @@ export default function App() {
           </div>
         )}
         <div className="workspace-body">
-          <main className={'main ' + (page === 'Network Graph' ? 'graph-main' : '')}>
+          <main
+            id="main-content"
+            tabIndex={-1}
+            className={'main ' + (page === 'Network Graph' ? 'graph-main' : '')}
+          >
             {loading ? (
               <div className="skeleton-wrap">
                 <div className="skeleton" />
@@ -531,6 +680,14 @@ export default function App() {
                       </button>
                     </div>
                     {projectCards}
+                    <ProjectTransfer
+                      project={current}
+                      onImported={async (value) => {
+                        await refreshProjects();
+                        openProject(value.id);
+                        notify('Project imported');
+                      }}
+                    />
                     <div className="dashboard-columns">
                       <section className="panel">
                         <div className="section-heading">
@@ -605,23 +762,44 @@ export default function App() {
                       </button>
                     </div>
                     {projectCards}
+                    <ProjectTransfer
+                      project={current}
+                      onImported={async (value) => {
+                        await refreshProjects();
+                        openProject(value.id);
+                        notify('Project imported');
+                      }}
+                    />
                   </div>
                 )}
-                {['Network Graph', 'Hosts', 'Scans'].includes(page) && !pid && (
-                  <Empty title="Choose your workspace" icon={Folder}>
-                    Open a project or{' '}
-                    <button className="text-button" onClick={newProject}>
-                      create a new one
-                    </button>{' '}
-                    to get started.
-                  </Empty>
-                )}
-                {['Network Graph', 'Hosts', 'Scans'].includes(page) && pid && !detail && (
-                  <div className="loading">
-                    <LoaderCircle className="spin" />
-                    Loading project…
-                  </div>
-                )}
+                {[
+                  'Network Graph',
+                  'Hosts',
+                  'Scans',
+                  ...knowledgeNav.map(([label]) => label),
+                ].includes(page) &&
+                  !pid && (
+                    <Empty title="Choose your workspace" icon={Folder}>
+                      Open a project or{' '}
+                      <button className="text-button" onClick={newProject}>
+                        create a new one
+                      </button>{' '}
+                      to get started.
+                    </Empty>
+                  )}
+                {[
+                  'Network Graph',
+                  'Hosts',
+                  'Scans',
+                  ...knowledgeNav.map(([label]) => label),
+                ].includes(page) &&
+                  pid &&
+                  !detail && (
+                    <div className="loading">
+                      <LoaderCircle className="spin" />
+                      Loading project…
+                    </div>
+                  )}
                 {page === 'Network Graph' && detail && (
                   <>
                     <div className="graph-toolbar">
@@ -675,6 +853,10 @@ export default function App() {
                                 n.label,
                                 n.kind,
                                 n.attrs.title,
+                                n.attrs.description,
+                                n.attrs.category,
+                                n.attrs.status,
+                                JSON.stringify(n.attrs.tags || []),
                                 JSON.stringify(n.attrs.technologies || []),
                               ]
                                 .join(' ')
@@ -686,6 +868,7 @@ export default function App() {
                               <button
                                 key={n.id}
                                 onClick={() => {
+                                  setNodeKind('all');
                                   setSelected(n.id);
                                   setQuery('');
                                 }}
@@ -699,6 +882,10 @@ export default function App() {
                     <div className="graph-area">
                       <Suspense fallback={<div className="loading">Loading graph…</div>}>
                         <Graph
+                          key={detail.project.id}
+                          projectId={detail.project.id}
+                          detailMode={appearance.graph_detail}
+                          theme={appearance.theme === 'system' ? undefined : appearance.theme}
                           selectedId={selected}
                           objects={detail.nodes.filter(
                             (n) => nodeKind === 'all' || n.kind === nodeKind,
@@ -707,7 +894,7 @@ export default function App() {
                             (edge) =>
                               nodeKind === 'all' ||
                               [edge.source, edge.target].every(
-                                (id) => detail.nodes.find((n) => n.id === id)?.kind === nodeKind,
+                                (id) => nodeMap.get(id)?.kind === nodeKind,
                               ),
                           )}
                           onSelect={setSelected}
@@ -717,7 +904,9 @@ export default function App() {
                               '/projects/' + pid + '/nodes/' + encodeURIComponent(id) + '/position',
                               'PUT',
                               { x, y },
-                            ).catch((e) => setError('Position was not saved: ' + e.message));
+                            )
+                              .then(() => refresh(pid!))
+                              .catch((e) => setError('Position was not saved: ' + e.message));
                           }}
                           onConnect={(c) => {
                             if (c.source && c.target)
@@ -875,6 +1064,58 @@ export default function App() {
                     </section>
                   </div>
                 )}
+                {detail && page in knowledgeKinds && (
+                  <Suspense fallback={<div className="loading">Loading workspace…</div>}>
+                    <Knowledge
+                      key={detail.project.id + page + (knowledgeSeed?.nonce || '')}
+                      detail={detail}
+                      kind={knowledgeKinds[page as keyof typeof knowledgeKinds]}
+                      nodeId={knowledgeSeed?.nodeId}
+                      focusId={knowledgeSeed?.recordId}
+                      onNode={(id) => {
+                        setPage('Network Graph');
+                        setSelected(id);
+                      }}
+                      onScan={(id) => {
+                        setScanId(id);
+                        setTab('Terminal Output');
+                        setBottom(true);
+                      }}
+                      onChanged={() => refresh(detail.project.id)}
+                    />
+                  </Suspense>
+                )}
+                {detail && page === 'Credentials Vault' && (
+                  <Suspense fallback={<div className="loading">Loading vault…</div>}>
+                    <Vault
+                      key={detail.project.id}
+                      detail={detail}
+                      onNode={(id) => {
+                        setPage('Network Graph');
+                        setSelected(id);
+                      }}
+                    />
+                  </Suspense>
+                )}
+                {detail && page === 'Evidence' && (
+                  <Suspense fallback={<div className="loading">Loading evidence…</div>}>
+                    <Evidence
+                      key={detail.project.id + (evidenceFocus || '')}
+                      pid={detail.project.id}
+                      focusId={evidenceFocus}
+                    />
+                  </Suspense>
+                )}
+                {detail && page === 'Timeline' && (
+                  <Timeline key={detail.project.id} pid={detail.project.id} />
+                )}
+                {detail && page === 'Project search' && (
+                  <ProjectSearch
+                    key={detail.project.id}
+                    pid={detail.project.id}
+                    onOpen={openSearchResult}
+                  />
+                )}
                 {page === 'Settings' && (
                   <div className="page">
                     <div className="page-heading">
@@ -883,6 +1124,7 @@ export default function App() {
                         <p>Predictable defaults for a small, local workstation.</p>
                       </div>
                     </div>
+                    <Preferences appearance={appearance} onAppearance={setAppearance} />
                     <ReconSettings />
                     <section className="panel settings">
                       {[
@@ -900,8 +1142,8 @@ export default function App() {
                           'Successful XML/JSON is retained until removed outside the app',
                         ],
                         [
-                          'Future features',
-                          'Attack Paths, Notes, Findings and Vault are not implemented',
+                          'Investigation workspace',
+                          'Notes, Findings, manual Attack Paths and encrypted Credentials Vault',
                         ],
                       ].map(([k, v]) => (
                         <div key={k}>
@@ -948,30 +1190,64 @@ export default function App() {
                     <h2>{object.label}</h2>
                     <span className={'badge ' + (object.kind === 'custom' ? 'warning' : 'success')}>
                       {object.kind === 'custom'
-                        ? 'Manual hypothesis'
+                        ? 'Manual · ' + String(object.attrs.status || 'idea')
                         : 'Observed · ' + String(object.attrs.source || 'nmap')}
                     </span>
                   </div>
-                  <div className="inspector-section">
-                    <h3>Attributes</h3>
-                    {Object.entries(object.attrs)
-                      .filter(
-                        ([k]) =>
-                          ![
-                            'evidence_xml',
-                            'evidence_json',
-                            'scan_id',
-                            'observations',
-                            'evidence_truncated',
-                          ].includes(k),
-                      )
-                      .map(([k, v]) => (
-                        <div className="attribute" key={k}>
-                          <span>{k}</span>
-                          <strong>{String(v) || '—'}</strong>
-                        </div>
-                      ))}
-                  </div>
+                  {object.kind === 'custom' && (
+                    <CustomObjectDetails
+                      key={object.id}
+                      node={object}
+                      onSave={async (content) => {
+                        await api(
+                          '/projects/' + pid + '/nodes/' + encodeURIComponent(object.id),
+                          'PUT',
+                          content,
+                        );
+                        await refresh(pid!);
+                        notify('Object updated');
+                      }}
+                    />
+                  )}
+                  {object.kind !== 'custom' && (
+                    <div className="inspector-section">
+                      <h3>Attributes</h3>
+                      {Object.entries(object.attrs)
+                        .filter(
+                          ([k]) =>
+                            ![
+                              'evidence_xml',
+                              'evidence_json',
+                              'scan_id',
+                              'observations',
+                              'evidence_truncated',
+                            ].includes(k),
+                        )
+                        .map(([k, v]) => (
+                          <div className="attribute" key={k}>
+                            <span>{k}</span>
+                            <strong>{String(v) || '—'}</strong>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                  <PositionEditor
+                    key={object.id + ':' + object.x + ':' + object.y}
+                    node={object}
+                    onSave={async (x, y) => {
+                      await api(
+                        '/projects/' +
+                          pid +
+                          '/nodes/' +
+                          encodeURIComponent(object.id) +
+                          '/position',
+                        'PUT',
+                        { x, y },
+                      );
+                      await refresh(pid!);
+                      notify('Position updated');
+                    }}
+                  />
                   <div className="inspector-section">
                     <h3>Related objects</h3>
                     {detail?.edges
@@ -992,6 +1268,29 @@ export default function App() {
                           </button>
                         );
                       })}
+                  </div>
+                  <div className="inspector-section">
+                    <h3>Investigation</h3>
+                    <div className="linked-items">
+                      <button
+                        onClick={() => {
+                          setKnowledgeSeed({ nodeId: object.id, nonce: Date.now() });
+                          setSelected(null);
+                          setPage('Notes');
+                        }}
+                      >
+                        Add linked note
+                      </button>
+                      <button
+                        onClick={() => {
+                          setKnowledgeSeed({ nodeId: object.id, nonce: Date.now() });
+                          setSelected(null);
+                          setPage('Findings');
+                        }}
+                      >
+                        Add linked finding
+                      </button>
+                    </div>
                   </div>
                   {pid && (
                     <Suggestions
@@ -1079,6 +1378,21 @@ export default function App() {
                   </span>
                   <p>Source: {detail?.nodes.find((n) => n.id === selectedEdge.source)?.label}</p>
                   <p>Target: {detail?.nodes.find((n) => n.id === selectedEdge.target)?.label}</p>
+                  {!selectedEdge.evidence && (
+                    <RelationshipEditor
+                      key={selectedEdge.id}
+                      label={selectedEdge.kind}
+                      onSave={async (kind) => {
+                        await api(
+                          '/projects/' + pid + '/edges/' + encodeURIComponent(selectedEdge.id),
+                          'PUT',
+                          { kind },
+                        );
+                        await refresh(pid!);
+                        notify('Relationship updated');
+                      }}
+                    />
+                  )}
                   {!selectedEdge.evidence && (
                     <button
                       className="danger-button"
@@ -1336,31 +1650,24 @@ export default function App() {
       )}
       {modal === 'node' && (
         <Dialog title="Add a custom object" onClose={closeModal}>
-          <form onSubmit={submitNode}>
-            <p className="muted">
-              Manual objects are marked as hypotheses. Connect them by dragging between node
-              handles.
-            </p>
-            <label>
-              Object label
-              <input
-                required
-                maxLength={120}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Investigation note"
-              />
-            </label>
-            <div className="dialog-actions">
-              <button type="button" onClick={closeModal}>
-                Cancel
-              </button>
-              <button className="primary" disabled={busy || !name.trim()}>
-                <Plus size={14} />
-                Add object
-              </button>
-            </div>
-          </form>
+          <p className="muted">
+            Describe an asset, note, hypothesis, task or reference. Connect objects using their
+            handles.
+          </p>
+          <NodeEditor
+            onCancel={closeModal}
+            onSave={async (content) => {
+              const node = await api<ObjectNode>('/projects/' + pid + '/nodes', 'POST', {
+                ...content,
+                x: 200,
+                y: 450,
+              });
+              await refresh(pid!);
+              setSelected(node.id);
+              closeModal();
+              notify('Custom object saved');
+            }}
+          />
         </Dialog>
       )}
       {modal === 'command' && (
@@ -1371,11 +1678,75 @@ export default function App() {
               aria-label="Search commands"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Pages, projects, objects…"
+              placeholder="Pages, projects, objects, knowledge…"
+              onKeyDown={(e) => {
+                if (['ArrowDown', 'Enter'].includes(e.key)) {
+                  e.preventDefault();
+                  document.querySelector<HTMLButtonElement>('.commands button')?.focus();
+                  if (e.key === 'Enter')
+                    document.querySelector<HTMLButtonElement>('.commands button')?.click();
+                }
+              }}
             />
           </div>
-          <div className="commands">
-            {nav
+          <div
+            className="commands"
+            onKeyDown={(e) => {
+              const buttons = [
+                ...e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),
+              ];
+              const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+              if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                buttons[
+                  (index + (e.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length
+                ]?.focus();
+              }
+            }}
+          >
+            {[
+              { name: 'Create new project', action: newProject, enabled: true },
+              { name: 'Add custom object', action: () => setModal('node'), enabled: Boolean(pid) },
+              { name: 'Start recon scan', action: startScan, enabled: Boolean(pid) },
+              {
+                name: 'Toggle task panel',
+                action: () => {
+                  setBottom((v) => !v);
+                  closeModal();
+                },
+                enabled: true,
+              },
+              {
+                name: 'Lock credentials vault',
+                action: () => {
+                  void api('/vault/lock', 'POST')
+                    .then(() => {
+                      window.dispatchEvent(new Event('dragontrip:vault-locked'));
+                      notify('Vault locked');
+                    })
+                    .catch((e) => setError(e.message));
+                  closeModal();
+                },
+                enabled: true,
+              },
+            ]
+              .filter(
+                (item) => item.enabled && item.name.toLowerCase().includes(query.toLowerCase()),
+              )
+              .map((item) => (
+                <button
+                  key={item.name}
+                  onClick={() => {
+                    setQuery('');
+                    item.action();
+                  }}
+                >
+                  <Command size={16} />
+                  {item.name}
+                  <span>Action</span>
+                </button>
+              ))}
+            {[...nav, ...knowledgeNav]
               .filter(([n]) => n.toLowerCase().includes(query.toLowerCase()))
               .map(([n, Icon]) => (
                 <button
@@ -1410,7 +1781,16 @@ export default function App() {
               ))}
             {detail?.nodes
               .filter((n) =>
-                [n.label, n.kind, n.attrs.title, JSON.stringify(n.attrs.technologies || [])]
+                [
+                  n.label,
+                  n.kind,
+                  n.attrs.title,
+                  n.attrs.description,
+                  n.attrs.category,
+                  n.attrs.status,
+                  JSON.stringify(n.attrs.tags || []),
+                  JSON.stringify(n.attrs.technologies || []),
+                ]
                   .join(' ')
                   .toLowerCase()
                   .includes(query.toLowerCase()),
@@ -1431,6 +1811,9 @@ export default function App() {
                   <span>Object</span>
                 </button>
               ))}
+            {pid && query.trim() && (
+              <SearchResults pid={pid} query={query} compact onOpen={openSearchResult} />
+            )}
           </div>
         </Dialog>
       )}

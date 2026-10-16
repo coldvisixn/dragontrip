@@ -1,12 +1,13 @@
 # Установка DRAGONTRIP на Kali Linux
 
-Готовый пакет: `dragontrip_0.2.0_amd64.deb` (около 28,2 MiB). Архитектура — x86_64.
+Текущая версия — `0.4.0`, архитектура x86_64. Локально собранный пакет находится в `src-tauri/target/release/bundle/deb/dragontrip_0.4.0_amd64.deb`; рядом — `dragontrip_0.4.0_amd64.deb.sha256`. Новая версия пока не опубликована в старом артефакте 0.2.0. После запуска нового CI пакет будет доступен в артефакте **dragontrip-linux-amd64** [workflow](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml).
 
-Скачайте артефакт **dragontrip-linux-amd64** из [сборки GitHub Actions](https://github.com/coldvisixn/dragontrip/actions/runs/38792713976), распакуйте его и найдите `dragontrip_0.2.0_amd64.deb` в `src-tauri/target/release/bundle/deb/`. Рядом находится файл SHA-256. Откройте терминал в папке с пакетом:
+Скопируйте пакет и файл SHA-256 на Kali, затем откройте терминал в этой папке:
 
 ```bash
+sha256sum --check dragontrip_0.4.0_amd64.deb.sha256
 sudo apt update
-sudo apt install ./dragontrip_0.2.0_amd64.deb nmap whatweb httpx-toolkit ffuf
+sudo apt install ./dragontrip_0.4.0_amd64.deb nmap whatweb httpx-toolkit ffuf
 ```
 
 Запустите **Dragontrip** из меню приложений или командой:
@@ -31,8 +32,19 @@ dragontrip
 sudo apt remove dragontrip
 ```
 
-Пакет прошёл нативные проверки Ubuntu и установку через apt, запуск из меню и полный сценарий Nmap/графа на официальном Kali Rolling с XFWM в контейнере (4 GB RAM, 2 CPU). Пользовательская VirtualBox VM ещё требует отдельной ручной проверки. Полный отчёт и измерения: [VALIDATION.md](VALIDATION.md).
+Версия 0.4.0 собрана и проверяется в Debian-контейнере с настоящим Tauri/WebKit. Исторические результаты 0.2.0 на Kali не являются проверкой нового пакета. Состояние нового выпуска и измерения: [PHASE4.md](PHASE4.md); предыдущие результаты: [VALIDATION.md](VALIDATION.md). Проверка вашей VirtualBox VM остаётся отдельной.
 
 Сборка из исходников описана в [README.md](../README.md).
 
 Фаза 2: профили, очередь, рекомендации и ограничения описаны в [PHASE2.md](PHASE2.md). WhatWeb, ProjectDiscovery httpx и ffuf устанавливаются системными пакетами; Python-программа httpx не заменяет httpx-toolkit.
+
+После установки:
+
+- Нажмите кастомную ноду → **Edit object**, чтобы задать тип, описание, статус и теги.
+- **Notes / Findings** поддерживают Markdown и вложения, **Attack Paths** — упорядоченные ручные цепочки.
+- **Evidence**, **Timeline** и **Project search** собирают материалы и историю проекта.
+- **Credentials Vault** хранит секреты под мастер-паролем. Не забудьте его: восстановления нет.
+- **Projects → Project portability** переносит проекты с доказательствами. Учётные данные включаются только явно, с отдельным паролем архива.
+- В **Settings** задаются оформление, детализация карты и пути к инструментам. **Ctrl+K** открывает палитру команд, **Ctrl+Shift+F** — поиск по знаниям.
+
+Перед обновлением сделайте резервную копию всей папки данных при закрытом приложении. Миграции сохраняют существующие проекты; старый бинарник 0.2.0 после обновления базы использовать не следует.

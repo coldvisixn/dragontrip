@@ -4,7 +4,16 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from sqlalchemy import create_engine, event, Column, String, Text, Float, ForeignKey
+from sqlalchemy import (
+    create_engine,
+    event,
+    Column,
+    String,
+    Text,
+    Float,
+    Integer,
+    ForeignKey,
+)
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 Base = declarative_base()
@@ -80,6 +89,41 @@ class Activity(Base):
     created = Column(String, default=now)
 
 
+class Knowledge(Base):
+    __tablename__ = "knowledge"
+    id = Column(String, primary_key=True, default=uid)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
+    kind = Column(String, nullable=False)
+    title = Column(String, nullable=False)
+    content = Column(Text, nullable=False, default="{}")
+    created = Column(String, default=now)
+    updated = Column(String, default=now)
+
+
+class Credential(Base):
+    __tablename__ = "credentials"
+    id = Column(String, primary_key=True, default=uid)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
+    ciphertext = Column(Text, nullable=False)
+
+
+class Attachment(Base):
+    __tablename__ = "attachments"
+    id = Column(String, primary_key=True, default=uid)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
+    filename = Column(String, nullable=False)
+    media_type = Column(String, nullable=False)
+    size = Column(Integer, nullable=False)
+    sha256 = Column(String, nullable=False)
+    created = Column(String, default=now)
+
+
+class GraphView(Base):
+    __tablename__ = "graph_views"
+    project_id = Column(String, ForeignKey("projects.id"), primary_key=True)
+    value = Column(Text, nullable=False)
+
+
 def record(db, project_id, message):
     db.add(Activity(project_id=project_id, message=message))
     project = db.get(Project, project_id)
@@ -95,6 +139,8 @@ def serialize(obj, exclude=()):
     }
     if isinstance(obj, Node):
         result["attrs"] = json.loads(result["attrs"])
+    if isinstance(obj, Knowledge):
+        result["content"] = json.loads(result["content"])
     if isinstance(obj, Scan):
         result["command"] = json.loads(result["command"])
         result["options"] = json.loads(result["options"])

@@ -63,7 +63,7 @@ beforeEach(() => {
     if (path === '/projects' && method === 'POST') return { ...project, ...(body as any) };
     if (path === '/projects') return [project];
     if (path === '/tools') return [{ name: 'Nmap', installed: true, path: '/usr/bin/nmap' }];
-    if (path === '/projects/lab') return detail;
+    if (path === '/projects/lab?compact=true') return detail;
     if (path === '/scans/scan-1') return { ...detail.scans[0], output: 'Actual output' };
     return { saved: true };
   });

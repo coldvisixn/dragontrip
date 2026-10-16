@@ -6,7 +6,7 @@ import time
 from PIL import Image, ImageStat
 
 
-def capture_ui(destination: Path, timeout=20):
+def capture_ui(destination: Path, timeout=20, theme="dark"):
     deadline = time.monotonic() + timeout
     destination.parent.mkdir(parents=True, exist_ok=True)
     last = "application window unavailable"
@@ -30,9 +30,11 @@ def capture_ui(destination: Path, timeout=20):
             # Inspect workspace pixels, excluding title bar and navigation sidebar.
             region = image.convert("L").crop((max(0, x + 240), max(0, y + 90), right, bottom))
             low, high = region.getextrema()
-            mean = ImageStat.Stat(region).mean[0]
-            if high - low > 40 and 5 < mean < 150:
+            statistics = ImageStat.Stat(region)
+            mean, deviation = statistics.mean[0], statistics.stddev[0]
+            expected_brightness = 150 < mean < 254.8 if theme == "light" else 5 < mean < 150
+            if high - low > 40 and deviation > 8 and expected_brightness:
                 return
-            last = f"webview pixels are blank/unpainted: range={low}..{high}, mean={mean:.1f}"
+            last = f"webview pixels are blank/unpainted for {theme} theme: range={low}..{high}, mean={mean:.1f}, deviation={deviation:.1f}"
         time.sleep(.3)
     raise RuntimeError(last + f"; display screenshot: {destination}")

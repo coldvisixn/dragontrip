@@ -1,0 +1,46 @@
+{
+  "runtime": "Chromium production frontend + Python backend; manual fixtures only",
+  "version": "0.4.0",
+  "viewport": "1366x768",
+  "samples": [
+    {
+      "count": 100,
+      "backend_rss_mib": 77,
+      "graph_open_ms": 1088,
+      "overview_dom_nodes": 100,
+      "focused_dom_nodes": 9,
+      "compact_payload_kib": 27,
+      "js_heap_mib": 10.1,
+      "drag_frame_median_ms": 17,
+      "drag_frame_p95_ms": 17,
+      "frame_samples": 35,
+      "minimap_enabled": true
+    },
+    {
+      "count": 300,
+      "backend_rss_mib": 78,
+      "graph_open_ms": 985,
+      "overview_dom_nodes": 300,
+      "focused_dom_nodes": 9,
+      "compact_payload_kib": 80,
+      "js_heap_mib": 42.6,
+      "drag_frame_median_ms": 17,
+      "drag_frame_p95_ms": 17,
+      "frame_samples": 33,
+      "minimap_enabled": true
+    },
+    {
+      "count": 1000,
+      "backend_rss_mib": 80,
+      "graph_open_ms": 1051,
+      "overview_dom_nodes": 1000,
+      "focused_dom_nodes": 9,
+      "compact_payload_kib": 265,
+      "js_heap_mib": 54.2,
+      "drag_frame_median_ms": 17,
+      "drag_frame_p95_ms": 17,
+      "frame_samples": 32,
+      "minimap_enabled": false
+    }
+  ]
+}

@@ -134,9 +134,10 @@ def target(value, tool):
     return urlunsplit((url.scheme, url.netloc, url.path or "/", "", ""))
 
 
-async def discover(only=None):
+async def discover(only=None, overrides=None):
     async def check(key, label):
-        path = shutil.which(key + "-toolkit") if key == "httpx" else None
+        path = (overrides or {}).get(key)
+        path = path or (shutil.which(key + "-toolkit") if key == "httpx" else None)
         path = path or shutil.which(key)
         info = {"id": key, "name": label, "path": path, "installed": bool(path)}
         if not path:

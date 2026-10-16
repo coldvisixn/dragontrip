@@ -12,16 +12,16 @@ class Placement:
             self.add(node.x or 0, node.y or 0)
 
     def add(self, x, y):
-        self.cells.setdefault((int(x // 250), int(y // 115)), []).append((x, y))
+        self.cells.setdefault((int(x // 250), int(y // 175)), []).append((x, y))
 
     def reserve(self, x, y):
         base = (max(-500000, min(500000, x)), max(-500000, min(500000, y)))
         cursor = self.cursors.get(base, 0)
         for index in range(cursor, cursor + 100000):
-            x, y = base[0] + (index // 12) * 280, base[1] + (index % 12) * 125
-            column, row = int(x // 250), int(y // 115)
+            x, y = base[0] + (index // 12) * 280, base[1] + (index % 12) * 185
+            column, row = int(x // 250), int(y // 175)
             occupied = any(
-                abs(x - px) < 250 and abs(y - py) < 115
+                abs(x - px) < 250 and abs(y - py) < 175
                 for dx in (-1, 0, 1)
                 for dy in (-1, 0, 1)
                 for px, py in self.cells.get((column + dx, row + dy), [])

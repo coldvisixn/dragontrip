@@ -38,6 +38,7 @@ with tempfile.TemporaryDirectory(prefix="dragontrip-smoke-") as storage:
     try:
         p=request("/projects",{"name":"Frozen backend smoke"})
         node=request(f"/projects/{p['id']}/nodes",{"label":"Saved object","x":123,"y":456})
+        finding=request(f"/projects/{p['id']}/knowledge",{"kind":"finding","title":"Unicode persistence","content":{"body":"я"*12000,"remediation":"ф"*6000}})
     finally:
         proc.terminate()
         proc.wait(timeout=10)
@@ -46,6 +47,9 @@ with tempfile.TemporaryDirectory(prefix="dragontrip-smoke-") as storage:
         result=request(f"/projects/{p['id']}")
         assert result["nodes"][0]["x"]==123
         assert result["nodes"][0]["id"]==node["id"]
+        restored=request(f"/projects/{p['id']}/knowledge/{finding['id']}")
+        assert restored["content"]["body"]=="я"*12000
+        assert restored["content"]["remediation"]=="ф"*6000
         print("Frozen backend HTTP + migrations + restart persistence: PASS")
     finally:
         proc.terminate()
