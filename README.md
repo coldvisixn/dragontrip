@@ -4,11 +4,11 @@
 
 Local security workspace for Kali Linux: Tauri 2 + React/TypeScript + Python/FastAPI + SQLite. Phase 2 recon automation: Nmap, WhatWeb, ProjectDiscovery httpx and ffuf, with a persistent infrastructure graph and bounded task queue.
 
-**Current implementation: 0.4.0.** Phases 1–4 are implemented: recon automation, an investigation knowledge graph, Markdown/evidence/Timeline/search, encrypted credentials, portable projects, appearance/tool settings and graph/navigation improvements. [Phase 4](docs/PHASE4.md) records current validation and package details; [ROADMAP](docs/ROADMAP.md) maps the requested scope. Local build output is not a published release. The earlier [0.2.0 release run](https://github.com/coldvisixn/dragontrip/actions/runs/38792713976) contains only Phase 2.
+**Current implementation: 0.5.0.** Phases 1–4 are implemented: recon automation, an investigation knowledge graph, Markdown/evidence/Timeline/search, encrypted credentials, portable projects, appearance/tool settings and graph/navigation improvements. [Phase 4](docs/PHASE4.md) records current validation and package details; [ROADMAP](docs/ROADMAP.md) maps the requested scope. Local build output is not a published release. The earlier [0.2.0 release run](https://github.com/coldvisixn/dragontrip/actions/runs/38792713976) contains only Phase 2.
 
 ## Investigation planning and reporting additions
 
-This branch extends the completed 0.4.0 workspace with a persistent task board (owners, deadlines, priorities and object links), a project progress/risk overview, and configurable Markdown reports with preview and private Downloads export. Tasks participate in search, Timeline and portable project archives. See [planning and reporting](docs/PLANNING.md) for usage, verification and compatibility limits. These additions are not a published desktop release.
+This branch extends the completed 0.4.0 workspace with a persistent task board (owners, deadlines, priorities and object links), a project progress/risk overview, and configurable Markdown reports with preview and private Downloads export. Tasks participate in search, Timeline and portable project archives. See [planning and reporting](docs/PLANNING.md) for usage, verification and compatibility limits. A local 0.5.0 Debian package has passed installed-Debian native acceptance; see [build verification](docs/BUILD-0.5.0.md). It has not been published as a GitHub release.
 
 ## Implemented
 
@@ -78,7 +78,7 @@ source .venv/bin/activate
 npm run desktop:build
 python scripts/smoke-packaged.py
 ls src-tauri/target/release/bundle/deb/*.deb
-sudo apt install ./src-tauri/target/release/bundle/deb/dragontrip_0.4.0_amd64.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/dragontrip_0.5.0_amd64.deb
 dragontrip
 # Uninstall (user projects remain):
 sudo apt remove dragontrip

@@ -1,13 +1,13 @@
 # Установка DRAGONTRIP на Kali Linux
 
-Текущая версия — `0.4.0`, архитектура x86_64. Локально собранный пакет находится в `src-tauri/target/release/bundle/deb/dragontrip_0.4.0_amd64.deb`; рядом — `dragontrip_0.4.0_amd64.deb.sha256`. Новая версия пока не опубликована в старом артефакте 0.2.0. После запуска нового CI пакет будет доступен в артефакте **dragontrip-linux-amd64** [workflow](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml).
+Текущая версия — `0.5.0`, архитектура x86_64. Локально собранный пакет находится в `src-tauri/target/release/bundle/deb/dragontrip_0.5.0_amd64.deb`; рядом — `dragontrip_0.5.0_amd64.deb.sha256`. Новая версия пока не опубликована в старом артефакте 0.2.0. После запуска нового CI пакет будет доступен в артефакте **dragontrip-linux-amd64** [workflow](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml).
 
 Скопируйте пакет и файл SHA-256 на Kali, затем откройте терминал в этой папке:
 
 ```bash
-sha256sum --check dragontrip_0.4.0_amd64.deb.sha256
+sha256sum --check dragontrip_0.5.0_amd64.deb.sha256
 sudo apt update
-sudo apt install ./dragontrip_0.4.0_amd64.deb nmap whatweb httpx-toolkit ffuf
+sudo apt install ./dragontrip_0.5.0_amd64.deb nmap whatweb httpx-toolkit ffuf
 ```
 
 Запустите **Dragontrip** из меню приложений или командой:
@@ -32,7 +32,7 @@ dragontrip
 sudo apt remove dragontrip
 ```
 
-Версия 0.4.0 собрана и проверяется в Debian-контейнере с настоящим Tauri/WebKit. Исторические результаты 0.2.0 на Kali не являются проверкой нового пакета. Состояние нового выпуска и измерения: [PHASE4.md](PHASE4.md); предыдущие результаты: [VALIDATION.md](VALIDATION.md). Проверка вашей VirtualBox VM остаётся отдельной.
+Версия 0.5.0 собрана и проверена в Debian-контейнере с настоящим Tauri/WebKit. Исторические результаты 0.2.0 на Kali не являются проверкой нового пакета. Состояние нового выпуска и измерения: [BUILD-0.5.0.md](BUILD-0.5.0.md); предыдущие результаты: [VALIDATION.md](VALIDATION.md). Проверка вашей VirtualBox VM остаётся отдельной.
 
 Сборка из исходников описана в [README.md](../README.md).
 

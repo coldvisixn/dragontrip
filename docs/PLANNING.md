@@ -31,4 +31,4 @@ Reports support up to 10,000 records per source section and an 8 MiB knowledge-c
 - Frozen backend: PyInstaller build and packaged migrations/restart smoke pass; the planning browser scenario also passes with the production Vite assets and frozen sidecar.
 - Screenshots: `docs/screenshots/phase5-{task-board,project-overview,report}.png` show explicitly manual test fixtures.
 
-Run browser acceptance after starting Vite on localhost:1420. Set `DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend` to run against the frozen sidecar, and `SCREENSHOT_DIR` to retain screenshots. Desktop package and installed-Kali acceptance must be rerun before publishing a release containing these changes.
+Run browser acceptance after starting Vite on localhost:1420. Set `DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend` to run against the frozen sidecar, and `SCREENSHOT_DIR` to retain screenshots. The 0.5.0 Debian package and installed-Debian native checks now pass; see [BUILD-0.5.0.md](BUILD-0.5.0.md). Installed-Kali/VirtualBox acceptance remains separate.
