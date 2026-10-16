@@ -1,6 +1,6 @@
 # Dragontrip 0.5.0 local Debian build
 
-This package includes the task board, project overview and Markdown reports from planning commit `3a8023f`, with synchronized 0.5.0 version metadata. It was built locally; no GitHub release has been published by this task.
+This package includes the task board, project overview and Markdown reports from planning commit `3a8023f`, with synchronized 0.5.0 version metadata. This record describes the local build. Tagged CI releases rebuild from source and attach their own installer/checksum; those artifacts can differ from this local package.
 
 ## Artifact
 

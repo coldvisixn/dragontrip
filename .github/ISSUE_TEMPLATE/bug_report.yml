@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a reproducible Dragontrip problem.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "Use a redacted lab fixture. Keep credentials, tokens and confidential assessment evidence out of public reports. For implementation vulnerabilities, see SECURITY.md."
+  - type: input
+    id: version
+    attributes:
+      label: Dragontrip version and installation method
+      placeholder: "0.5.0, .deb from Releases"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Distribution, architecture and desktop/VM
+      placeholder: "Kali Rolling amd64, XFCE, VirtualBox with 4 GB RAM"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Describe the smallest repeatable case using non-sensitive data.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted logs or screenshots
+      description: Optional. Include the relevant error and tool/WebKit version when available.

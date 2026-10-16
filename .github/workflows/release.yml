@@ -1,0 +1,136 @@
+name: Publish Linux release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate tag, version metadata and release notes
+        id: version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, tomllib
+          from pathlib import Path
+          version = json.loads(Path('package.json').read_text())['version']
+          assert re.fullmatch(r'\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?', version), version
+          assert os.environ['RELEASE_TAG'] == 'v' + version, 'Tag must match package.json'
+          assert json.loads(Path('package-lock.json').read_text())['version'] == version
+          assert json.loads(Path('src-tauri/tauri.conf.json').read_text())['version'] == version
+          assert tomllib.loads(Path('src-tauri/Cargo.toml').read_text())['package']['version'] == version
+          assert Path('docs/releases/' + os.environ['RELEASE_TAG'] + '.md').is_file(), 'Add release notes before tagging'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              print('version=' + version, file=output)
+          PY
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: '1.99.0'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          cache-on-failure: true
+      - name: Install Linux build and native-test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf nmap webkit2gtk-driver xvfb xauth dbus-x11 scrot xdotool
+      - run: bash scripts/setup.sh
+      - name: Backend and UI tests
+        env:
+          DRAGONTRIP_LIVE_TEST: '1'
+        run: |
+          .venv/bin/python -m pytest -q
+          npm test
+      - name: Build desktop installer
+        run: |
+          source .venv/bin/activate
+          npm run desktop:build
+          python scripts/smoke-packaged.py
+      - name: Verify package metadata and checksum
+        env:
+          PACKAGE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          package="dragontrip_${PACKAGE_VERSION}_amd64.deb"
+          directory=src-tauri/target/release/bundle/deb
+          test "$(dpkg-deb --field "$directory/$package" Version)" = "$PACKAGE_VERSION"
+          test "$(dpkg-deb --field "$directory/$package" Architecture)" = amd64
+          (cd "$directory" && sha256sum --check "$package.sha256")
+          dpkg-deb --extract "$directory/$package" "$RUNNER_TEMP/dragontrip-native"
+      - name: Install native test driver
+        run: cargo install tauri-driver --version 2.1.0 --locked
+      - name: Test packaged planning and reporting in WebKit
+        env:
+          GSETTINGS_BACKEND: memory
+          DRAGONTRIP_VALIDATION_DIR: ${{ runner.temp }}/release-validation
+        run: |
+          xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-planning-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-amd64
+          if-no-files-found: error
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/deb/*.deb.sha256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-native-validation
+          if-no-files-found: ignore
+          path: ${{ runner.temp }}/release-validation
+
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-linux-amd64
+          path: release-assets
+      - name: Publish verified installer and checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          package="dragontrip_${version}_amd64.deb"
+          (cd release-assets && sha256sum --check "$package.sha256")
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            echo "Release already exists; refusing to replace published assets."
+            exit 1
+          fi
+          flags=()
+          if [[ "$version" == 0.* || "$version" == *-* ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$RELEASE_TAG" \
+            --verify-tag \
+            --title "Dragontrip $version" \
+            --notes-file "docs/releases/$RELEASE_TAG.md" \
+            "${flags[@]}" \
+            "release-assets/$package" \
+            "release-assets/$package.sha256"

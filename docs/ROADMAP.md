@@ -1,23 +1,29 @@
-# Delivery roadmap
+# Roadmap
 
-This checklist covers the four requested phases. A feature is implemented only with working persistence and a usable interface; release verification is tracked separately from implementation.
+This page separates implemented capabilities from future priorities. [CHANGELOG.md](../CHANGELOG.md) records version changes; [build evidence](BUILD-0.5.0.md) records platform-specific verification.
 
-1. **Desktop MVP** (existing): Tauri lifecycle, projects, Nmap, graph, Inspector, SQLite migrations, Debian packaging.
-2. **Recon automation** (implemented; all four tool adapters verified locally): Quick/Full/Service profiles, WhatWeb/ProjectDiscovery httpx/ffuf, FIFO concurrency, cancellation/recovery, parsed evidence, recommendations, scan history.
-3. **Attack knowledge graph**
-   - Existing: editable typed custom objects, manual relationships, ordered path builder, findings, linked notes, encrypted credentials.
-   - Implemented: safe Markdown preview, evidence/screenshot attachments, references from knowledge records, project Timeline and unified knowledge search.
-4. **Product polish**
-   - Data: versioned project archives with checksums, preserved evidence and remapped identities, validated transactional import into a new project; explicit handling of credential portability.
-   - Configuration: validated tool executable locations and detection, persistent theme/accent/density/reduced-motion preferences.
-   - Graph: slim graph payloads, incremental metadata updates, stable viewport persistence, selected-object focusing, low-detail large-graph mode and resource measurements.
-   - UX: keyboard navigation and actions, searchable command palette, project/object/knowledge navigation, focus management, accessible controls, helpful empty/error/loading states.
-   - Delivery: extension documentation, functional/performance checks, frontend/frozen-backend/native build and acceptance, versioned Debian package and checksum.
+## Available in 0.5.0
 
-Implementation order is data contracts and migration → API and validation → UI → integration/performance verification → release documentation. Existing projects and manual content must survive upgrades. Paths remain user-authored investigation plans; no automatic exploitation is included.
+- Local projects, SQLite migrations and Tauri-managed Python backend.
+- Nmap/WhatWeb/ProjectDiscovery httpx/ffuf adapters, validated profiles, bounded queue, cancellation/recovery and scan artifacts/history.
+- Persistent infrastructure graph, editable custom objects/manual relationships, Inspector, saved coordinates/viewport and large-graph refinements.
+- Notes, findings, manually authored paths, Markdown, evidence attachments, Timeline and unified search.
+- Encrypted credential vault and versioned project archives with optional encrypted credential transfer.
+- Task planning, project progress/risk overview and configurable Markdown reports.
+- Appearance/tool settings, keyboard navigation and a searchable command palette.
+- Debian packaging, checksums and tagged GitHub release workflow.
 
-All four feature phases are implemented in 0.4.0. The local Debian package, browser/frozen-backend scenarios, all four real recon adapters, installed desktop launcher and expanded native workflow have passed. Release publication, a fresh Kali CI run (cloud repository access is denied), and the user’s VirtualBox hardware acceptance are separate outstanding release gates. Evidence and exact limits are in [PHASE4.md](PHASE4.md).
+## Next priorities
 
-## Next workspace additions
+- Complete and maintain fresh Kali Rolling installed-package CI and real 4 GB VirtualBox acceptance.
+- Benchmark larger engagements before increasing graph/archive limits; improve resource use based on measurements.
+- Add explicit evidence-retention management beyond manual artifact cleanup.
+- Improve report composition persistence and evaluate additional export formats.
+- Broaden target/adapter scope only with validated behavior, preserved evidence and regression coverage.
+- Improve onboarding and accessibility using feedback from real assessment workflows.
 
-Implemented on top of 0.4.0: persistent investigation task board, aggregated project progress/risk overview and configurable Markdown reporting. See [PLANNING.md](PLANNING.md) for current behavior and verification; desktop release acceptance remains separate.
+These are priorities, not promised delivery dates. Windows/macOS/ARM support, hostname/CIDR/IPv6 scope and PDF/HTML reports are not implemented. Investigation paths remain manual plans; automatic exploitation is not part of the current product.
+
+## Implementation history
+
+[Phase 2: recon](PHASE2.md) · [Phase 3: knowledge/vault](PHASE3.md) · [Phase 4: product polish](PHASE4.md) · [Planning/reporting](PLANNING.md)

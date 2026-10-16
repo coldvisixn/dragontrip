@@ -1,5 +1,28 @@
 name: Linux build and verification
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'README*.md'
+      - 'CHANGELOG.md'
+      - 'CONTRIBUTING.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - 'README*.md'
+      - 'CHANGELOG.md'
+      - 'CONTRIBUTING.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 jobs:
   verify:
     runs-on: ubuntu-24.04
@@ -7,6 +30,10 @@ jobs:
       package_built: ${{ steps.package.outcome == 'success' }}
     steps:
       - uses: actions/checkout@v5
+      - name: Resolve package version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          echo "DRAGONTRIP_DEB=dragontrip_${version}_amd64.deb" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
@@ -86,6 +113,9 @@ jobs:
             DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
             node scripts/workspace-smoke.cjs
           CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
+            DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
+            node scripts/planning-smoke.cjs
+          CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
             PROFILE_OUTPUT=docs/product-browser-profile.json node scripts/profile-graph.cjs
       - name: Prepare native test driver
         run: cargo install tauri-driver --locked
@@ -117,7 +147,7 @@ jobs:
       - name: Native packaged application test
         id: native
         run: |
-          dpkg-deb -x src-tauri/target/release/bundle/deb/dragontrip_0.4.0_amd64.deb "$RUNNER_TEMP/dragontrip-native"
+          dpkg-deb -x "src-tauri/target/release/bundle/deb/$DRAGONTRIP_DEB" "$RUNNER_TEMP/dragontrip-native"
           set -o pipefail
           xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip" --profile 2>&1 | tee native-check.log
       - name: Native failure diagnostics
@@ -145,8 +175,8 @@ jobs:
         with:
           name: dragontrip-linux-amd64
           path: |
-            src-tauri/target/release/bundle/deb/dragontrip_0.4.0_amd64.deb
-            src-tauri/target/release/bundle/deb/dragontrip_0.4.0_amd64.deb.sha256
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/deb/*.deb.sha256
             docs/native-profile.json
             docs/product-browser-profile.json
             docs/screenshots/native-graph.png
@@ -220,7 +250,9 @@ jobs:
           path: test-driver
       - name: Install actual Debian package on Kali
         run: |
-          DEBIAN_FRONTEND=noninteractive apt-get install -y ./artifact/src-tauri/target/release/bundle/deb/dragontrip_0.4.0_amd64.deb
+          mapfile -t packages < <(find artifact -type f -name 'dragontrip_*_amd64.deb')
+          test "${#packages[@]}" -eq 1
+          DEBIAN_FRONTEND=noninteractive apt-get install -y "./${packages[0]}"
           dpkg-query -W dragontrip
           nmap --version
           chmod +x test-driver/tauri-driver

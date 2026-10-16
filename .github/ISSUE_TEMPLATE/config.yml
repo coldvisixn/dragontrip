@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Installation and troubleshooting
+    url: https://github.com/coldvisixn/dragontrip/blob/main/docs/INSTALL.md
+    about: Download, install, upgrade and troubleshoot the desktop package.
+  - name: Security reporting
+    url: https://github.com/coldvisixn/dragontrip/blob/main/SECURITY.md
+    about: Read the private-reporting guidance before disclosing an implementation vulnerability.
