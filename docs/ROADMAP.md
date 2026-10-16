@@ -15,7 +15,7 @@ This page separates implemented capabilities from future priorities. [CHANGELOG.
 
 ## Next priorities
 
-- Complete and maintain fresh Kali Rolling installed-package CI and real 4 GB VirtualBox acceptance.
+- Maintain Kali Rolling installed-package CI and complete real 4 GB VirtualBox acceptance.
 - Benchmark larger engagements before increasing graph/archive limits; improve resource use based on measurements.
 - Add explicit evidence-retention management beyond manual artifact cleanup.
 - Improve report composition persistence and evaluate additional export formats.

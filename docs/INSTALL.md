@@ -11,7 +11,7 @@ Open [Releases](https://github.com/coldvisixn/dragontrip/releases/tag/v0.5.0) an
 
 GitHub's automatically generated **Source code (zip/tar.gz)** downloads are source snapshots. They do not contain a ready-to-run application. Actions artifacts are intended for development builds; Releases is the user download page.
 
-Version 0.5.0 is an early preview. The local package was checked on Debian 13 with WebKitGTK 2.54; published workflow builds record their own platform and checks. The intended primary environment is current Kali Linux x86_64. Windows, macOS, ARM, older distribution compatibility and a specific VM performance guarantee are not provided.
+Version 0.5.0 is an early preview. The local package was checked on Debian 13 with WebKitGTK 2.54; published workflow builds record their own platform and checks. [Installed Kali Rolling CI](https://github.com/coldvisixn/dragontrip/actions/runs/38942229914) also passed for the release commit. The intended primary environment is current Kali Linux x86_64. Windows, macOS, ARM, older distribution compatibility and a specific VM performance guarantee are not provided.
 
 Check your architecture with `dpkg --print-architecture`; this package requires `amd64`.
 

@@ -19,7 +19,7 @@ An offline-first desktop workspace for security assessments: discover infrastruc
 
 Dragontrip keeps recon results, infrastructure relationships, notes, findings, evidence and follow-up tasks in one local project. It is designed for Kali Linux users working on authorized assessments, labs and investigation workflows.
 
-**Current version: 0.5.0 — early preview.** An installable Debian package is available for Linux x86_64 (`amd64`). The local package has passed installed-Debian/WebKit checks; Kali Rolling CI and testing on a 4 GB VirtualBox VM are tracked separately. Windows, macOS and ARM packages are not provided.
+**Current version: 0.5.0 — early preview.** An installable Debian package is available for Linux x86_64 (`amd64`). The local package has passed installed-Debian/WebKit checks, and [installed Kali Rolling CI](https://github.com/coldvisixn/dragontrip/actions/runs/38942229914) has passed for the release commit. Testing on a 4 GB VirtualBox VM remains separate. Windows, macOS and ARM packages are not provided.
 
 ## Get started
 

@@ -15,6 +15,8 @@ The public installer was downloaded without GitHub authentication and verified a
 
 This CI-built Ubuntu 24.04 artifact differs from the earlier local Debian build below. Use the checksum attached to the release when verifying a downloaded installer.
 
+[The Linux verification run](https://github.com/coldvisixn/dragontrip/actions/runs/38942229914) for release commit `8cdadff` also passed all three jobs: `verify`, `kali-preflight` and `kali-installed`. That job installed its own CI-built package on Kali Rolling and checked recon, launcher/native workflows and data retention on uninstall. This does not replace real VirtualBox hardware acceptance.
+
 ## Earlier local artifact
 
 - File: `src-tauri/target/release/bundle/deb/dragontrip_0.5.0_amd64.deb`

@@ -11,7 +11,7 @@
 
 Архивы **Source code (zip/tar.gz)** — исходники для разработчиков, а не готовая программа. Артефакты Actions нужны для тестовых сборок; обычное скачивание находится в Releases.
 
-Версия 0.5.0 — ранняя preview-версия для Linux x86_64. Проверьте архитектуру командой `dpkg --print-architecture`: нужна `amd64`. Сборок для ARM, Windows и macOS сейчас нет. Локальный пакет проверен на Debian 13 с настоящим Tauri/WebKit; результаты Kali CI и вашей VirtualBox VM учитываются отдельно.
+Версия 0.5.0 — ранняя preview-версия для Linux x86_64. Проверьте архитектуру командой `dpkg --print-architecture`: нужна `amd64`. Сборок для ARM, Windows и macOS сейчас нет. Локальный пакет проверен на Debian 13 с настоящим Tauri/WebKit; [Kali Rolling CI](https://github.com/coldvisixn/dragontrip/actions/runs/38942229914) для release-коммита также прошёл. Проверка вашей VirtualBox VM остаётся отдельной.
 
 ## Проверить и установить
 
