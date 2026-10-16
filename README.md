@@ -21,6 +21,12 @@ Dragontrip keeps recon results, infrastructure relationships, notes, findings, e
 
 **Current version: 0.5.0 — early preview.** An installable Debian package is available for Linux x86_64 (`amd64`). The local package has passed installed-Debian/WebKit checks, and [installed Kali Rolling CI](https://github.com/coldvisixn/dragontrip/actions/runs/38942229914) has passed for the release commit. Testing on a 4 GB VirtualBox VM remains separate. Windows, macOS and ARM packages are not provided.
 
+**Research foundation (0.6.0):** Adds project scope, offline Nmap/Burp/Nuclei imports and an application-focused web map. The published download above remains 0.5.0. See [scope/import usage and exact limitations](docs/IMPORTS.md), [audit and staged plan](docs/RESEARCH-WORKSPACE.md), and [local build verification](docs/BUILD-0.6.0.md).
+
+**0.7.0 development update:** four-state methodologies and guided, saved recon sequences now complement the 0.6.0 import/web-map stage. [Usage and limitations](docs/METHODOLOGIES.md) · [Local package verification](docs/BUILD-0.7.0.md).
+
+**0.7.1:** a grouped sidebar, section tabs and a persistent compact mode simplify navigation. [Screenshots and behavior](docs/NAVIGATION.md).
+
 ## Get started
 
 1. Open [Releases](https://github.com/coldvisixn/dragontrip/releases/tag/v0.5.0) and download **`dragontrip_0.5.0_amd64.deb`** and its **`.sha256`** file from **Assets**. GitHub's “Source code” archives are for developers.

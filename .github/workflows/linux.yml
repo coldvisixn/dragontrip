@@ -116,6 +116,15 @@ jobs:
             DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
             node scripts/planning-smoke.cjs
           CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
+            DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
+            node scripts/research-smoke.cjs
+          CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
+            DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
+            node scripts/navigation-smoke.cjs
+          CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
+            DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
+            node scripts/methodology-smoke.cjs
+          CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
             PROFILE_OUTPUT=docs/product-browser-profile.json node scripts/profile-graph.cjs
       - name: Prepare native test driver
         run: cargo install tauri-driver --locked
@@ -150,6 +159,12 @@ jobs:
           dpkg-deb -x "src-tauri/target/release/bundle/deb/$DRAGONTRIP_DEB" "$RUNNER_TEMP/dragontrip-native"
           set -o pipefail
           xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip" --profile 2>&1 | tee native-check.log
+      - name: Native research workspace acceptance
+        run: xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-research-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
+      - name: Native methodology and workflow acceptance
+        run: xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-methodology-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
+      - name: Native grouped navigation acceptance
+        run: xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-navigation-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
       - name: Native failure diagnostics
         if: failure() && steps.native.outcome == 'failure'
         run: |

@@ -10,6 +10,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { api, type Detail } from './api';
+import { Observations } from './Research';
 import Markdown, { MarkdownPreview } from './Markdown';
 import { AttachmentLinks, LinkedEvidence } from './Evidence';
 
@@ -668,6 +669,9 @@ export default function Knowledge({
                 )}
                 {!selected.content.node_ids.length && <p className="muted">No linked objects.</p>}
               </div>
+              {kind === 'finding' && (
+                <Observations key={selected.id} pid={pid} findingId={selected.id} />
+              )}
               <LinkedEvidence pid={pid} ids={selected.content.attachment_ids || []} />
               <h3>Source scans</h3>
               <div className="linked-items">
@@ -681,7 +685,7 @@ export default function Knowledge({
                 )}
               </div>
               <small>
-                Updated {new Date(selected.updated).toLocaleString()} · Authored manually
+                Updated {new Date(selected.updated).toLocaleString()} · Investigation record
               </small>
               <div className="dialog-actions">
                 <button className="danger-button" disabled={deleting} onClick={() => void remove()}>

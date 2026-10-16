@@ -9,7 +9,7 @@ export type Project = {
 };
 export type ObjectNode = {
   id: string;
-  kind: 'host' | 'service' | 'custom' | 'url';
+  kind: 'host' | 'service' | 'custom' | 'url' | 'domain' | 'application' | 'endpoint';
   label: string;
   x: number;
   y: number;

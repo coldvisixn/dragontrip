@@ -62,6 +62,7 @@ beforeEach(() => {
   vi.mocked(api).mockImplementation(async (path, method, body) => {
     if (path === '/projects' && method === 'POST') return { ...project, ...(body as any) };
     if (path === '/projects') return [project];
+    if (path.includes('/observations?')) return { items: [], total: 0 };
     if (path === '/tools') return [{ name: 'Nmap', installed: true, path: '/usr/bin/nmap' }];
     if (path === '/projects/lab?compact=true') return detail;
     if (path === '/scans/scan-1') return { ...detail.scans[0], output: 'Actual output' };
@@ -132,4 +133,24 @@ describe('workspace', () => {
     fireEvent.click(dialog.querySelector('.commands button')!);
     expect(await screen.findByText('Tool integrations')).toBeVisible();
   });
+});
+
+it('keeps tab selection, group memory and collapsed menu through navigation', async () => {
+  render(<App />);
+  await screen.findByText('Workspace overview');
+  fireEvent.click(screen.getByRole('button', { name: /HTB Lab Authorized lab/ }));
+  await screen.findByRole('tab', { name: 'Network Graph' });
+  fireEvent.click(screen.getByRole('tab', { name: 'Hosts' }));
+  expect(screen.getByRole('tab', { name: 'Hosts' })).toHaveAttribute('aria-selected', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Project' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Assets' }));
+  expect(screen.getByRole('tab', { name: 'Hosts' })).toHaveAttribute('aria-selected', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+  await waitFor(() => expect(localStorage.getItem('dragontrip.sidebarCollapsed')).toBe('true'));
+  expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
+  expect(screen.getByRole('tab', { name: 'Project overview' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
 });

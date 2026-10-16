@@ -2,9 +2,14 @@
 
 ## Use the application
 
+- [Grouped navigation and compact sidebar](NAVIGATION.md)
+
 - [Install and update](INSTALL.md) / [Установка на Kali](INSTALL-KALI.md)
 - [Your first investigation](USAGE.md)
 - [Data, encryption, backups and project transfer](DATA.md)
+- [Methodologies and guided recon workflows](METHODOLOGIES.md)
+- [Scope, offline imports and web application map](IMPORTS.md)
+- [Research workspace audit and delivery stages](RESEARCH-WORKSPACE.md)
 - [Planning and report behavior/limits](PLANNING.md)
 - [Changelog](../CHANGELOG.md) and [roadmap](ROADMAP.md)
 

@@ -4,7 +4,8 @@ import os
 import signal
 from pathlib import Path
 
-from .db import Scan, now, record
+from .db import Scan, ScopeRule, now, record
+from .scope import classify
 from .graph import ingest, ingest_web
 from . import nmap, recon
 
@@ -102,6 +103,14 @@ class TaskManager:
         try:
             with self.sessions() as db:
                 scan = db.get(Scan, scan_id)
+                rules = list(db.query(ScopeRule).filter_by(project_id=scan.project_id))
+                scope_required = json.loads(scan.options).get("scope_required", False)
+                if (scope_required and not rules) or (
+                    rules and classify(rules, scan.target) != "included"
+                ):
+                    raise ValueError(
+                        "Project scope changed while queued; target is no longer included"
+                    )
                 args = json.loads(scan.command)
                 scan.status = "running"
                 scan.started = now()

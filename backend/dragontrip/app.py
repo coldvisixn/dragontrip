@@ -40,6 +40,10 @@ from .evidence import register_evidence
 from .product import register_product
 from .reporting import register_reporting
 from .archives import register_archives
+from .scope import register_scope, classify
+from .imports import register_imports
+from .db import ScopeRule
+from .methodologies import register_methodologies
 
 
 class ProjectInput(BaseModel):
@@ -57,6 +61,7 @@ class ProjectInput(BaseModel):
 class ScanInput(BaseModel):
     target: str = Field(max_length=1000)
     authorized: Literal[True]
+    scope_required: bool = False
     profile: str = "quick"
     confirmed: bool = False
     service_node: str | None = Field(default=None, max_length=300)
@@ -214,6 +219,8 @@ def create_app(token: str, root: Path | None = None, dev=False):
         lifespan=lifespan,
     )
     app.state.sessions, app.state.manager = sessions, manager
+    app.state.research_lock = threading.RLock()
+    app.state.workflow_launch_lock = asyncio.Lock()
 
     @app.middleware("http")
     async def guard(request: Request, call_next):
@@ -241,7 +248,9 @@ def create_app(token: str, root: Path | None = None, dev=False):
         ):
             return Response(status_code=401, headers=cors)
         upload = request.method == "POST" and (
-            request.url.path.endswith("/attachments") or request.url.path == "/imports"
+            request.url.path.endswith("/attachments")
+            or request.url.path == "/imports"
+            or "/tool-import/" in request.url.path
         )
         limit = (
             140 * 1024 * 1024
@@ -270,6 +279,8 @@ def create_app(token: str, root: Path | None = None, dev=False):
             raise HTTPException(404, "Project not found")
         return item
 
+    register_scope(app, sessions, project)
+    register_imports(app, sessions, project, root)
     register_workspace(app, sessions, project)
     register_reporting(app, sessions, project)
     register_vault(app, sessions, project)
@@ -576,6 +587,13 @@ def create_app(token: str, root: Path | None = None, dev=False):
             destination = recon.target(body.target, profile["tool"])
         except ValueError as exc:
             raise HTTPException(422, str(exc))
+        with sessions() as db:
+            project(db, pid)
+            rules = list(db.query(ScopeRule).filter_by(project_id=pid))
+            if (body.scope_required and not rules) or (
+                rules and classify(rules, destination) != "included"
+            ):
+                raise HTTPException(422, "Target is outside explicit project scope")
         if body.service_node and profile["id"] == "service":
             with sessions() as db:
                 node = db.get(Node, body.service_node)
@@ -628,13 +646,23 @@ def create_app(token: str, root: Path | None = None, dev=False):
                 )
         with sessions() as db:
             project(db, pid)
+            current_scope = list(db.query(ScopeRule).filter_by(project_id=pid))
+            if (body.scope_required and not current_scope) or (
+                current_scope and classify(current_scope, destination) != "included"
+            ):
+                raise HTTPException(422, "Target is outside current project scope")
             scan = Scan(
                 id=uid(),
                 project_id=pid,
                 target=destination,
                 tool=profile["tool"],
                 profile=profile["id"],
-                options=json.dumps(profile),
+                options=json.dumps(
+                    {
+                        **profile,
+                        "scope_required": body.scope_required or bool(current_scope),
+                    }
+                ),
             )
             extension = "xml" if scan.tool == "nmap" else "json"
             words = manager.artifacts / f"{scan.id}.words"
@@ -734,4 +762,5 @@ def create_app(token: str, root: Path | None = None, dev=False):
                 ),
             )
 
+    register_methodologies(app, sessions, project, profiles, scan, ScanInput, manager)
     return app

@@ -140,12 +140,17 @@ class Driver:
         return self.call("POST", "/execute/sync", {"script": script, "args": list(args)})
 
     def click(self, label):
-        result = self.js("""
-            const b=[...document.querySelectorAll('button')].find(b=>b.textContent.trim()===arguments[0]);
-            if(!b||b.disabled)return false;b.click();return true;
-        """, label)
-        if not result:
-            raise RuntimeError(f"Button unavailable: {label}")
+        def clicked():
+            return self.js("""
+                const label=arguments[0];
+                const tab=[...document.querySelectorAll('[role=tab]')].find(b=>b.textContent.trim()===label);
+                const button=tab||[...document.querySelectorAll('button:not([data-pages])')].find(b=>b.textContent.trim()===label);
+                if(button&&!button.disabled){button.click();return true;}
+                const group=[...document.querySelectorAll('.sidebar nav button[data-pages]')].find(b=>b.dataset.pages.split('|').includes(label));
+                if(group&&!group.disabled){group.click();return group.dataset.pages.split('|').length===1;}
+                return false;
+            """, label)
+        wait_until(clicked)
 
     def fill(self, selector, text):
         wait_until(lambda: self.js("return !!document.querySelector(arguments[0])", selector))
@@ -159,16 +164,8 @@ class Driver:
         self.call("POST", f"/element/{eid}/value", {"text": text, "value": list(text)})
 
     def navigate(self, label, selector):
-        # WebKit can replace the document's active context while React changes pages.
-        # Navigation is idempotent; confirm its destination before another click.
-        def arrived():
-            return self.js("""
-                if(document.querySelector(arguments[1]))return true;
-                const button=[...document.querySelectorAll('nav button')].find(b=>b.textContent.trim()===arguments[0]);
-                if(button&&!button.disabled)button.click();
-                return false;
-            """, label, selector)
-        wait_until(arrived)
+        self.click(label)
+        wait_until(lambda: self.js("return !!document.querySelector(arguments[0])", selector))
 
     def graph(self):
         return self.call("POST", "/execute/async", {"script": """
@@ -344,6 +341,12 @@ def main():
                     driver.js("document.querySelector('.dialog input[type=checkbox]').click()")
                     driver.js("[...document.querySelectorAll('.dialog button')].find(b=>b.textContent.trim()==='Start scan').click()")
                     wait_until(lambda: any(s.get('tool')=='whatweb' and s['status']=='completed' for s in driver.graph().get('scans',[])), 90)
+                    # New application aggregates may place the URL beyond the saved viewport.
+                    # Use the same explicit graph search/focus path available to the user.
+                    web_node = wait_until(lambda: next((n for n in driver.graph()['nodes'] if n['kind'] == 'url'), None))
+                    driver.fill('.graph-search input', web_node['label'])
+                    wait_until(lambda: driver.js("return !!document.querySelector('.search-results button')"))
+                    driver.js("[...document.querySelectorAll('.search-results button')].find(b=>b.textContent.trim()===arguments[0]).click()", web_node['label'])
                     wait_until(lambda: driver.js("return !!document.querySelector('.object-card.url')"))
                     driver.js("document.querySelector('.object-card.url').click()")
                     wait_until(lambda: driver.js("return document.body.textContent.includes('Source evidence · JSON')"))

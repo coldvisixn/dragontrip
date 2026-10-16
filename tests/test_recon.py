@@ -118,7 +118,11 @@ def test_web_results_deduplicate_and_preserve_manual_position(app, tmp_path):
         db.commit()
         ingest_web(db, scan, result)
         db.commit()
-        assert db.query(Node).count() == 2
+        assert db.query(Node).count() == 4
+        assert db.query(Node).filter_by(kind="application").count() == 1
+        endpoint = db.query(Node).filter_by(kind="endpoint").one()
+        assert json.loads(endpoint.attrs)["method"] == "GET"
+        assert json.loads(endpoint.attrs)["scan_id"] == scan.id
         assert db.query(Node).filter_by(kind="url").one().x == 789
         assert len(json.loads(node.attrs)["observations"]) == 1
         empty = Project(name="Empty")

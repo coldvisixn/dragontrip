@@ -27,6 +27,7 @@ type GraphData = {
   category: string;
   subtitle: string;
   status: string;
+  provenance: string;
   tags: string[];
   compact: boolean;
 };
@@ -65,7 +66,7 @@ const ObjectCard = memo(function ObjectCard({ data, selected }: NodeProps<Node<G
       {!compact && (
         <div className="object-footer">
           <span>{data.status}</span>
-          <span>{data.kind === 'custom' ? 'Manual' : 'Observed'}</span>
+          <span>{data.provenance}</span>
         </div>
       )}
       {!compact && data.tags.length > 0 && (
@@ -178,6 +179,12 @@ export default function Graph({
           position: { x: n.x, y: n.y },
           data: {
             compact,
+            provenance:
+              n.kind === 'custom' || n.attrs.source === 'manual'
+                ? 'Manual'
+                : n.attrs.run_id
+                  ? 'Imported'
+                  : 'Observed',
             label: n.label,
             kind: n.kind,
             category: n.kind === 'custom' ? String(n.attrs.category || 'hypothesis') : n.kind,
@@ -195,7 +202,9 @@ export default function Graph({
                   : n.kind === 'host'
                     ? String(n.attrs.state || 'unknown')
                     : [n.attrs.product, n.attrs.version].filter(Boolean).join(' ') ||
-                      'Nmap · observed service',
+                      (n.attrs.origin
+                        ? String(n.attrs.origin)
+                        : String(n.attrs.source || 'Observed service')),
           },
         };
         cache.current.set(n.id, { fingerprint, node });

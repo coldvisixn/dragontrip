@@ -32,7 +32,7 @@ Graph overview requests use `?compact=true`; the selected-object endpoint suppli
 
 ## Project archive contract
 
-`.dtproj` is a ZIP with `manifest.json`, version `1`, format `dragontrip-project`. The manifest contains project metadata, objects, edges, historical scans, knowledge, attachment metadata, events, viewport, credential inclusion flag, and a size/SHA-256 map for every additional entry.
+`.dtproj` is a ZIP with `manifest.json`, version `3` (versions `1` and `2` remain readable), format `dragontrip-project`. The manifest contains project metadata, objects, edges, historical scans, knowledge, attachment metadata, events, viewport, credential inclusion flag, and a size/SHA-256 map for every additional entry. Version 2 adds scope rules, import runs and source observations, with all node/finding/run/attachment references remapped. Old consumers reject version 2. Imported finding and relation suffixes remain stable so later imports deduplicate after transfer.
 
 Only `artifacts/<scan-id>.xml|json`, `attachments/<id>` and optional encrypted `vault.json` entries are allowed. No archive path is extracted directly. Import validates counts, byte budgets, identities, coordinates, references, image types and checksums, writes a fresh project, remaps identities and cleans staged files on transaction failure. Imported active scans become interrupted and never enter the execution queue. Observed node IDs retain their suffix under the new project ID so rescans deduplicate them.
 
@@ -43,3 +43,9 @@ Preserve archive compatibility or add a new version with explicit migration. Cur
 Use `npm test`, `npm run build`, and `DRAGONTRIP_LIVE_TEST=1 .venv/bin/python -m pytest -q`. Browser acceptance is `scripts/workspace-smoke.cjs`; baseline scan/graph acceptance is `scripts/browser-smoke.cjs`. Run these against built frontend assets and the frozen sidecar as well as development source.
 
 `scripts/profile-graph.cjs` creates only explicitly manual fixtures in isolated storage, exercises a persisted drag at 100/300/1,000 objects and reports graph loading, DOM count, payload size, heap and frame intervals. Native acceptance uses actual Tauri/WebKit, the installed package and Xvfb. `DRAGONTRIP_VALIDATION_DIR` selects an isolated output directory. Rebuild Python resources after backend changes before packaging. See `PHASE4.md` for measured results and remaining platform checks.
+
+## Offline import contracts (0.6.0)
+
+`import_formats.py` parses bounded UTF-8 sources without resolving names or launching tools. `scope.py` handles explicit membership and URL origins. `entities.py` shares stable identity/upsert behavior with manual web objects and existing recon. `imports.py` implements read-only preview, stale-preview validation, transactional apply and observation history. Add formats only with real structure fixtures, entity/link tests, source hashes, repeat-import and archive-roundtrip tests. No absent finding may be resolved by an incomplete export. [User-facing limits](IMPORTS.md).
+
+Version 3 adds checklist/workflow/workflow_run knowledge records. Preserve nested service_node/workflow_id/scan_ids remapping. Guided launches delegate to the existing scan handler, with explicit scope required and double-click serialization; do not infer methodology completion from tool results.

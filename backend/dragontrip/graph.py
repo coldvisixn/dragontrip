@@ -119,6 +119,25 @@ def ingest_web(db, scan, results):
     if not results:
         record(db, scan.project_id, f"{scan.tool}: no HTTP responses observed")
         return
+    # Project web observations into the application map; keep legacy URL identities too.
+    from .entities import upsert_objects
+    from .import_formats import web_record
+
+    mapped = [web_record(r["url"], "GET") for r in results]
+    upsert_objects(db, scan.project_id, mapped, scan.tool)
+    for mapped_row, result in zip(mapped, results):
+        endpoint = db.get(Node, scan.project_id + ":" + mapped_row["key"])
+        endpoint.attrs = json.dumps(
+            {
+                **json.loads(endpoint.attrs),
+                "scan_id": scan.id,
+                "technologies": result.get("technologies", []),
+                "status": result["status"],
+                "title": result["title"],
+                "evidence_json": json.dumps(result["evidence"])[:16000],
+                "evidence_truncated": len(json.dumps(result["evidence"])) > 16000,
+            }
+        )
     placement = Placement(db, scan.project_id)
     origin = urlsplit(scan.target)
     host = origin.hostname

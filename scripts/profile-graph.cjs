@@ -1,3 +1,4 @@
+const { navigate } = require('./navigation.cjs');
 /* Repeatable production-browser profile. All generated nodes are manual fixtures. */
 const { chromium } = require('playwright-core');
 const { spawn, execFileSync } = require('node:child_process');
@@ -68,7 +69,7 @@ db.commit()
       ]);
       const started = performance.now();
       await page.goto('http://localhost:1420');
-      await page.getByRole('button', { name: 'Network Graph', exact: true }).click();
+      await navigate(page, 'Network Graph');
       await page.locator('.object-card').first().waitFor();
       const openMs = performance.now() - started;
       await page.waitForTimeout(600);

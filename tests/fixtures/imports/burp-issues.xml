@@ -1,0 +1,6 @@
+<?xml version="1.0"?><!DOCTYPE issues [<!ELEMENT issues (issue*)>]><issues><issue><serialNumber>12</serialNumber><type>1234</type><name>Missing header</name><host ip="10.10.10.10">http://app.htb</host><path>/login</path><location>/login [header]</location><severity>Low</severity><confidence>Firm</confidence><issueDetail>original description</issueDetail><remediationBackground>add header</remediationBackground><requestresponse><request base64="false">GET /login HTTP/1.1
+Host: app.htb
+
+</request><response>HTTP/1.1 200 OK
+
+original</response></requestresponse></issue></issues>

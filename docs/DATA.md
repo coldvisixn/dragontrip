@@ -38,6 +38,10 @@ Credentials are excluded by default. Including them requires an unlocked vault, 
 
 Task records added in 0.5.0 require the updated importer. Earlier archives remain supported by 0.5.0. Current limits include a 128 MiB expanded archive, a 32 MiB manifest, 10,000 objects, 50,000 edges, 5,000 scans/knowledge records, 500 attachments and 10 MiB per attachment. [Archive extension contract](EXTENSIONS.md#project-archive-contract) documents validation.
 
+0.6.0 adds scope, import runs and immutable source observations through additive migration 0005. New archives use format version 2 and include those records and original sources; version 1 remains readable. Older application versions reject version 2. Imported-source attachments are retained by history and cannot be deleted through ordinary attachment cleanup. [Import limits and provenance](IMPORTS.md).
+
+0.7.0 adds methodology/workflow Knowledge records and archive version 3, including run scan IDs and action references. There is no additional physical database migration. Versions 1/2 remain readable. [Methodology/workflow portability and limits](METHODOLOGIES.md).
+
 ## Reports and evidence retention
 
 Markdown reports omit vault records, raw scan output and attachment bytes. They can still include authored sensitive text and evidence filenames. Review the preview before sharing. Downloads exports are private and do not overwrite existing files.

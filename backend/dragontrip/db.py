@@ -13,6 +13,7 @@ from sqlalchemy import (
     Float,
     Integer,
     ForeignKey,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -167,3 +168,37 @@ def data_dir():
         Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
         / "dragontrip"
     )
+
+
+class ScopeRule(Base):
+    __tablename__ = "scope_rules"
+    id = Column(String, primary_key=True)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
+    value = Column(String, nullable=False)
+    mode = Column(String, nullable=False)
+
+
+class ImportRun(Base):
+    __tablename__ = "import_runs"
+    __table_args__ = (
+        UniqueConstraint("project_id", "sha256", name="uq_import_source"),
+    )
+    id = Column(String, primary_key=True, default=uid)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
+    format = Column(String, nullable=False)
+    sha256 = Column(String, nullable=False)
+    attachment_id = Column(String, ForeignKey("attachments.id"), nullable=False)
+    created = Column(String, default=now)
+    summary = Column(Text, nullable=False, default="{}")
+
+
+class Observation(Base):
+    __tablename__ = "observations"
+    id = Column(String, primary_key=True, default=uid)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
+    run_id = Column(String, ForeignKey("import_runs.id"), nullable=False, index=True)
+    node_id = Column(String, ForeignKey("nodes.id"), nullable=False, index=True)
+    finding_id = Column(String, ForeignKey("knowledge.id"), nullable=True)
+    fingerprint = Column(String, nullable=False)
+    locator = Column(String, nullable=False)
+    data = Column(Text, nullable=False)

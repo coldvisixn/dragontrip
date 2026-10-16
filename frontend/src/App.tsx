@@ -14,6 +14,8 @@ import {
 } from 'react';
 import {
   Activity,
+  PanelLeftClose,
+  PanelLeftOpen,
   ListChecks,
   ClipboardList,
   ArrowLeft,
@@ -61,6 +63,16 @@ import Preferences, { useAppearance, type Appearance } from './Preferences';
 import ProjectTransfer from './ProjectTransfer';
 import { ProjectSearch, SearchResults, Timeline, type SearchResult } from './ProjectActivity';
 import { useNavigation } from './navigation';
+import {
+  PrimaryNavigation,
+  SettingsNavigation,
+  SectionTabs,
+  sectionFor,
+  tabId,
+  type WorkspacePage,
+} from './WorkspaceNavigation';
+import { ScopePage, ImportsPage, WebMap, Observations } from './Research';
+import { Methodologies, Workflows } from './Methodologies';
 const Tasks = lazy(() => import('./Tasks'));
 const Reports = lazy(() => import('./Reporting'));
 const ProjectOverview = lazy(() =>
@@ -71,6 +83,11 @@ const Graph = lazy(() => import('./Graph'));
 const Knowledge = lazy(() => import('./Knowledge'));
 const Vault = lazy(() => import('./Vault'));
 const knowledgeNav = [
+  ['Methodologies', ListChecks],
+  ['Recon workflows', Activity],
+  ['Targets & scope', ShieldCheck],
+  ['Import results', ArrowDownToLine],
+  ['Web applications', Globe],
   ['Project overview', ClipboardList],
   ['Task board', ListChecks],
   ['Reports', FileText],
@@ -92,7 +109,7 @@ const nav = [
   ['Tools', Wrench],
   ['Settings', Settings],
 ] as const;
-type Page = (typeof nav)[number][0] | (typeof knowledgeNav)[number][0];
+type Page = WorkspacePage;
 const active = (s: Scan) => s.status === 'running' || s.status === 'queued';
 const date = (s: string) => new Date(s).toLocaleString();
 function Empty({
@@ -182,6 +199,17 @@ export default function App() {
     canForward,
   } = useNavigation<Page>('Dashboard');
   const [appearance, setAppearance] = useAppearance();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem('dragontrip.sidebarCollapsed') === 'true',
+  );
+  const rememberedSections = useRef<Partial<Record<string, WorkspacePage>>>({});
+  const activeSection = sectionFor(page);
+  useEffect(() => {
+    if (activeSection) rememberedSections.current[activeSection.id] = page;
+  }, [page, activeSection]);
+  useEffect(() => {
+    localStorage.setItem('dragontrip.sidebarCollapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
   const [knowledgeSeed, setKnowledgeSeed] = useState<{
     nodeId?: string;
     recordId?: string;
@@ -325,7 +353,7 @@ export default function App() {
   }, [pid, selected, detail?.project.updated]);
   useEffect(() => {
     document.title = `${page} · Dragontrip`;
-    if (!modal && !document.activeElement?.matches('input,textarea,select'))
+    if (!modal && !document.activeElement?.matches('input,textarea,select,[role="tab"]'))
       document.querySelector<HTMLElement>('.main')?.focus({ preventScroll: true });
   }, [page]);
   useEffect(() => {
@@ -498,7 +526,7 @@ export default function App() {
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <aside className="sidebar">
+      <aside className={'sidebar' + (sidebarCollapsed ? ' collapsed' : '')}>
         <div className="brand">
           <svg width="30" height="34" viewBox="0 0 30 34" fill="none" aria-hidden="true">
             <path
@@ -513,7 +541,12 @@ export default function App() {
             DRAGONTRIP<small>SECURITY WORKSPACE</small>
           </span>
         </div>
-        <button className="workspace-switch" onClick={() => setPage('Projects')}>
+        <button
+          aria-label="Choose project"
+          title="Choose project"
+          className="workspace-switch"
+          onClick={() => setPage('Projects')}
+        >
           <div className="avatar">P</div>
           <span>
             Personal workspace<small>Local · offline first</small>
@@ -522,58 +555,46 @@ export default function App() {
         </button>
         <button
           className="search-button"
+          aria-label="Quick search"
+          title="Quick search (Ctrl+K)"
           onClick={() => {
             setQuery('');
             setModal('command');
           }}
         >
           <Search size={15} />
-          Quick search<kbd>Ctrl K</kbd>
+          <span className="navigation-label">Quick search</span>
+          <kbd>Ctrl K</kbd>
         </button>
-        <div className="nav-label">WORKSPACE</div>
-        <nav>
-          {nav.slice(0, 5).map(([label, Icon]) => (
-            <button
-              key={label}
-              className={page === label ? 'active' : ''}
-              onClick={() => setPage(label)}
-            >
-              <Icon size={17} />
-              {label}
-              {label === 'Scans' && running > 0 && <span className="count">{running}</span>}
-            </button>
-          ))}
-        </nav>
-        <div className="nav-label future-label">KNOWLEDGE</div>
-        <nav>
-          {knowledgeNav.map(([n, Icon]) => (
-            <button
-              key={n}
-              className={page === n ? 'active' : ''}
-              onClick={() => {
-                setKnowledgeSeed(undefined);
-                setSelected(null);
-                setPage(n);
-              }}
-            >
-              <Icon size={16} />
-              {n}
-            </button>
-          ))}
-        </nav>
+        <PrimaryNavigation
+          page={page}
+          hasProject={Boolean(pid)}
+          running={running}
+          remembered={rememberedSections.current}
+          onNavigate={(destination) => {
+            setKnowledgeSeed(undefined);
+            setSelected(null);
+            setPage(destination);
+          }}
+        />
         <div className="sidebar-bottom">
-          <nav>
-            {nav.slice(5).map(([label, Icon]) => (
-              <button
-                key={label}
-                className={page === label ? 'active' : ''}
-                onClick={() => setPage(label)}
-              >
-                <Icon size={17} />
-                {label}
-              </button>
-            ))}
-          </nav>
+          <SettingsNavigation
+            page={page}
+            remembered={rememberedSections.current}
+            onNavigate={setPage}
+          />
+          <button
+            className="sidebar-toggle"
+            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!sidebarCollapsed}
+            onClick={() => setSidebarCollapsed((value) => !value)}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
+            <span className="navigation-label">
+              {sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            </span>
+          </button>
           <div className="local-status">
             <span className="dot green" />
             <span>
@@ -624,6 +645,14 @@ export default function App() {
             </button>
           </div>
         </header>
+        <SectionTabs
+          page={page}
+          onNavigate={(destination) => {
+            setKnowledgeSeed(undefined);
+            setSelected(null);
+            setPage(destination);
+          }}
+        />
         {error && (
           <div className="error-banner" role="alert">
             {error}
@@ -632,7 +661,14 @@ export default function App() {
             </button>
           </div>
         )}
-        <div className="workspace-body">
+        <div
+          className="workspace-body"
+          id="workspace-section-panel"
+          role={activeSection && activeSection.pages.length > 1 ? 'tabpanel' : undefined}
+          aria-labelledby={
+            activeSection && activeSection.pages.length > 1 ? tabId(page) : undefined
+          }
+        >
           <main
             id="main-content"
             tabIndex={-1}
@@ -838,6 +874,10 @@ export default function App() {
                         </button>
                       </div>
                     </div>
+                    <p className="graph-scope-hint">
+                      Endpoints are collapsed in the overview. Use Web applications or select the
+                      endpoint type to explore them.
+                    </p>
                     <div className="graph-search">
                       <Search size={14} />
                       <input
@@ -851,7 +891,16 @@ export default function App() {
                         value={nodeKind}
                         onChange={(e) => setNodeKind(e.target.value)}
                       >
-                        {['all', 'host', 'service', 'url', 'custom'].map((kind) => (
+                        {[
+                          'all',
+                          'host',
+                          'service',
+                          'url',
+                          'domain',
+                          'application',
+                          'endpoint',
+                          'custom',
+                        ].map((kind) => (
                           <option key={kind} value={kind}>
                             {kind === 'all' ? 'All types' : kind}
                           </option>
@@ -899,15 +948,19 @@ export default function App() {
                           detailMode={appearance.graph_detail}
                           theme={appearance.theme === 'system' ? undefined : appearance.theme}
                           selectedId={selected}
-                          objects={detail.nodes.filter(
-                            (n) => nodeKind === 'all' || n.kind === nodeKind,
+                          objects={detail.nodes.filter((n) =>
+                            nodeKind === 'all'
+                              ? n.kind !== 'endpoint' || n.id === selected
+                              : n.kind === nodeKind,
                           )}
-                          relations={detail.edges.filter(
-                            (edge) =>
-                              nodeKind === 'all' ||
-                              [edge.source, edge.target].every(
-                                (id) => nodeMap.get(id)?.kind === nodeKind,
-                              ),
+                          relations={detail.edges.filter((edge) =>
+                            nodeKind === 'all'
+                              ? [edge.source, edge.target].every(
+                                  (id) => nodeMap.get(id)?.kind !== 'endpoint' || id === selected,
+                                )
+                              : [edge.source, edge.target].every(
+                                  (id) => nodeMap.get(id)?.kind === nodeKind,
+                                ),
                           )}
                           onSelect={setSelected}
                           onEdge={setSelected}
@@ -1147,6 +1200,55 @@ export default function App() {
                     />
                   </Suspense>
                 )}
+                {detail && page === 'Methodologies' && (
+                  <Methodologies key={detail.project.id} detail={detail} />
+                )}
+                {detail && page === 'Recon workflows' && (
+                  <Workflows
+                    key={detail.project.id}
+                    detail={detail}
+                    onChanged={() => refresh(detail.project.id)}
+                    onScan={(s) => {
+                      setScanId(s.id);
+                      setPage('Scans');
+                      setBottom(true);
+                    }}
+                  />
+                )}
+                {detail && page === 'Targets & scope' && (
+                  <ScopePage
+                    key={detail.project.id}
+                    pid={detail.project.id}
+                    onChanged={() => refresh(detail.project.id)}
+                  />
+                )}
+                {detail && page === 'Import results' && (
+                  <ImportsPage
+                    key={detail.project.id}
+                    pid={detail.project.id}
+                    onChanged={() => refresh(detail.project.id)}
+                  />
+                )}
+                {detail && page === 'Web applications' && (
+                  <WebMap
+                    key={detail.project.id}
+                    detail={detail}
+                    onChanged={() => refresh(detail.project.id)}
+                    onInspect={(id) => {
+                      setSelected(id);
+                      setNodeKind('all');
+                      setPage('Network Graph');
+                    }}
+                    onFinding={(id) => {
+                      setKnowledgeSeed({ recordId: id, nonce: Date.now() });
+                      setPage('Findings');
+                    }}
+                    onKnowledge={(id, kind) => {
+                      setKnowledgeSeed({ nodeId: id, nonce: Date.now() });
+                      setPage(kind);
+                    }}
+                  />
+                )}
                 {detail && page === 'Timeline' && (
                   <Timeline key={detail.project.id} pid={detail.project.id} />
                 )}
@@ -1232,7 +1334,11 @@ export default function App() {
                     <span className={'badge ' + (object.kind === 'custom' ? 'warning' : 'success')}>
                       {object.kind === 'custom'
                         ? 'Manual · ' + String(object.attrs.status || 'idea')
-                        : 'Observed · ' + String(object.attrs.source || 'nmap')}
+                        : (object.attrs.source === 'manual'
+                            ? 'Manual · '
+                            : object.attrs.run_id
+                              ? 'Imported · '
+                              : 'Observed · ') + String(object.attrs.source || 'nmap')}
                     </span>
                   </div>
                   {object.kind === 'custom' && (
@@ -1272,6 +1378,7 @@ export default function App() {
                         ))}
                     </div>
                   )}
+                  {pid && <Observations key={object.id} pid={pid} nodeId={object.id} />}
                   <PositionEditor
                     key={object.id + ':' + object.x + ':' + object.y}
                     node={object}

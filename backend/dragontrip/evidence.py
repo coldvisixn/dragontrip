@@ -160,6 +160,10 @@ def register_evidence(app, sessions, project, root):
                         409,
                         "Unlink this file from knowledge records before deleting it",
                     )
+            from .db import ImportRun
+
+            if db.query(ImportRun).filter_by(attachment_id=aid).first():
+                raise HTTPException(409, "This source is retained by import history")
             db.delete(row)
             record(db, pid, "Evidence attachment deleted")
             db.commit()

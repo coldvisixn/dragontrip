@@ -1,3 +1,4 @@
+const { navigate } = require('./navigation.cjs');
 /* Real planning/reporting UI/API test. Only Tauri credential delivery is bridged in Chromium.
    Run after npm run dev. Uses isolated data and never starts a recon tool. */
 const assert = require('node:assert/strict');
@@ -109,7 +110,7 @@ const { once } = require('node:events');
       await page.getByRole('heading', { name: 'Workspace overview' }).waitFor();
     }
     await openPage();
-    await page.getByRole('button', { name: 'Task board', exact: true }).click();
+    await navigate(page, 'Task board');
     await page.getByRole('button', { name: 'New task', exact: true }).click();
     await page.getByLabel('Task template', { exact: true }).selectOption('3');
     await page.getByLabel('Title', { exact: true }).fill('Verify lab remediation');
@@ -137,11 +138,11 @@ const { once } = require('node:events');
     await page.locator('.task-card').waitFor();
     await page.getByText('Loading tasks…', { exact: true }).waitFor({ state: 'hidden' });
     await page.screenshot({ path: join(screenshots, 'phase5-task-board.png') });
-    await page.getByRole('button', { name: 'Project overview', exact: true }).click();
+    await navigate(page, 'Project overview');
     await page.getByText('Tasks completed', { exact: true }).waitFor();
     assert.match(await page.locator('.engagement-metrics').innerText(), /0 \/ 1/);
     await page.screenshot({ path: join(screenshots, 'phase5-project-overview.png') });
-    await page.getByRole('button', { name: 'Reports', exact: true }).click();
+    await navigate(page, 'Reports');
     await page
       .getByLabel('Executive summary', { exact: true })
       .fill('Local review completed. Follow-up verification remains.');
@@ -165,14 +166,14 @@ const { once } = require('node:events');
     await stop();
     await launch();
     await openPage();
-    await page.getByRole('button', { name: 'Task board', exact: true }).click();
+    await navigate(page, 'Task board');
     await page.getByRole('button', { name: 'Verify lab remediation', exact: true }).waitFor();
     const tasks = await request(`/projects/${pid}/knowledge?kind=task`);
     assert.equal(tasks[0].content.status, 'in_progress');
     assert.equal(tasks[0].content.assignee, 'Analyst');
     assert.deepEqual(tasks[0].content.node_ids, [node.id]);
     await page.setViewportSize({ width: 1366, height: 768 });
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await navigate(page, 'Settings');
     await page.getByRole('heading', { name: 'Environment settings' }).waitFor();
     assert.deepEqual(errors, []);
     console.log(

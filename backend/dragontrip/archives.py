@@ -27,6 +27,9 @@ from .db import (
     Attachment,
     Credential,
     GraphView,
+    ScopeRule,
+    ImportRun,
+    Observation,
     serialize,
     uid,
     now,
@@ -50,7 +53,9 @@ class ArchiveOptions(BaseModel):
 class NodeRecord(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(min_length=1, max_length=300)
-    kind: Literal["host", "service", "url", "custom"]
+    kind: Literal[
+        "host", "service", "url", "custom", "domain", "application", "endpoint"
+    ]
     label: str = Field(min_length=1, max_length=1000)
     attrs: dict = Field(default_factory=dict)
     x: float = Field(ge=-1000000, le=1000000, allow_inf_nan=False)
@@ -103,9 +108,34 @@ class EventRecord(BaseModel):
     created: str = Field(max_length=100)
 
 
+class ScopeRecord(BaseModel):
+    id: str = Field(min_length=1, max_length=300)
+    value: str = Field(min_length=1, max_length=1000)
+    mode: Literal["include", "exclude"]
+
+
+class ImportRecord(BaseModel):
+    id: str = Field(min_length=1, max_length=300)
+    format: Literal["burp-items", "burp-issues", "nmap-xml", "nuclei-jsonl"]
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    attachment_id: str = Field(min_length=1, max_length=300)
+    created: str = Field(max_length=100)
+    summary: str = Field(max_length=100000)
+
+
+class ObservationRecord(BaseModel):
+    id: str = Field(min_length=1, max_length=300)
+    run_id: str = Field(max_length=300)
+    node_id: str = Field(max_length=300)
+    finding_id: str | None = Field(default=None, max_length=300)
+    fingerprint: str = Field(pattern=r"^[0-9a-f]{64}$")
+    locator: str = Field(max_length=1000)
+    data: str = Field(max_length=1000000)
+
+
 class Manifest(BaseModel):
     format: Literal["dragontrip-project"]
-    version: Literal[1]
+    version: Literal[1, 2, 3]
     project: dict
     nodes: list[NodeRecord] = Field(max_length=10000)
     edges: list[EdgeRecord] = Field(max_length=50000)
@@ -114,6 +144,11 @@ class Manifest(BaseModel):
     attachments: list[AttachmentRecord] = Field(max_length=500)
     events: list[EventRecord] = Field(max_length=10000)
     files: dict[str, dict] = Field(max_length=6000)
+    scope_rules: list[ScopeRecord] = Field(default_factory=list, max_length=500)
+    import_runs: list[ImportRecord] = Field(default_factory=list, max_length=500)
+    observations: list[ObservationRecord] = Field(
+        default_factory=list, max_length=50000
+    )
     view: dict | None = None
     credentials_included: bool = False
 
@@ -148,6 +183,9 @@ def register_archives(app, sessions, project, root):
                     (Knowledge, 5000),
                     (Attachment, 500),
                     (Activity, 10000),
+                    (ScopeRule, 500),
+                    (ImportRun, 500),
+                    (Observation, 50000),
                 ]:
                     filters = model.project_id == pid
                     count = db.scalar(
@@ -189,11 +227,14 @@ def register_archives(app, sessions, project, root):
                     )
                 manifest = {
                     "format": "dragontrip-project",
-                    "version": 1,
+                    "version": 3,
                     "project": serialize(p),
                     "nodes": rows(Node),
                     "edges": rows(Edge),
                     "scans": scans,
+                    "scope_rules": rows(ScopeRule),
+                    "import_runs": rows(ImportRun),
+                    "observations": rows(Observation),
                     "knowledge": rows(Knowledge),
                     "attachments": rows(Attachment),
                     "events": rows(Activity),
@@ -341,6 +382,9 @@ def register_archives(app, sessions, project, root):
                     manifest.scans,
                     manifest.knowledge,
                     manifest.attachments,
+                    manifest.scope_rules,
+                    manifest.import_runs,
+                    manifest.observations,
                 ]:
                     if len({item.id for item in collection}) != len(collection) or any(
                         not SAFE_ID.fullmatch(item.id) for item in collection
@@ -353,7 +397,28 @@ def register_archives(app, sessions, project, root):
                     for item in manifest.edges
                 ):
                     fail("Duplicate or invalid relationship identities")
+                from .scope import canonical_rule
+
+                for rule in manifest.scope_rules:
+                    if canonical_rule(rule.value) != rule.value:
+                        fail("Invalid scope rule")
+                if manifest.version == 1 and (
+                    manifest.scope_rules
+                    or manifest.import_runs
+                    or manifest.observations
+                ):
+                    fail("Research data requires archive version 2")
+                if len({r.sha256 for r in manifest.import_runs}) != len(
+                    manifest.import_runs
+                ):
+                    fail("Duplicate import sources")
+                if manifest.version < 3 and any(
+                    k.kind in {"checklist", "workflow", "workflow_run"}
+                    for k in manifest.knowledge
+                ):
+                    fail("Methodologies and workflows require archive version 3")
                 sid = {row.id: uid() for row in manifest.scans}
+                rid = {row.id: uid() for row in manifest.import_runs}
                 aid = {row.id: uid() for row in manifest.attachments}
                 pid = uid()
                 nid = {
@@ -366,10 +431,29 @@ def register_archives(app, sessions, project, root):
                 }
                 if len(set(nid.values())) != len(nid):
                     fail("Ambiguous object identities")
+                kid = {
+                    row.id: (
+                        pid + row.id[len(old_pid) :]
+                        if row.id.startswith(old_pid + ":")
+                        else uid()
+                    )
+                    for row in manifest.knowledge
+                }
+                if any(r.attachment_id not in aid for r in manifest.import_runs) or any(
+                    o.run_id not in rid
+                    or o.node_id not in nid
+                    or (o.finding_id and o.finding_id not in kid)
+                    for o in manifest.observations
+                ):
+                    fail("Invalid import provenance references")
                 if any(
                     edge.source not in nid
                     or edge.target not in nid
-                    or (edge.evidence and edge.evidence not in sid)
+                    or (
+                        edge.evidence
+                        and edge.evidence not in sid
+                        and edge.evidence not in rid
+                    )
                     for edge in manifest.edges
                 ):
                     fail("Relationship references are invalid")
@@ -434,11 +518,23 @@ def register_archives(app, sessions, project, root):
                             if key in {"scan_id", "scan_ids"}
                             else (
                                 aid
-                                if key == "attachment_ids"
-                                else nid if key in {"node_id", "node_ids"} else None
+                                if key in {"attachment_ids", "attachment_id"}
+                                else (
+                                    nid
+                                    if key in {"node_id", "node_ids", "service_node"}
+                                    else (
+                                        rid
+                                        if key == "run_id"
+                                        else (
+                                            kid
+                                            if key in {"finding_id", "workflow_id"}
+                                            else None
+                                        )
+                                    )
+                                )
                             )
                         )
-                        if mapping is not None:
+                        if mapping is not None and entry is not None:
                             if isinstance(entry, list):
                                 result[key] = [
                                     mapping.setdefault(str(v), uid()) for v in entry
@@ -493,10 +589,8 @@ def register_archives(app, sessions, project, root):
                         db.flush()
                         for row in manifest.edges:
                             edge_id = (
-                                nid[row.target]
-                                + (":web" if row.kind == "WEB_RESOURCE" else ":exposes")
-                                if row.evidence
-                                and row.kind in {"WEB_RESOURCE", "EXPOSES"}
+                                pid + row.id[len(old_pid) :]
+                                if row.id.startswith(old_pid + ":")
                                 else (
                                     f"manual:{pid}:{nid[row.source]}:{nid[row.target]}"
                                     if not row.evidence
@@ -510,17 +604,20 @@ def register_archives(app, sessions, project, root):
                                     source=nid[row.source],
                                     target=nid[row.target],
                                     kind=row.kind,
-                                    evidence=sid.get(row.evidence),
+                                    evidence=sid.get(row.evidence)
+                                    or rid.get(row.evidence),
                                 )
                             )
                         for row in manifest.knowledge:
                             db.add(
                                 Knowledge(
-                                    id=uid(),
+                                    id=kid[row.id],
                                     project_id=pid,
                                     kind=row.kind,
                                     title=row.title,
-                                    content=json.dumps(remap(row.content.model_dump(mode="json"))),
+                                    content=json.dumps(
+                                        remap(row.content.model_dump(mode="json"))
+                                    ),
                                     created=row.created,
                                     updated=row.updated,
                                 )
@@ -544,6 +641,51 @@ def register_archives(app, sessions, project, root):
                                     size=row.size,
                                     sha256=row.sha256,
                                     created=row.created,
+                                )
+                            )
+                        db.flush()
+                        for row in manifest.scope_rules:
+                            db.add(
+                                ScopeRule(
+                                    id=uid(),
+                                    project_id=pid,
+                                    value=row.value,
+                                    mode=row.mode,
+                                )
+                            )
+                        for row in manifest.import_runs:
+                            source_attachment = next(
+                                a
+                                for a in manifest.attachments
+                                if a.id == row.attachment_id
+                            )
+                            if source_attachment.sha256 != row.sha256:
+                                fail("Import source hash mismatch")
+                            json.loads(row.summary)
+                            db.add(
+                                ImportRun(
+                                    id=rid[row.id],
+                                    project_id=pid,
+                                    format=row.format,
+                                    sha256=row.sha256,
+                                    attachment_id=aid[row.attachment_id],
+                                    created=row.created,
+                                    summary=row.summary,
+                                )
+                            )
+                        db.flush()
+                        for row in manifest.observations:
+                            json.loads(row.data)
+                            db.add(
+                                Observation(
+                                    id=uid(),
+                                    project_id=pid,
+                                    run_id=rid[row.run_id],
+                                    node_id=nid[row.node_id],
+                                    finding_id=kid.get(row.finding_id),
+                                    fingerprint=row.fingerprint,
+                                    locator=row.locator,
+                                    data=row.data,
                                 )
                             )
                         for row in manifest.events:

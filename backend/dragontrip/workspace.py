@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import select, desc, func
 from .db import Knowledge, Node, Scan, Attachment, now, record, serialize
 
-Kind = Literal["note", "finding", "path", "task"]
+Kind = Literal[
+    "note", "finding", "path", "task", "checklist", "workflow", "workflow_run"
+]
 TASK_STATUSES = {"todo", "in_progress", "blocked", "done", "cancelled"}
 RECORD_STATUSES = {"draft", "open", "confirmed", "resolved", "dismissed"}
 
@@ -26,7 +28,26 @@ class Step(BaseModel):
         return value.strip()
 
 
+class CheckItem(BaseModel):
+    key: str = Field(min_length=1, max_length=80)
+    title: str = Field(min_length=1, max_length=300)
+    state: Literal["not_tested", "in_progress", "tested", "not_applicable"] = (
+        "not_tested"
+    )
+    note: str = Field(default="", max_length=2000)
+
+
+class WorkflowAction(BaseModel):
+    profile: str = Field(min_length=1, max_length=300)
+    target: str = Field(min_length=1, max_length=1000)
+    service_node: str | None = Field(default=None, max_length=300)
+    words: list[str] = Field(default_factory=list, max_length=500)
+
+
 class Content(BaseModel):
+    checks: list[CheckItem] = Field(default_factory=list, max_length=100)
+    actions: list[WorkflowAction] = Field(default_factory=list, max_length=8)
+    workflow_id: str | None = Field(default=None, max_length=300)
     body: str = Field(default="", max_length=12000)
     node_ids: list[str] = Field(default_factory=list, max_length=50)
     scan_ids: list[str] = Field(default_factory=list, max_length=20)
@@ -72,6 +93,13 @@ class KnowledgeInput(BaseModel):
             raise ValueError("Add at least one path step")
         if self.kind != "path" and self.content.steps:
             raise ValueError("Steps are only available for paths")
+        if self.kind == "checklist" and (
+            not self.content.checks
+            or len({c.key for c in self.content.checks}) != len(self.content.checks)
+        ):
+            raise ValueError("Methodology checks need unique keys")
+        if self.kind in {"workflow", "workflow_run"} and not self.content.actions:
+            raise ValueError("Add at least one workflow action")
         return self
 
 
@@ -83,7 +111,11 @@ def register_workspace(app, sessions, project):
             s["node_id"] for s in previous.get("steps", [])
         }
         old_scans = set(previous.get("scan_ids", []))
-        nodes = set(content.node_ids) | {step.node_id for step in content.steps}
+        nodes = (
+            set(content.node_ids)
+            | {step.node_id for step in content.steps}
+            | {a.service_node for a in content.actions if a.service_node}
+        )
         for model, ids, old in [
             (Node, nodes, old_nodes),
             (Scan, set(content.scan_ids), old_scans),
@@ -151,6 +183,10 @@ def register_workspace(app, sessions, project):
     def add_knowledge(pid: str, body: KnowledgeInput):
         with sessions() as db:
             project(db, pid)
+            if body.kind == "workflow_run":
+                raise HTTPException(
+                    403, "Workflow runs are managed through their launch controls"
+                )
             validate_links(db, pid, body.content)
             row = Knowledge(
                 project_id=pid,
@@ -177,6 +213,8 @@ def register_workspace(app, sessions, project):
             row = db.get(Knowledge, kid)
             if row is None or row.project_id != pid:
                 raise HTTPException(404, "Record not found")
+            if row.kind == "workflow_run":
+                raise HTTPException(403, "Workflow run history is read-only")
             if row.kind != body.kind:
                 raise HTTPException(422, "Record type cannot be changed")
             validate_links(db, pid, body.content, json.loads(row.content))
@@ -195,6 +233,15 @@ def register_workspace(app, sessions, project):
             row = db.get(Knowledge, kid)
             if row is None or row.project_id != pid:
                 raise HTTPException(404, "Record not found")
+            if row.kind == "workflow_run":
+                raise HTTPException(409, "Workflow run history is retained")
+            from .db import Observation
+
+            if db.query(Observation).filter_by(finding_id=kid).first():
+                raise HTTPException(
+                    409,
+                    "Imported findings retain evidence history; dismiss the finding instead",
+                )
             record(db, pid, f"{row.kind.capitalize()} deleted")
             db.delete(row)
             db.commit()

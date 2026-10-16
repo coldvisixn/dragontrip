@@ -1,3 +1,4 @@
+const { navigate } = require('./navigation.cjs');
 /* Tests the real UI + API in a browser. Only Tauri's credential delivery is bridged. */
 const {chromium}=require('playwright-core');
 const {spawn}=require('node:child_process');
@@ -93,12 +94,12 @@ const {once}=require('node:events');
     if(response.status()!==201)throw new Error('Edge creation failed: '+await response.text());
     await page.waitForTimeout(700);
     await page.reload();
-    await page.getByRole('button',{name:'Network Graph',exact:true}).click();
+    await navigate(page, 'Network Graph');
     await page.locator('.object-card.custom').waitFor();
     await page.getByText('CUSTOM_RELATION',{exact:true}).waitFor();
     await page.getByRole('button',{name:'Hosts',exact:true}).click();
     await page.getByLabel('Host inventory').getByRole('button').filter({hasText:'127.0.0.1'}).waitFor();
-    await page.getByRole('button',{name:'Scans',exact:true}).click();
+    await navigate(page, 'Scans');
     await page.getByLabel('Scan history').getByRole('button').filter({hasText:'127.0.0.1'}).waitFor();
     await page.getByRole('button',{name:'Dashboard',exact:true}).click();
     const collapse=page.getByRole('button',{name:'Collapse task panel',exact:true});

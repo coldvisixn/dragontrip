@@ -13,6 +13,14 @@ This page separates implemented capabilities from future priorities. [CHANGELOG.
 - Appearance/tool settings, keyboard navigation and a searchable command palette.
 - Debian packaging, checksums and tagged GitHub release workflow.
 
+## Implemented in the 0.6.0 development checkout
+
+Scope rules, offline Nmap/Burp/Nuclei imports with preview and provenance, web application/endpoints view, manual additions and per-import comparison are the first research-workspace stage. [Implemented behavior and limits](IMPORTS.md); [remaining stages and acceptance criteria](RESEARCH-WORKSPACE.md). Live domain/CIDR/IPv6 scanning, methodology workflows and expanded finding/retest lifecycle remain future work.
+
+## Implemented in the 0.7.0 development checkout
+
+Four-state manual web/network methodologies, evidence links, saved ordered recon actions, scope/parameter preview and guided sequential runs through the existing queue. [Usage, verification and limits](METHODOLOGIES.md). A crawler, live-domain dispatch and expanded finding/retest lifecycle remain separate work.
+
 ## Next priorities
 
 - Maintain Kali Rolling installed-package CI and complete real 4 GB VirtualBox acceptance.
@@ -22,7 +30,7 @@ This page separates implemented capabilities from future priorities. [CHANGELOG.
 - Broaden target/adapter scope only with validated behavior, preserved evidence and regression coverage.
 - Improve onboarding and accessibility using feedback from real assessment workflows.
 
-These are priorities, not promised delivery dates. Windows/macOS/ARM support, hostname/CIDR/IPv6 scope and PDF/HTML reports are not implemented. Investigation paths remain manual plans; automatic exploitation is not part of the current product.
+These are priorities, not promised delivery dates. Windows/macOS/ARM support, live hostname/CIDR/IPv6 recon and PDF/HTML reports are not implemented. Offline scope rules support those address/name forms in 0.6.0. Investigation paths remain manual plans; automatic exploitation is not part of the current product.
 
 ## Implementation history
 

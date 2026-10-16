@@ -1,3 +1,4 @@
+const { navigate } = require('./navigation.cjs');
 /* Real Phase 3 UI/API test. Only Tauri credential delivery is bridged in Chromium.
    Run after npm run dev. Uses isolated data and never starts a recon tool. */
 const assert = require('node:assert/strict');
@@ -167,7 +168,7 @@ const { once } = require('node:events');
       .waitFor();
 
     console.log('Checking findings');
-    await page.getByRole('button', { name: 'Findings', exact: true }).click();
+    await navigate(page, 'Findings');
     await page.getByRole('button', { name: 'New finding', exact: true }).click();
     await page.getByLabel('Title', { exact: true }).fill('Discarded draft');
     page.once('dialog', (dialog) => dialog.accept());
@@ -188,7 +189,7 @@ const { once } = require('node:events');
     await page.screenshot({ path: join(screenshots, 'findings.png') });
 
     console.log('Checking attack paths');
-    await page.getByRole('button', { name: 'Attack Paths', exact: true }).click();
+    await navigate(page, 'Attack Paths');
     await page.getByRole('button', { name: 'New path', exact: true }).click();
     await page.getByLabel('Title', { exact: true }).fill('Authentication investigation');
     await page
@@ -216,7 +217,7 @@ const { once } = require('node:events');
     await page.screenshot({ path: join(screenshots, 'attack-path.png') });
 
     console.log('Checking vault');
-    await page.getByRole('button', { name: 'Credentials Vault', exact: true }).click();
+    await navigate(page, 'Credentials Vault');
     const password = 'browser-test-master-password';
     await page.getByLabel('Master password', { exact: true }).fill(password);
     // A polling status check must not clear the user's partially entered password.
@@ -262,7 +263,7 @@ const { once } = require('node:events');
     await page.locator('.secret-box').getByText(secret, { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Hide secret', exact: true }).click();
     console.log('Checking Markdown, screenshots, timeline, search and preferences');
-    await page.getByRole('button', { name: 'Notes', exact: true }).click();
+    await navigate(page, 'Notes');
     await page.getByRole('button', { name: /Session investigation context/ }).click();
     await page.getByRole('button', { name: 'Edit note', exact: true }).click();
     await page
@@ -289,7 +290,7 @@ const { once } = require('node:events');
     await page.getByRole('button', { name: 'Save boundary-proof.png', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Saved:' }).waitFor();
     await page.screenshot({ path: join(screenshots, 'markdown-evidence.png') });
-    await page.getByRole('button', { name: 'Timeline', exact: true }).click();
+    await navigate(page, 'Timeline');
     await page.getByLabel('Filter timeline').fill('Evidence attachment');
     await page
       .getByLabel('Project timeline')
@@ -305,7 +306,7 @@ const { once } = require('node:events');
       .locator('.knowledge-article')
       .getByRole('heading', { name: 'Boundary documentation' })
       .waitFor();
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await navigate(page, 'Settings');
     await page.getByLabel('Theme', { exact: true }).selectOption('light');
     await page.getByLabel('Accent', { exact: true }).selectOption('cyan');
     await page.getByLabel('Density', { exact: true }).selectOption('compact');
@@ -323,20 +324,20 @@ const { once } = require('node:events');
     await page.getByLabel('Theme', { exact: true }).selectOption('dark');
     await page.getByRole('button', { name: 'Save appearance', exact: true }).click();
     await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
-    await page.getByRole('button', { name: 'Network Graph', exact: true }).click();
+    await navigate(page, 'Network Graph');
     await page.locator('.object-card.custom').waitFor();
     await page.getByRole('button', { name: 'zoom out', exact: false }).click();
     await page.waitForTimeout(700);
     const savedView = await request(`/projects/${pid}/view`);
     assert.ok(savedView && savedView.zoom > 0);
-    await page.getByRole('button', { name: 'Notes', exact: true }).click();
-    await page.getByRole('button', { name: 'Network Graph', exact: true }).click();
+    await navigate(page, 'Notes');
+    await navigate(page, 'Network Graph');
     await page.locator('.object-card.custom').waitFor();
     const transform = await page
       .locator('.react-flow__viewport')
       .evaluate((element) => getComputedStyle(element).transform);
     assert.ok(Math.abs(Number(transform.match(/matrix\(([^,]+)/)[1]) - savedView.zoom) < 0.01);
-    await page.getByRole('button', { name: 'Projects', exact: true }).click();
+    await navigate(page, 'Projects');
     await page
       .getByRole('checkbox', { name: 'Include encrypted credentials', exact: true })
       .check();
@@ -388,10 +389,10 @@ const { once } = require('node:events');
         false,
       );
     }
-    await page.getByRole('button', { name: 'Network Graph', exact: true }).click();
+    await navigate(page, 'Network Graph');
     await page.locator('.object-card.custom').waitFor();
     await page.reload();
-    await page.getByRole('button', { name: 'Network Graph', exact: true }).click();
+    await navigate(page, 'Network Graph');
     await page
       .locator('.object-card.custom')
       .filter({ hasText: 'Review session handling' })
