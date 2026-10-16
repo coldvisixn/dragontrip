@@ -152,6 +152,12 @@ class Driver:
             """, label)
         wait_until(clicked)
 
+    def fit_graph(self):
+        # The saved viewport can point at a URL after recon. React Flow
+        # virtualizes off-screen cards, so fit before asserting their DOM.
+        wait_until(lambda: self.js("return !!document.querySelector('.react-flow__controls-fitview')"))
+        self.js("document.querySelector('.react-flow__controls-fitview').click()")
+
     def fill(self, selector, text):
         wait_until(lambda: self.js("return !!document.querySelector(arguments[0])", selector))
         # Let the native dialog focus/transition finish before WebDriver types.
@@ -457,6 +463,7 @@ def main():
                     print("Native session launched", flush=True)
                     wait_until(lambda: driver.js("return document.body.textContent.includes('Workspace overview')"))
                     driver.click("Network Graph")
+                    driver.fit_graph()
                     wait_until(lambda: driver.js("return !!document.querySelector('.object-card.custom')"))
                     restored = driver.graph()
                     same = next(n for n in restored["nodes"] if n["id"] == service["id"])
@@ -470,6 +477,7 @@ def main():
                     driver.js("const s=document.querySelectorAll('section[aria-label=\"Scan history\"] select')[1];s.value='whatweb';s.dispatchEvent(new Event('change',{bubbles:true}));")
                     wait_until(lambda: driver.js("return document.querySelectorAll('.scan-row').length===1 && document.querySelector('.scan-row').textContent.includes('whatweb')"))
                     driver.click('Network Graph')
+                    driver.fit_graph()
                     wait_until(lambda: driver.js("return !!document.querySelector('.object-card.custom')"))
                     print('PASS: native paginated tool filter and web-result restart persistence',flush=True)
                     if args.profile:
@@ -492,6 +500,7 @@ def main():
                             driver.js("location.reload()")
                             wait_until(lambda: driver.js("return document.body.textContent.includes('Workspace overview')"))
                             driver.click("Network Graph")
+                            driver.fit_graph()
                             wait_until(lambda: driver.js("return !!document.querySelector('.object-card.custom')"))
                             time.sleep(4)
                             metrics[f"graph_{count}"]=measure(proc.pid,application)
