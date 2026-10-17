@@ -1,5 +1,4 @@
 import asyncio
-import hmac
 import json
 import os
 import signal
@@ -10,8 +9,9 @@ from typing import Literal
 
 from alembic import command
 from alembic.config import Config
-from fastapi import FastAPI, HTTPException, Request, Query
-from fastapi.responses import Response
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select, desc, func
 from sqlalchemy.orm import defer
@@ -45,6 +45,7 @@ from .scope import register_scope, classify
 from .imports import register_imports
 from .db import ScopeRule
 from .methodologies import register_methodologies
+from .security import LocalAPIGuard
 
 
 class ProjectInput(BaseModel):
@@ -224,56 +225,21 @@ def create_app(token: str, root: Path | None = None, dev=False):
     app.state.research_lock = threading.RLock()
     app.state.workflow_launch_lock = asyncio.Lock()
 
-    @app.middleware("http")
-    async def guard(request: Request, call_next):
-        host = request.headers.get("host", "").split(":")[0]
-        if host != "127.0.0.1":
-            return Response(status_code=403)
-        origin = request.headers.get("origin")
-        if origin and origin not in origins:
-            return Response(status_code=403)
-        cors = (
-            {"Access-Control-Allow-Origin": origin, "Vary": "Origin"} if origin else {}
+    app.add_middleware(LocalAPIGuard, token=token, origins=origins)
+
+    @app.exception_handler(RequestValidationError)
+    async def invalid_request(request, exc):
+        # Pydantic's default `input`/`ctx` may contain passwords, credentials or
+        # an entire malformed document. Keep actionable field errors only.
+        return JSONResponse(
+            status_code=422,
+            content={
+                "detail": [
+                    {key: error[key] for key in ("type", "loc", "msg")}
+                    for error in exc.errors()
+                ]
+            },
         )
-        if request.method == "OPTIONS":
-            if origin not in origins:
-                return Response(status_code=403)
-            return Response(
-                headers={
-                    **cors,
-                    "Access-Control-Allow-Headers": "Authorization, Content-Type",
-                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                }
-            )
-        if not hmac.compare_digest(
-            request.headers.get("authorization", ""), f"Bearer {token}"
-        ):
-            return Response(status_code=401, headers=cors)
-        upload = request.method == "POST" and (
-            request.url.path.endswith("/attachments")
-            or request.url.path == "/imports"
-            or "/tool-import/" in request.url.path
-        )
-        limit = (
-            140 * 1024 * 1024
-            if request.url.path == "/imports"
-            else 11 * 1024 * 1024 if upload else 256 * 1024
-        )
-        try:
-            length = int(request.headers.get("content-length", "0"))
-        except ValueError:
-            return Response(status_code=400, headers=cors)
-        if length < 0:
-            return Response(status_code=400, headers=cors)
-        if upload and "content-length" not in request.headers:
-            return Response(status_code=411, headers=cors)
-        if length > limit:
-            return Response(status_code=413, headers=cors)
-        response = await call_next(request)
-        response.headers.update(cors)
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        return response
 
     def project(db, pid):
         item = db.get(Project, pid)
