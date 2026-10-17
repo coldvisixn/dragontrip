@@ -108,6 +108,11 @@ jobs:
           GSETTINGS_BACKEND: memory
           DRAGONTRIP_VALIDATION_DIR: ${{ runner.temp }}/release-validation
         run: xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-navigation-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
+      - name: Test draft recovery and report bundles in WebKit
+        env:
+          GSETTINGS_BACKEND: memory
+          DRAGONTRIP_VALIDATION_DIR: ${{ runner.temp }}/release-validation
+        run: xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-delivery-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
       - uses: actions/upload-artifact@v4
         with:
           name: release-linux-amd64

@@ -1,5 +1,7 @@
 # Investigation planning and reporting
 
+**Historical implementation record for 0.5.0. Current report composition, presets, HTML/ZIP exports and preview validation are documented in [0.8.0 delivery](DELIVERY.md).**
+
 Built on GitHub commit `628ce10` (the completed 0.4.0 workspace). These additions extend that source; they are not a published desktop release.
 
 ## Task board

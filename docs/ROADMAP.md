@@ -21,16 +21,20 @@ Scope rules, offline Nmap/Burp/Nuclei imports with preview and provenance, web a
 
 Four-state manual web/network methodologies, evidence links, saved ordered recon actions, scope/parameter preview and guided sequential runs through the existing queue. [Usage, verification and limits](METHODOLOGIES.md). A crawler, live-domain dispatch and expanded finding/retest lifecycle remain separate work.
 
+## Implemented in 0.8.0
+
+Recoverable editor/report drafts, explicit fictional demo, import-first project start, project details editing, finding template, screenshot paste/drop, retained manual retests, delivery/working report presets, standalone HTML and selected-evidence ZIP exports. Archive v4 preserves retests. [Workflow and exact limits](DELIVERY.md).
+
 ## Next priorities
 
 - Maintain Kali Rolling installed-package CI and complete real 4 GB VirtualBox acceptance.
 - Benchmark larger engagements before increasing graph/archive limits; improve resource use based on measurements.
 - Add explicit evidence-retention management beyond manual artifact cleanup.
-- Improve report composition persistence and evaluate additional export formats.
+- Evaluate native PDF/DOCX output and additional finding templates using real deliverable feedback.
 - Broaden target/adapter scope only with validated behavior, preserved evidence and regression coverage.
 - Improve onboarding and accessibility using feedback from real assessment workflows.
 
-These are priorities, not promised delivery dates. Windows/macOS/ARM support, live hostname/CIDR/IPv6 recon and PDF/HTML reports are not implemented. Offline scope rules support those address/name forms in 0.6.0. Investigation paths remain manual plans; automatic exploitation is not part of the current product.
+These are priorities, not promised delivery dates. Windows/macOS/ARM support, live hostname/CIDR/IPv6 recon and native PDF/DOCX reports are not implemented. HTML reports are available in 0.8.0. Offline scope rules support those address/name forms in 0.6.0. Investigation paths remain manual plans; automatic exploitation is not part of the current product.
 
 ## Implementation history
 

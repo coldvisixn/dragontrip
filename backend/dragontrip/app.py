@@ -37,6 +37,8 @@ from .workspace import register_workspace
 from .vault import register_vault
 from .evidence import register_evidence
 from .product import register_product
+from .examples import register_examples
+from .drafts import register_drafts
 from .reporting import register_reporting
 from .archives import register_archives
 from .scope import register_scope, classify
@@ -280,8 +282,10 @@ def create_app(token: str, root: Path | None = None, dev=False):
 
     register_scope(app, sessions, project)
     register_imports(app, sessions, project, root)
+    register_examples(app, sessions)
+    register_drafts(app, sessions, project)
     register_workspace(app, sessions, project)
-    register_reporting(app, sessions, project)
+    register_reporting(app, sessions, project, root)
     register_vault(app, sessions, project)
     register_evidence(app, sessions, project, root)
     register_product(app, sessions, project, configuration, save_configuration)
@@ -358,6 +362,15 @@ def create_app(token: str, root: Path | None = None, dev=False):
             db.add(p)
             db.flush()
             record(db, p.id, "Project created")
+            db.commit()
+            return serialize(p)
+
+    @app.put("/projects/{pid}")
+    def edit_project(pid: str, body: ProjectInput):
+        with sessions() as db:
+            p = project(db, pid)
+            p.name, p.description = body.name, body.description
+            record(db, pid, "Project details updated")
             db.commit()
             return serialize(p)
 

@@ -84,6 +84,8 @@ def main():
                 driver.click("New project")
                 driver.fill(".dialog input", "Native planning delivery")
                 driver.click("Create project")
+                checks.wait_until(lambda: driver.js("return !!document.querySelector('.start-project')"))
+                driver.navigate("Network Graph", ".graph-toolbar")
                 checks.wait_until(
                     lambda: driver.js(
                         "return !!document.querySelector('.graph-toolbar')"
@@ -131,6 +133,7 @@ def main():
                     "return document.querySelector('.engagement-metrics').textContent.includes('0 / 1')"
                 )
                 driver.navigate("Reports", ".report-options")
+                driver.click("Working preset")
                 driver.click("Generate preview")
                 checks.wait_until(
                     lambda: driver.js(

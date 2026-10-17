@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Dragontrip",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "identifier": "io.dragontrip.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -26,24 +26,18 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "deb"
-    ],
+    "targets": ["deb"],
     "category": "DeveloperTool",
-    "shortDescription": "Personal security workspace and infrastructure graph",
+    "shortDescription": "Local pentest workspace: from recon to report",
     "resources": {
       "resources/backend/": "backend/"
     },
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/256x256.png"
-    ],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/256x256.png"],
     "linux": {
       "deb": {
         "desktopTemplate": "dragontrip.desktop"
       }
     },
-    "longDescription": "Offline desktop workspace for authorized security assessments, with Nmap discovery, source XML evidence and a persistent infrastructure graph."
+    "longDescription": "Bring Nmap, Burp and Nuclei results into one local project. Connect infrastructure, findings and evidence, recover editor drafts, record retests and build Markdown, HTML or evidence-bundle reports. Open-source MVP for authorized assessments."
   }
 }

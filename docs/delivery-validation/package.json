@@ -1,0 +1,7 @@
+{
+  "version": "0.8.0",
+  "architecture": "amd64",
+  "bytes": 44844926,
+  "sha256": "40c3e1d93899ea9433d12c8d0a5de55a3f377f53a57ad05f0ef232b1c859d417",
+  "build_platform": "Debian 13 / WebKitGTK 2.54; local verification package, separate from CI release bytes"
+}

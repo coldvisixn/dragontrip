@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "backend": "frozen",
+  "checks": [
+    "isolated fictional demo",
+    "new project onboarding",
+    "scope and Burp import",
+    "finding draft recovery",
+    "pasted screenshot",
+    "append-only retest",
+    "HTML and ZIP export",
+    "1366/1000px viewport fit",
+    "report recovery after backend restart without local mirror",
+    "standalone HTML without external requests"
+  ],
+  "page_errors": []
+}

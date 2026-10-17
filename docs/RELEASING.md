@@ -14,8 +14,8 @@ User-facing installers belong in [GitHub Releases](https://github.com/coldvisixn
 From the intended release commit, for example:
 
 ```bash
-git tag -a v0.7.1 -m "Dragontrip 0.7.1"
-git push origin v0.7.1
+git tag -a v0.8.0 -m "Dragontrip 0.8.0"
+git push origin v0.8.0
 ```
 
 [The release workflow](../.github/workflows/release.yml) checks the tag against version metadata, builds the Linux `amd64` package on Ubuntu 24.04, runs backend/UI/frozen-backend checks and native Tauri/WebKit planning acceptance, and verifies package metadata/checksums. Only the publish job receives `contents: write`.

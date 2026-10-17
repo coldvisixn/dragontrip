@@ -56,3 +56,7 @@ Credentials are excluded by default. Including them requires explicit selection,
 ## Navigation
 
 `Ctrl+K` opens the command palette; `Ctrl+Shift+F` opens project search. The navigation arrows move through visited pages. Inspector and the bottom task panel are resizable. Theme, accent, density, reduced motion and graph detail are under **Settings**.
+
+## 0.8.0 workflow update
+
+New projects open in Project overview with import, scope and live recon actions. Rename a project through Project details. Dashboard/Projects offers an explicit, separate fictional demo. Note/finding/plan editors recover device-local drafts; Reports keeps its options/summary. Findings support a description template, pasted/dropped screenshots and retained manual retests. Reports has delivery/working presets and Markdown, HTML or selected-evidence ZIP output. [Complete workflow and limits](DELIVERY.md).

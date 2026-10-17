@@ -146,6 +146,7 @@ const { once } = require('node:events');
     await page
       .getByLabel('Executive summary', { exact: true })
       .fill('Local review completed. Follow-up verification remains.');
+    await page.getByRole('button', { name: 'Working preset', exact: true }).click();
     await page.getByRole('button', { name: 'Generate preview', exact: true }).click();
     await page.getByRole('heading', { name: 'Confirmed observation', exact: true }).waitFor();
     assert.match(await page.getByLabel('Report preview').innerText(), /Verify lab remediation/);

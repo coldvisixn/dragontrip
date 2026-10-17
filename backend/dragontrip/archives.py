@@ -135,7 +135,7 @@ class ObservationRecord(BaseModel):
 
 class Manifest(BaseModel):
     format: Literal["dragontrip-project"]
-    version: Literal[1, 2, 3]
+    version: Literal[1, 2, 3, 4]
     project: dict
     nodes: list[NodeRecord] = Field(max_length=10000)
     edges: list[EdgeRecord] = Field(max_length=50000)
@@ -227,7 +227,7 @@ def register_archives(app, sessions, project, root):
                     )
                 manifest = {
                     "format": "dragontrip-project",
-                    "version": 3,
+                    "version": 4,
                     "project": serialize(p),
                     "nodes": rows(Node),
                     "edges": rows(Edge),
@@ -417,6 +417,8 @@ def register_archives(app, sessions, project, root):
                     for k in manifest.knowledge
                 ):
                     fail("Methodologies and workflows require archive version 3")
+                if manifest.version < 4 and any(k.content.retests for k in manifest.knowledge):
+                    fail("Retest history requires archive version 4")
                 sid = {row.id: uid() for row in manifest.scans}
                 rid = {row.id: uid() for row in manifest.import_runs}
                 aid = {row.id: uid() for row in manifest.attachments}

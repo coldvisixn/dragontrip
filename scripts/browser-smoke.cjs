@@ -29,6 +29,7 @@ const {once}=require('node:events');
     await page.getByRole('button',{name:'New project',exact:true}).click();
     await page.getByLabel('Project name').fill('HTB Lab');
     await page.getByRole('button',{name:'Create project',exact:true}).click();
+    await navigate(page, 'Network Graph');
     await page.getByRole('button',{name:'Start scan',exact:true}).click();
     await page.getByLabel('Target IPv4 address').fill('127.0.0.1');
     await page.getByRole('checkbox').check();

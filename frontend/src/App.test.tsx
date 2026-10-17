@@ -62,6 +62,17 @@ beforeEach(() => {
   vi.mocked(api).mockImplementation(async (path, method, body) => {
     if (path === '/projects' && method === 'POST') return { ...project, ...(body as any) };
     if (path === '/projects') return [project];
+    if (path.endsWith('/overview'))
+      return {
+        objects: {},
+        scans: {},
+        records: {},
+        tasks: {},
+        overdue: 0,
+        active_risks: {},
+        attachments: 0,
+        as_of: project.updated,
+      };
     if (path.includes('/observations?')) return { items: [], total: 0 };
     if (path === '/tools') return [{ name: 'Nmap', installed: true, path: '/usr/bin/nmap' }];
     if (path === '/projects/lab?compact=true') return detail;
@@ -115,7 +126,7 @@ describe('workspace', () => {
     await waitFor(() =>
       expect(api).toHaveBeenCalledWith('/projects', 'POST', { name: 'My Lab', description: '' }),
     );
-    await screen.findByRole('button', { name: '8080/tcp · http' });
+    await screen.findByRole('heading', { name: 'Start with the evidence you already have' });
   });
   it('surfaces backend failure and lets the user retry', async () => {
     vi.mocked(api).mockRejectedValue(new Error('Backend unavailable'));

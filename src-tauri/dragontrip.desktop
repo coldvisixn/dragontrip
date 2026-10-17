@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Dragontrip
-Comment=Personal security workspace and infrastructure graph
+Comment=Local pentest workspace: from recon to report
 Exec=dragontrip
 Icon=dragontrip
 Terminal=false

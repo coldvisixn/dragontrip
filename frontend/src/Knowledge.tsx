@@ -13,6 +13,7 @@ import { api, type Detail } from './api';
 import { Observations } from './Research';
 import Markdown, { MarkdownPreview } from './Markdown';
 import { AttachmentLinks, LinkedEvidence } from './Evidence';
+import { useDraft } from './useDraft';
 
 export type KnowledgeKind = 'note' | 'finding' | 'path';
 type Step = { node_id: string; action: string; status: string };
@@ -25,6 +26,7 @@ type Content = {
   status: string;
   remediation: string;
   steps: Step[];
+  retests?: { at: string; result: string; note: string }[];
 };
 export type KnowledgeRecord = {
   id: string;
@@ -121,21 +123,28 @@ function Editor({
   kind: KnowledgeKind;
   record?: KnowledgeRecord;
   nodeId?: string;
-  onSave: (title: string, content: Content) => Promise<void>;
+  onSave: (title: string, content: Content, expectedUpdated?: string) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [title, setTitle] = useState(record?.title || '');
-  const [content, setContent] = useState<Content>({ ...blank(nodeId), ...record?.content });
+  const draft = useDraft(detail.project.id, `${kind}:${record?.id || 'new'}`, {
+    title: record?.title || '',
+    content: { ...blank(nodeId), ...record?.content },
+    expectedUpdated: record?.updated,
+  });
+  const { title, content } = draft.value;
+  const setTitle = (title: string) => draft.change((v) => ({ ...v, title }));
+  const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const change = <K extends keyof Content>(key: K, value: Content[K]) =>
-    setContent((c) => ({ ...c, [key]: value }));
+    draft.change((v) => ({ ...v, content: { ...v.content, [key]: value } }));
   async function save(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError('');
     try {
-      await onSave(title.trim(), content);
+      await onSave(title.trim(), content, draft.value.expectedUpdated);
+      await draft.clear();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -158,242 +167,396 @@ function Editor({
       <h2>
         {record ? 'Edit' : 'New'} {singular[kind]}
       </h2>
-      <label>
-        Title
-        <input
-          autoFocus
-          required
-          maxLength={160}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-      </label>
-      <div className="form-pair">
-        <label>
-          Status
-          <select
-            aria-label="Status"
-            value={content.status}
-            onChange={(e) => change('status', e.target.value)}
+      <p aria-live="polite" className="muted">
+        {draft.status}
+      </p>
+      {draft.error && (
+        <p role="alert" className="form-error">
+          {draft.error}{' '}
+          <button type="button" onClick={draft.retry}>
+            Retry draft recovery
+          </button>
+        </p>
+      )}
+      <fieldset className="editor-fields" disabled={busy || !draft.ready}>
+        {!record && kind === 'finding' && (
+          <button
+            type="button"
+            onClick={() => {
+              if (
+                content.body &&
+                !window.confirm('Replace the description with a blank finding template?')
+              )
+                return;
+              change(
+                'body',
+                '## Observation\n\nDescribe what you observed and the affected target.\n\n## Steps to reproduce\n\n1. \n\n## Expected and actual behavior\n\n\n## Impact\n\nExplain the demonstrated impact and any limits.\n\n## Evidence\n\nLink supporting screenshots, objects and source scans below.',
+              );
+            }}
           >
-            {['draft', 'open', 'confirmed', 'resolved', 'dismissed'].map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
+            Use finding template
+          </button>
+        )}
+        <label>
+          Title
+          <input
+            autoFocus
+            required
+            maxLength={160}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+          />
         </label>
-        {kind === 'finding' && (
+        <div className="form-pair">
           <label>
-            Severity
+            Status
             <select
-              aria-label="Severity"
-              value={content.severity}
-              onChange={(e) => change('severity', e.target.value)}
+              aria-label="Status"
+              value={content.status}
+              onChange={(e) => change('status', e.target.value)}
             >
-              {['info', 'low', 'medium', 'high', 'critical'].map((s) => (
+              {['draft', 'open', 'confirmed', 'resolved', 'dismissed'].map((s) => (
                 <option key={s}>{s}</option>
               ))}
             </select>
           </label>
-        )}
-      </div>
-      <label>
-        {kind === 'finding' ? 'Description and evidence' : 'Content'}
-        <textarea
-          aria-label={kind === 'finding' ? 'Description and evidence' : 'Content'}
-          rows={7}
-          maxLength={12000}
-          value={content.body}
-          onChange={(e) => change('body', e.target.value)}
-          placeholder={
-            kind === 'path'
-              ? 'Goal, assumptions and reasoning…'
-              : 'Context, observations and supporting details…'
-          }
-        />
-      </label>
-      <MarkdownPreview source={content.body} />
-      {kind === 'finding' && (
-        <label>
-          Remediation
-          <textarea
-            aria-label="Remediation"
-            maxLength={6000}
-            value={content.remediation}
-            onChange={(e) => change('remediation', e.target.value)}
-            placeholder="Recommended fix and how to verify it…"
-          />
-        </label>
-      )}
-      {kind === 'path' && (
-        <section className="path-editor">
-          <div className="section-actions">
-            <h3>Ordered steps</h3>
-            <button
-              type="button"
-              disabled={!detail.nodes.length || content.steps.length >= 50}
-              onClick={() =>
-                change('steps', [
-                  ...content.steps,
-                  { node_id: detail.nodes[0].id, action: '', status: 'planned' },
-                ])
-              }
-            >
-              <Plus size={14} />
-              Add step
-            </button>
-          </div>
-          <p className="muted">Manual investigation plan. Steps never execute tools.</p>
-          {content.steps.map((s, i) => (
-            <fieldset key={i}>
-              <legend>Step {i + 1}</legend>
-              <label>
-                Object
-                <select
-                  aria-label="Object"
-                  value={s.node_id}
-                  onChange={(e) => step(i, { node_id: e.target.value })}
-                >
-                  {!detail.nodes.some((n) => n.id === s.node_id) && (
-                    <option value={s.node_id}>Deleted object</option>
-                  )}
-                  {detail.nodes.map((n) => (
-                    <option key={n.id} value={n.id}>
-                      {n.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Action or rationale
-                <input
-                  required
-                  maxLength={500}
-                  value={s.action}
-                  onChange={(e) => step(i, { action: e.target.value })}
-                />
-              </label>
-              <label>
-                Step status
-                <select
-                  aria-label="Step status"
-                  value={s.status}
-                  onChange={(e) => step(i, { status: e.target.value })}
-                >
-                  {['planned', 'validated', 'blocked'].map((v) => (
-                    <option key={v}>{v}</option>
-                  ))}
-                </select>
-              </label>
-              <div className="step-actions">
-                <button
-                  type="button"
-                  aria-label={`Move step ${i + 1} up`}
-                  disabled={i === 0}
-                  onClick={() => move(i, -1)}
-                >
-                  <ArrowUp size={14} />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Move step ${i + 1} down`}
-                  disabled={i === content.steps.length - 1}
-                  onClick={() => move(i, 1)}
-                >
-                  <ArrowDown size={14} />
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Remove step ${i + 1}`}
-                  onClick={() =>
-                    change(
-                      'steps',
-                      content.steps.filter((_, j) => j !== i),
-                    )
-                  }
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </fieldset>
-          ))}
-        </section>
-      )}
-      <AttachmentLinks
-        pid={detail.project.id}
-        ids={content.attachment_ids}
-        onChange={(ids) => change('attachment_ids', ids)}
-      />
-      <ObjectLinks
-        detail={detail}
-        ids={content.node_ids}
-        onChange={(ids) => change('node_ids', ids)}
-      />
-      <fieldset className="reference-picker">
-        <legend>Source scans</legend>
-        <div className="reference-options">
-          {[...new Set([...content.scan_ids, ...detail.scans.map((s) => s.id)])].map((id) => {
-            const scan = detail.scans.find((s) => s.id === id);
-            return (
-              <label className="check-row" key={id}>
-                <input
-                  type="checkbox"
-                  checked={content.scan_ids.includes(id)}
-                  onChange={(e) =>
-                    change(
-                      'scan_ids',
-                      e.target.checked
-                        ? [...content.scan_ids, id]
-                        : content.scan_ids.filter((s) => s !== id),
-                    )
-                  }
-                />
-                <span>
-                  {scan
-                    ? `${scan.tool || 'nmap'} · ${scan.target} · ${scan.status}`
-                    : 'Historical scan ' + id}
-                  <small>{scan ? new Date(scan.started).toLocaleString() : id}</small>
-                </span>
-              </label>
-            );
-          })}
-          {!detail.scans.length && !content.scan_ids.length && (
-            <p className="muted">No scans yet.</p>
+          {kind === 'finding' && (
+            <label>
+              Severity
+              <select
+                aria-label="Severity"
+                value={content.severity}
+                onChange={(e) => change('severity', e.target.value)}
+              >
+                {['info', 'low', 'medium', 'high', 'critical'].map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </label>
           )}
         </div>
+        <label>
+          {kind === 'finding' ? 'Description and evidence' : 'Content'}
+          <textarea
+            aria-label={kind === 'finding' ? 'Description and evidence' : 'Content'}
+            rows={7}
+            maxLength={12000}
+            value={content.body}
+            onChange={(e) => change('body', e.target.value)}
+            placeholder={
+              kind === 'path'
+                ? 'Goal, assumptions and reasoning…'
+                : 'Context, observations and supporting details…'
+            }
+          />
+        </label>
+        <MarkdownPreview source={content.body} />
+        {kind === 'finding' && (
+          <label>
+            Remediation
+            <textarea
+              aria-label="Remediation"
+              maxLength={6000}
+              value={content.remediation}
+              onChange={(e) => change('remediation', e.target.value)}
+              placeholder="Recommended fix and how to verify it…"
+            />
+          </label>
+        )}
+        {kind === 'path' && (
+          <section className="path-editor">
+            <div className="section-actions">
+              <h3>Ordered steps</h3>
+              <button
+                type="button"
+                disabled={!detail.nodes.length || content.steps.length >= 50}
+                onClick={() =>
+                  change('steps', [
+                    ...content.steps,
+                    { node_id: detail.nodes[0].id, action: '', status: 'planned' },
+                  ])
+                }
+              >
+                <Plus size={14} />
+                Add step
+              </button>
+            </div>
+            <p className="muted">Manual investigation plan. Steps never execute tools.</p>
+            {content.steps.map((s, i) => (
+              <fieldset key={i}>
+                <legend>Step {i + 1}</legend>
+                <label>
+                  Object
+                  <select
+                    aria-label="Object"
+                    value={s.node_id}
+                    onChange={(e) => step(i, { node_id: e.target.value })}
+                  >
+                    {!detail.nodes.some((n) => n.id === s.node_id) && (
+                      <option value={s.node_id}>Deleted object</option>
+                    )}
+                    {detail.nodes.map((n) => (
+                      <option key={n.id} value={n.id}>
+                        {n.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Action or rationale
+                  <input
+                    required
+                    maxLength={500}
+                    value={s.action}
+                    onChange={(e) => step(i, { action: e.target.value })}
+                  />
+                </label>
+                <label>
+                  Step status
+                  <select
+                    aria-label="Step status"
+                    value={s.status}
+                    onChange={(e) => step(i, { status: e.target.value })}
+                  >
+                    {['planned', 'validated', 'blocked'].map((v) => (
+                      <option key={v}>{v}</option>
+                    ))}
+                  </select>
+                </label>
+                <div className="step-actions">
+                  <button
+                    type="button"
+                    aria-label={`Move step ${i + 1} up`}
+                    disabled={i === 0}
+                    onClick={() => move(i, -1)}
+                  >
+                    <ArrowUp size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Move step ${i + 1} down`}
+                    disabled={i === content.steps.length - 1}
+                    onClick={() => move(i, 1)}
+                  >
+                    <ArrowDown size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={`Remove step ${i + 1}`}
+                    onClick={() =>
+                      change(
+                        'steps',
+                        content.steps.filter((_, j) => j !== i),
+                      )
+                    }
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </fieldset>
+            ))}
+          </section>
+        )}
+        <AttachmentLinks
+          pid={detail.project.id}
+          ids={content.attachment_ids}
+          onChange={(ids) => change('attachment_ids', ids)}
+          onBusyChange={setUploading}
+        />
+        <ObjectLinks
+          detail={detail}
+          ids={content.node_ids}
+          onChange={(ids) => change('node_ids', ids)}
+        />
+        <fieldset className="reference-picker">
+          <legend>Source scans</legend>
+          <div className="reference-options">
+            {[...new Set([...content.scan_ids, ...detail.scans.map((s) => s.id)])].map((id) => {
+              const scan = detail.scans.find((s) => s.id === id);
+              return (
+                <label className="check-row" key={id}>
+                  <input
+                    type="checkbox"
+                    checked={content.scan_ids.includes(id)}
+                    onChange={(e) =>
+                      change(
+                        'scan_ids',
+                        e.target.checked
+                          ? [...content.scan_ids, id]
+                          : content.scan_ids.filter((s) => s !== id),
+                      )
+                    }
+                  />
+                  <span>
+                    {scan
+                      ? `${scan.tool || 'nmap'} · ${scan.target} · ${scan.status}`
+                      : 'Historical scan ' + id}
+                    <small>{scan ? new Date(scan.started).toLocaleString() : id}</small>
+                  </span>
+                </label>
+              );
+            })}
+            {!detail.scans.length && !content.scan_ids.length && (
+              <p className="muted">No scans yet.</p>
+            )}
+          </div>
+        </fieldset>
+        <label>
+          Link historical scan by ID
+          <input
+            placeholder="Scan ID from history"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                const id = e.currentTarget.value.trim();
+                if (id && !content.scan_ids.includes(id))
+                  change('scan_ids', [...content.scan_ids, id]);
+                e.currentTarget.value = '';
+              }
+            }}
+          />
+          <small>Press Enter to add. The server verifies project ownership.</small>
+        </label>
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button type="button" disabled={busy} onClick={onCancel}>
+            Cancel
+          </button>
+          <button
+            className="primary"
+            disabled={
+              busy || uploading || !title.trim() || (kind === 'path' && !content.steps.length)
+            }
+          >
+            {busy ? 'Saving…' : 'Save ' + singular[kind]}
+          </button>
+        </div>
       </fieldset>
-      <label>
-        Link historical scan by ID
-        <input
-          placeholder="Scan ID from history"
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              const id = e.currentTarget.value.trim();
-              if (id && !content.scan_ids.includes(id))
-                change('scan_ids', [...content.scan_ids, id]);
-              e.currentTarget.value = '';
+      <small className="muted">
+        Closing keeps your draft. Drafts are stored unencrypted on this device and are excluded from
+        reports and portable projects.
+      </small>
+      <button
+        type="button"
+        disabled={busy || !draft.ready}
+        onClick={async () => {
+          if (
+            !window.confirm(
+              'Discard this draft? Your saved record and evidence files stay in the project.',
+            )
+          )
+            return;
+          void draft.clear();
+          onCancel();
+        }}
+      >
+        Discard draft
+      </button>
+    </form>
+  );
+}
+
+function RetestForm({
+  pid,
+  record,
+  onSaved,
+}: {
+  pid: string;
+  record: KnowledgeRecord;
+  onSaved: (saved: KnowledgeRecord) => void;
+}) {
+  const [note, setNote] = useState('');
+  const [result, setResult] = useState('inconclusive');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  return (
+    <section>
+      <h3>Retest history</h3>
+      {(record.content.retests || []).map((entry, i) => (
+        <div className="panel" key={i}>
+          <strong>
+            {entry.result.replaceAll('_', ' ')} · {new Date(entry.at).toLocaleString()}
+          </strong>
+          <Markdown source={entry.note} />
+        </div>
+      ))}
+      <details>
+        <summary>Record a retest</summary>
+        <p className="muted">
+          Record your manual verification and supporting evidence. Fixed resolves the finding; still
+          present confirms it. History is retained.
+        </p>
+        <form
+          className="knowledge-editor"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setBusy(true);
+            setError('');
+            try {
+              onSaved(
+                await api(`/projects/${pid}/knowledge/${record.id}/retests`, 'POST', {
+                  result,
+                  note,
+                  expected_updated: record.updated,
+                }),
+              );
+              setNote('');
+            } catch (e) {
+              setError((e as Error).message);
+            } finally {
+              setBusy(false);
             }
           }}
-        />
-        <small>Press Enter to add. The server verifies project ownership.</small>
-      </label>
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="dialog-actions">
-        <button type="button" disabled={busy} onClick={onCancel}>
-          Cancel
-        </button>
-        <button
-          className="primary"
-          disabled={busy || !title.trim() || (kind === 'path' && !content.steps.length)}
         >
-          {busy ? 'Saving…' : 'Save ' + singular[kind]}
-        </button>
-      </div>
-    </form>
+          <fieldset className="editor-fields" disabled={busy}>
+            <label>
+              Retest result
+              <select
+                aria-label="Retest result"
+                value={result}
+                onChange={(e) => setResult(e.target.value)}
+              >
+                <option value="inconclusive">Inconclusive</option>
+                <option value="fixed">Fixed</option>
+                <option value="still_present">Still present</option>
+              </select>
+            </label>
+            <label>
+              Retest notes
+              <textarea
+                required
+                maxLength={2000}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="What you tested, the observed result and relevant evidence references…"
+              />
+            </label>
+            <button disabled={!note.trim()}>Save retest</button>
+          </fieldset>
+        </form>
+        {error && (
+          <p role="alert" className="form-error">
+            {error}{' '}
+            <button
+              onClick={async () => {
+                try {
+                  onSaved(await api(`/projects/${pid}/knowledge/${record.id}`));
+                  setError('');
+                } catch (e) {
+                  setError((e as Error).message);
+                }
+              }}
+            >
+              Reload finding
+            </button>
+          </p>
+        )}
+      </details>
+    </section>
   );
 }
 
@@ -423,6 +586,7 @@ export default function Knowledge({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [savingRecord, setSavingRecord] = useState(false);
   const [revision, setRevision] = useState(0);
   const [editorVersion, setEditorVersion] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -506,8 +670,8 @@ export default function Knowledge({
         </div>
         <button
           className="primary"
+          disabled={savingRecord}
           onClick={() => {
-            if (editing && !window.confirm('Discard unsaved changes?')) return;
             setSelected(undefined);
             setEditorVersion((v) => v + 1);
             setEditing(true);
@@ -562,8 +726,8 @@ export default function Knowledge({
               <button
                 key={item.id}
                 className={'knowledge-card ' + (selected?.id === item.id ? 'active' : '')}
+                disabled={savingRecord}
                 onClick={() => {
-                  if (editing && !window.confirm('Discard unsaved changes?')) return;
                   setSelected(item);
                   setEditing(false);
                 }}
@@ -607,17 +771,22 @@ export default function Knowledge({
               record={selected}
               nodeId={nodeId}
               onCancel={() => setEditing(false)}
-              onSave={async (title, content) => {
-                const saved = await api<KnowledgeRecord>(
-                  `/projects/${pid}/knowledge` + (selected ? '/' + selected.id : ''),
-                  selected ? 'PUT' : 'POST',
-                  { kind, title, content },
-                );
-                setItems((rows) => [saved, ...rows.filter((row) => row.id !== saved.id)]);
-                setSelected(saved);
-                setEditing(false);
-                setRevision((v) => v + 1);
-                await onChanged();
+              onSave={async (title, content, expectedUpdated) => {
+                setSavingRecord(true);
+                try {
+                  const saved = await api<KnowledgeRecord>(
+                    `/projects/${pid}/knowledge` + (selected ? '/' + selected.id : ''),
+                    selected ? 'PUT' : 'POST',
+                    { kind, title, content, expected_updated: expectedUpdated },
+                  );
+                  setItems((rows) => [saved, ...rows.filter((row) => row.id !== saved.id)]);
+                  setSelected(saved);
+                  setEditing(false);
+                  setRevision((v) => v + 1);
+                  await onChanged();
+                } finally {
+                  setSavingRecord(false);
+                }
               }}
             />
           ) : selected ? (
@@ -637,6 +806,16 @@ export default function Knowledge({
                 <>
                   <h3>Remediation</h3>
                   <Markdown source={selected.content.remediation || 'Not specified.'} />
+                  <RetestForm
+                    key={selected.id}
+                    pid={pid}
+                    record={selected}
+                    onSaved={(saved) => {
+                      setSelected(saved);
+                      setItems((rows) => rows.map((row) => (row.id === saved.id ? saved : row)));
+                      void onChanged();
+                    }}
+                  />
                 </>
               )}
               {kind === 'path' && (

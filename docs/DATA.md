@@ -17,7 +17,7 @@ The desktop starts a loopback-only backend with a fresh per-launch token deliver
 
 Vault contents are encrypted with AES-GCM using a key derived from the master password with Scrypt. Titles, usernames, secrets, private notes and object references are encrypted together. Unlock keys live in memory and are discarded on lock, idle expiry or backend restart. Password recovery/change is not currently implemented.
 
-Ordinary notes, findings, tasks, evidence, scan output and normal reports are plain project data. Vault encryption does not encrypt the whole project or protect a compromised running machine. Keep sensitive values in the vault rather than ordinary notes. See [the security policy](../SECURITY.md) for reporting implementation vulnerabilities.
+Ordinary notes, findings, editor drafts, report compositions, tasks, evidence, scan output and normal reports are plain project data. Vault encryption does not encrypt the whole project or protect a compromised running machine. Keep sensitive values in the vault rather than ordinary notes. See [the security policy](../SECURITY.md) for reporting implementation vulnerabilities.
 
 ## Back up the installation
 
@@ -42,9 +42,15 @@ Task records added in 0.5.0 require the updated importer. Earlier archives remai
 
 0.7.0 adds methodology/workflow Knowledge records and archive version 3, including run scan IDs and action references. There is no additional physical database migration. Versions 1/2 remain readable. [Methodology/workflow portability and limits](METHODOLOGIES.md).
 
+## Recoverable drafts (0.8.0)
+
+Note/finding/plan drafts and report composition sync into the existing SQLite configuration table, with an immediate unencrypted WebView recovery copy. Wait for successful draft sync before taking the data-directory backup. Drafts are excluded from project archives and reports; save records before transferring a project. Discard clears draft content while retaining a revision tombstone to reject delayed autosaves. [Recovery behavior and limits](DELIVERY.md#recover-your-work).
+
+0.8.0 exports archive format v4 for append-only finding retests and reads v1/v2/v3. Older apps reject v4. A finding with retests retains its history and can be dismissed instead of deleted. No new physical database migration is needed for this increment.
+
 ## Reports and evidence retention
 
-Markdown reports omit vault records, raw scan output and attachment bytes. They can still include authored sensitive text and evidence filenames. Review the preview before sharing. Downloads exports are private and do not overwrite existing files.
+Markdown reports omit vault records, editor drafts, raw scan output and attachment bytes. HTML and ZIP exports include only explicitly checked attachment files, with ownership and integrity verification (100 files / 32 MiB). They can still include authored sensitive text and evidence filenames. Review the preview before sharing. Downloads exports are private and do not overwrite existing files.
 
 Terminal history keeps the last 64 KiB per scan, not a full console transcript. Successful XML/JSON scan artifacts are retained; failed/cancelled partial artifacts are removed. Evidence retention is manual. Attachment deletion requires removing its knowledge references first. Do not delete files behind the application unless you accept missing-evidence errors.
 

@@ -145,7 +145,7 @@ class Driver:
                 const label=arguments[0];
                 const tab=[...document.querySelectorAll('[role=tab]')].find(b=>b.textContent.trim()===label);
                 const button=tab||[...document.querySelectorAll('button:not([data-pages])')].find(b=>b.textContent.trim()===label);
-                if(button&&!button.disabled){button.click();return true;}
+                if(button&&!button.matches(':disabled')){button.click();return true;}
                 const group=[...document.querySelectorAll('.sidebar nav button[data-pages]')].find(b=>b.dataset.pages.split('|').includes(label));
                 if(group&&!group.disabled){group.click();return group.dataset.pages.split('|').length===1;}
                 return false;
@@ -159,7 +159,7 @@ class Driver:
         self.js("document.querySelector('.react-flow__controls-fitview').click()")
 
     def fill(self, selector, text):
-        wait_until(lambda: self.js("return !!document.querySelector(arguments[0])", selector))
+        wait_until(lambda: self.js("const e=document.querySelector(arguments[0]);return !!e && !e.matches(':disabled')", selector))
         # Let the native dialog focus/transition finish before WebDriver types.
         time.sleep(.2)
         element = self.call("POST", "/element", {"using": "css selector", "value": selector})
@@ -280,6 +280,8 @@ def main():
                     driver.click("New project")
                     driver.fill(".dialog input", "HTB Native Lab")
                     driver.click("Create project")
+                    wait_until(lambda: driver.js("return !!document.querySelector('.start-project')"))
+                    driver.navigate("Network Graph", ".graph-toolbar")
                     wait_until(lambda: driver.js("return !!document.querySelector('.graph-toolbar')"))
                     driver.click("Start scan")
                     driver.fill(".dialog input:not([type=checkbox])", "127.0.0.1")

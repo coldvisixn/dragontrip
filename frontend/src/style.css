@@ -1623,6 +1623,7 @@ legend {
 }
 .node-editor label,
 .knowledge-editor > label,
+.editor-fields > label,
 .vault-unlock label,
 .path-editor label {
   display: grid;
@@ -2939,4 +2940,23 @@ summary {
   .sidebar .project-nav-label {
     margin-top: 18px;
   }
+}
+
+.editor-fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+.start-project {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.start-project .start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 }

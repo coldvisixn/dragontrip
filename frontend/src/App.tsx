@@ -468,6 +468,7 @@ export default function App() {
       const p = await api<Project>('/projects', 'POST', { name, description });
       await refreshProjects();
       openProject(p.id);
+      setPage('Project overview');
       setModal(null);
       notify('Project created');
     });
@@ -697,26 +698,28 @@ export default function App() {
                         New project
                       </button>
                     </div>
-                    <div className="stats">
-                      {[
-                        [Folder, 'Projects', projects.length, 'Independent workspaces'],
-                        [Server, 'Hosts', hostCount, 'In the selected project'],
-                        [Globe, 'Services', serviceCount, 'Evidence from Nmap'],
-                        [Activity, 'Active scans', running, 'Bounded recon queue'],
-                      ].map(([Icon, label, value, hint]) => {
-                        const I = Icon as typeof Folder;
-                        return (
-                          <div className="stat" key={String(label)}>
-                            <div>
-                              <span>{String(label)}</span>
-                              <I size={17} />
+                    {projects.length > 0 && (
+                      <div className="stats">
+                        {[
+                          [Folder, 'Projects', projects.length, 'Independent workspaces'],
+                          [Server, 'Hosts', hostCount, 'In the selected project'],
+                          [Globe, 'Services', serviceCount, 'Evidence from Nmap'],
+                          [Activity, 'Active scans', running, 'Bounded recon queue'],
+                        ].map(([Icon, label, value, hint]) => {
+                          const I = Icon as typeof Folder;
+                          return (
+                            <div className="stat" key={String(label)}>
+                              <div>
+                                <span>{String(label)}</span>
+                                <I size={17} />
+                              </div>
+                              <strong>{String(value)}</strong>
+                              <small>{String(hint)}</small>
                             </div>
-                            <strong>{String(value)}</strong>
-                            <small>{String(hint)}</small>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     <div className="section-heading">
                       <h2>
                         Your projects <span>{projects.length}</span>
@@ -727,6 +730,26 @@ export default function App() {
                       </button>
                     </div>
                     {projectCards}
+                    <section className="panel start-project" style={{ marginTop: 20 }}>
+                      <h2>Explore Dragontrip in a minute</h2>
+                      <p>
+                        Create a separate project with fictional objects, a draft finding and a
+                        task. No scans run.
+                      </p>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void perform(async () => {
+                            const example = await api<Project>('/examples', 'POST');
+                            await refreshProjects();
+                            openProject(example.id);
+                            notify('Fictional demo created · no scans launched');
+                          })
+                        }
+                      >
+                        Create fictional demo
+                      </button>
+                    </section>
                     <ProjectTransfer
                       project={current}
                       onImported={async (value) => {
@@ -809,6 +832,26 @@ export default function App() {
                       </button>
                     </div>
                     {projectCards}
+                    <section className="panel start-project" style={{ marginTop: 20 }}>
+                      <h2>Explore Dragontrip in a minute</h2>
+                      <p>
+                        Create a separate project with fictional objects, a draft finding and a
+                        task. No scans run.
+                      </p>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void perform(async () => {
+                            const example = await api<Project>('/examples', 'POST');
+                            await refreshProjects();
+                            openProject(example.id);
+                            notify('Fictional demo created · no scans launched');
+                          })
+                        }
+                      >
+                        Create fictional demo
+                      </button>
+                    </section>
                     <ProjectTransfer
                       project={current}
                       onImported={async (value) => {
@@ -1175,6 +1218,13 @@ export default function App() {
                       project={detail.project}
                       onTasks={() => setPage('Task board')}
                       onFindings={() => setPage('Findings')}
+                      onImport={() => setPage('Import results')}
+                      onScope={() => setPage('Targets & scope')}
+                      onRecon={startScan}
+                      onProjectChanged={async () => {
+                        await refreshProjects();
+                        if (pid) await refresh(pid);
+                      }}
                     />
                   </Suspense>
                 )}

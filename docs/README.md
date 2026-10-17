@@ -32,3 +32,7 @@ These documents record specific development snapshots. They are evidence/history
 - [Phase 3: investigation knowledge/vault](PHASE3.md)
 - [Phase 2: recon automation](PHASE2.md)
 - [Earlier native validation](VALIDATION.md)
+
+## MVP delivery (0.8.0)
+
+[First project, draft recovery, findings and HTML/ZIP reports](DELIVERY.md) · [Exact local build evidence](BUILD-0.8.0.md) · [Release notes](releases/v0.8.0.md)

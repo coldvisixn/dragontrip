@@ -49,3 +49,7 @@ Use `npm test`, `npm run build`, and `DRAGONTRIP_LIVE_TEST=1 .venv/bin/python -m
 `import_formats.py` parses bounded UTF-8 sources without resolving names or launching tools. `scope.py` handles explicit membership and URL origins. `entities.py` shares stable identity/upsert behavior with manual web objects and existing recon. `imports.py` implements read-only preview, stale-preview validation, transactional apply and observation history. Add formats only with real structure fixtures, entity/link tests, source hashes, repeat-import and archive-roundtrip tests. No absent finding may be resolved by an incomplete export. [User-facing limits](IMPORTS.md).
 
 Version 3 adds checklist/workflow/workflow_run knowledge records. Preserve nested service_node/workflow_id/scan_ids remapping. Guided launches delegate to the existing scan handler, with explicit scope required and double-click serialization; do not infer methodology completion from tool results.
+
+## Archive v4 and drafts (0.8.0)
+
+New exports use archive v4 and preserve append-only `content.retests` (finding records only). Imports read v1–v4; retests in a declared pre-v4 archive are rejected. Normal record editing must retain existing retests; append through `/projects/{pid}/knowledge/{kid}/retests` with the current update revision. Device-local drafts use `/projects/{pid}/drafts/{key}` and the existing configuration table; they are not project archive content. See [delivery contract](DELIVERY.md).

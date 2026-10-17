@@ -2,6 +2,15 @@
 
 Notable user-facing changes are listed here. Download installers from [Releases](https://github.com/coldvisixn/dragontrip/releases), not the automatic source-code archives.
 
+## [0.8.0] — 2026-10-17
+
+- Recover note/finding/manual-plan drafts across navigation and restart using an immediate WebView mirror and ordered SQLite sync. Keep report composition per project; reject stale saved-record edits.
+- Open new projects with import/scope/recon actions, suppress empty metrics, offer an explicit isolated fictional demo and edit project name/description.
+- Add a blank finding template, paste/drop evidence and retained append-only manual retests with status transitions. Keep upload completion tied to the current editor state.
+- Add confirmed-first delivery and working report presets, standalone script-free HTML and ZIP bundles with explicitly selected evidence, ownership/integrity checks and stale-preview validation.
+- Export archive format v4 to retain retests; read v1/v2/v3. Drafts stay on the device and are excluded from reports/transfers. Back up before upgrading.
+- Add real browser/frozen-backend and installed Tauri/WebKit delivery acceptance; require native delivery checks before tagged publication. See [workflow/limits](docs/DELIVERY.md) and [local build evidence](docs/BUILD-0.8.0.md).
+
 ## 0.7.1 — grouped navigation
 
 - Replace 22 flat sidebar destinations with eight links and section tabs: Project, Assets, Recon, Investigation, Reports and Settings.
@@ -56,3 +65,5 @@ This entry does not announce a published release or completion of the later work
 - Tauri-managed Python backend and Debian packaging.
 
 [0.5.0]: https://github.com/coldvisixn/dragontrip/releases/tag/v0.5.0
+
+[0.8.0]: https://github.com/coldvisixn/dragontrip/releases/tag/v0.8.0
