@@ -167,7 +167,8 @@ class Driver:
         time.sleep(.2)
         element = self.call("POST", "/element", {"using": "css selector", "value": selector})
         eid = element["element-6066-11e4-a52e-4f735466cecf"]
-        self.call("POST", f"/element/{eid}/clear", {})
+        if self.js("return document.querySelector(arguments[0]).type", selector) != 'file':
+            self.call("POST", f"/element/{eid}/clear", {})
         # WebKit's native send-keys ignores literal LF; use the standard Enter key.
         if "\n" in text and self.call("GET", f"/element/{eid}/name").lower() == "textarea":
             text = text.replace("\n", "\ue007")
@@ -449,12 +450,16 @@ def main():
                     driver.fill('.project-transfer input[type=file]', str(exported))
                     driver.fill('.project-transfer input[autocomplete=off]', 'native-archive-password')
                     driver.click('Import project')
+                    wait_until(lambda: driver.js("return localStorage.getItem('dragontrip.project')!==arguments[0]", original_pid))
+                    driver.navigate('Network Graph', '.graph-toolbar')
                     wait_until(lambda: driver.js("return document.querySelector('.graph-toolbar')?.textContent.includes('(imported)')"))
                     imported = driver.graph()
                     assert imported['project']['id'] != original_pid
                     assert len(imported['nodes']) >= 3 and not any(s['status'] in ('running','queued') for s in imported['scans'])
                     driver.click('Projects')
                     driver.js("[...document.querySelectorAll('.project-card')].find(b=>b.querySelector('h3')?.textContent.trim()==='HTB Native Lab').click()")
+                    wait_until(lambda: driver.js("return localStorage.getItem('dragontrip.project')===arguments[0]", original_pid))
+                    driver.navigate('Network Graph', '.graph-toolbar')
                     wait_until(lambda: driver.js("return document.querySelector('.graph-toolbar')?.textContent.includes('HTB Native Lab') && !document.querySelector('.graph-toolbar')?.textContent.includes('(imported)')"))
                     print('PASS: native Markdown + screenshot upload/preview + Timeline + project search + theme + vault reveal/hide + encrypted project export/import', flush=True)
                     print("Preparing native close / restart", flush=True)
