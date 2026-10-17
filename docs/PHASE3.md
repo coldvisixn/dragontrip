@@ -1,5 +1,7 @@
 # Phase 3 — Investigation workspace
 
+**Historical implementation record.** For current knowledge, vault and transfer behavior, use the [user guide](USAGE.md), [data guide](DATA.md) and [capabilities](CAPABILITIES.md).
+
 ## Delivery order
 
 1. Data and behavior

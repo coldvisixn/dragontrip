@@ -1,4 +1,4 @@
-# Workspace navigation (0.9.0)
+# Workspace navigation
 
 Six sidebar destinations keep research in three project sections. The first three pages in each section have tabs; additional pages appear in **More…**. Ctrl+K also reaches every existing page.
 
@@ -17,4 +17,4 @@ Each project retains its own navigation history and section pages. Deep links fr
 
 Keyboard controls: Left/Right selects adjacent visible tabs; Home/End selects the first/last visible tab. The active tab controls its labeled workspace panel. **More…** is a standard keyboard-operable select. Ctrl+K opens quick navigation, Alt+Left/Right goes Back/Forward, Ctrl+Shift+F opens project search. Dialogs retain focus and Escape closes them.
 
-Browser and installed Tauri/WebKit acceptance cover six links, remembered sections, source-linked note routing, compact sidebar, keyboard navigation, Back and restart recovery. Compact light/dark 1000×650 checks are included in investigation acceptance. [Current evidence](BUILD-0.9.0.md) · [Browser navigation test](../scripts/navigation-smoke.cjs) · [Native navigation test](../scripts/native-navigation-smoke.py).
+Browser and installed Tauri/WebKit acceptance cover six links, remembered sections, source-linked note routing, compact sidebar, keyboard navigation, Back and restart recovery. Compact light/dark 1000×650 checks are included in investigation acceptance. [Current evidence](BUILD-0.9.1.md) · [Browser navigation test](../scripts/navigation-smoke.cjs) · [Native navigation test](../scripts/native-navigation-smoke.py).

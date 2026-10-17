@@ -2,7 +2,7 @@
 
 [English overview](../README.md) · [Описание на русском](../README.ru.md) · [Install](INSTALL.md) · [Capabilities](CAPABILITIES.md)
 
-This gallery follows an observation into a hypothesis, a next check and a retained draft. It shows the actual application UI, driven against the local Python API in an isolated browser capture. It is not a native Tauri package test; installed-app verification is documented [separately](BUILD-0.9.0.md).
+This gallery follows an observation into a hypothesis, a next check and a retained draft. It shows the actual 0.9.0 application UI, driven against the local Python API in an isolated browser capture. The 0.9.1 security/maintenance release preserves these workflows. Installed-app verification for the current package is documented [separately](BUILD-0.9.1.md).
 
 All data is explicitly authored fiction: `[DEMO] Portal review`, the RFC 5737 address `192.0.2.10` and the reserved name `portal.example.test`. The Nmap/Burp-shaped files are offline fixtures, not claims of scanner results. No scanner or target request ran, no scope authorization was added and no vulnerability was confirmed. New projects start empty.
 

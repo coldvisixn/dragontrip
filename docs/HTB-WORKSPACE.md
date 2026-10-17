@@ -1,6 +1,6 @@
 # Local investigation and recovery
 
-This checkout extends the existing local project model; it adds no customer fields or mandatory finding completeness checks. Notes, findings, tasks, paths and methodologies remain ordinary Knowledge records. Tool observations do not confirm vulnerabilities, access or stage completion.
+Dragontrip's local investigation workspace keeps notes, findings, tasks, paths and methodologies in project Knowledge records, without mandatory customer fields or finding-completeness checks. Tool observations do not confirm vulnerabilities, access or stage completion. [Current release and verification](BUILD-0.9.1.md).
 
 ## Follow an investigation
 

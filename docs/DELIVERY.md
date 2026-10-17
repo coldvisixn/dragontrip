@@ -1,4 +1,4 @@
-# Dragontrip 0.9.0: local research and reviewed exports
+# Local research and reviewed exports
 
 Dragontrip is a local workspace for human-led penetration testing and security research: **import or recon → observations → hypotheses and checks → saved results**. Findings, reports and portable projects are possible outputs; ongoing research and unsuccessful checks belong in the same workspace. The graph, scope, methodologies, recon sequences, tasks and vault support that work. [Capabilities and current release status](CAPABILITIES.md).
 
@@ -52,4 +52,4 @@ Native PDF/DOCX export is not implemented. Use browser print for HTML. Cloud col
 
 New `.dtproj` exports use **v5** for research workspace recovery and retain append-only retests; imports read **v1–v5**. Older apps reject v5. Transfers include plain research drafts and retained recovery text; review them before sharing. Back up before upgrading and do not edit upgraded data with an older binary.
 
-[Build and exact verification](BUILD-0.9.0.md) · [Browser acceptance](../scripts/delivery-smoke.cjs) · [Installed Tauri/WebKit acceptance](../scripts/native-delivery-smoke.py).
+[Build and exact verification](BUILD-0.9.1.md) · [Browser acceptance](../scripts/delivery-smoke.cjs) · [Installed Tauri/WebKit acceptance](../scripts/native-delivery-smoke.py).

@@ -79,7 +79,7 @@ ls src-tauri/target/release/bundle/deb/*.deb
 
 The build stages the Python interpreter/dependencies with PyInstaller, builds Tauri and writes a normalized `dragontrip_<version>_amd64.deb` and `.deb.sha256`. Recon tools stay system dependencies. PyInstaller does not make glibc independent: build on the oldest supported distribution and verify the exact resulting package.
 
-Native tests require `tauri-driver`, the distribution's WebKit WebDriver package, Xvfb, D-Bus, screenshot tools and Pillow. The installed-launcher test also needs XFWM, wmctrl and desktop-file-utils. See [the managed-container recipe](BUILD-CLOUD.md) for the prepared cloud workflow and [release verification](BUILD-0.5.0.md) for concrete results.
+Native tests require `tauri-driver`, the distribution's WebKit WebDriver package, Xvfb, D-Bus, screenshot tools and Pillow. The installed-launcher test also needs XFWM, wmctrl and desktop-file-utils. See [the managed-container recipe](BUILD-CLOUD.md) for the prepared cloud workflow and [current release verification](BUILD-0.9.1.md) for concrete results. [Security audits](SECURITY-AUDIT-2026-10-17.md) describe dependency monitoring, backport verification and the remaining maintenance warning.
 
 ## Repository map
 

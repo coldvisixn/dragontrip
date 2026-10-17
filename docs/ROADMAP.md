@@ -2,7 +2,7 @@
 
 This page separates implemented capabilities from future priorities. [Capabilities and current limits](CAPABILITIES.md) describes the product today; [CHANGELOG.md](../CHANGELOG.md) records version changes and [0.9.1 verification](BUILD-0.9.1.md) records exact platform checks.
 
-## Available in 0.9.0
+## Available in 0.9.1
 
 - Local desktop projects, SQLite, evidence files and a Tauri-managed Python backend.
 - Nmap/WhatWeb/ProjectDiscovery httpx/ffuf adapters with validated profiles, bounded queue, cancellation and retained results/history.
@@ -15,8 +15,9 @@ This page separates implemented capabilities from future priorities. [Capabiliti
 - Configurable Markdown, standalone HTML and selected-evidence ZIP reports; portable `.dtproj` v5 with recovery text and v1–v5 import.
 - Separately encrypted credential vault and optional encrypted credential transfer.
 - Appearance/tool settings, keyboard navigation, command palette, Debian packaging, checksums and tagged release workflow.
+- API/dependency security fixes, verified GTK safety backport and scheduled dependency audits; coordinated dependency updates and installed-Kali publication gates.
 
-See [the user guide](USAGE.md) and [release notes](releases/v0.9.0.md). The download remains a prerelease / early MVP; availability does not imply support for every platform or target form.
+See [the user guide](USAGE.md) and [release notes](releases/v0.9.1.md). The download remains a prerelease / early MVP; availability does not imply support for every platform or target form.
 
 ## Next priorities
 

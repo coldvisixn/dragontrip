@@ -34,6 +34,10 @@ A local desktop workspace for penetration testing and security research. [Englis
 
 [0.9.1 installer and Linux/Kali acceptance](BUILD-0.9.1.md) records exact package checks and their limits. Current installation instructions are in the guides above; older documents below describe specific development snapshots.
 
+- [Security audit and remaining maintenance warning](SECURITY-AUDIT-2026-10-17.md)
+- [Completed PR review and dependency decisions](PR-REVIEW-0.9.1.md)
+- [Published package identity and download verification](release-validation/v0.9.1/published-package.json)
+- [0.9.0 verification](BUILD-0.9.0.md)
 - [0.8.0 verification](BUILD-0.8.0.md) · [0.7.0 verification](BUILD-0.7.0.md) · [0.6.0 verification](BUILD-0.6.0.md)
 - [0.5.0 local Debian build and native checks](BUILD-0.5.0.md) · [resource profile](0.5.0-native-profile.json)
 - [Research workspace audit and delivery stages](RESEARCH-WORKSPACE.md)

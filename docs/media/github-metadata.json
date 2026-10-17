@@ -11,7 +11,7 @@
     "linux",
     "tauri",
     "nmap",
-    "burpsuite",
+    "burp-suite",
     "nuclei"
   ]
 }

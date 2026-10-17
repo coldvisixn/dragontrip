@@ -32,7 +32,7 @@ Graph overview requests use `?compact=true`; the selected-object endpoint suppli
 
 ## Project archive contract
 
-`.dtproj` is a ZIP with `manifest.json`, version `3` (versions `1` and `2` remain readable), format `dragontrip-project`. The manifest contains project metadata, objects, edges, historical scans, knowledge, attachment metadata, events, viewport, credential inclusion flag, and a size/SHA-256 map for every additional entry. Version 2 adds scope rules, import runs and source observations, with all node/finding/run/attachment references remapped. Old consumers reject version 2. Imported finding and relation suffixes remain stable so later imports deduplicate after transfer.
+`.dtproj` is a ZIP with `manifest.json`, version **5** (imports read **1–5**), format `dragontrip-project`. The manifest contains project metadata, objects, edges, historical scans, knowledge/retests, attachment metadata, events, viewport, credential inclusion flag, scope rules, import runs, source observations, research workspace/recovery cells, and a size/SHA-256 map for every additional entry. Import remaps all project-scoped references. Older consumers reject unsupported versions. Imported finding and relation suffixes remain stable so later imports deduplicate after transfer. Report composition remains local and is not transferred.
 
 Only `artifacts/<scan-id>.xml|json`, `attachments/<id>` and optional encrypted `vault.json` entries are allowed. No archive path is extracted directly. Import validates counts, byte budgets, identities, coordinates, references, image types and checksums, writes a fresh project, remaps identities and cleans staged files on transaction failure. Imported active scans become interrupted and never enter the execution queue. Observed node IDs retain their suffix under the new project ID so rescans deduplicate them.
 
@@ -42,7 +42,7 @@ Preserve archive compatibility or add a new version with explicit migration. Cur
 
 Use `npm test`, `npm run build`, and `DRAGONTRIP_LIVE_TEST=1 .venv/bin/python -m pytest -q`. Browser acceptance is `scripts/workspace-smoke.cjs`; baseline scan/graph acceptance is `scripts/browser-smoke.cjs`. Run these against built frontend assets and the frozen sidecar as well as development source.
 
-`scripts/profile-graph.cjs` creates only explicitly manual fixtures in isolated storage, exercises a persisted drag at 100/300/1,000 objects and reports graph loading, DOM count, payload size, heap and frame intervals. Native acceptance uses actual Tauri/WebKit, the installed package and Xvfb. `DRAGONTRIP_VALIDATION_DIR` selects an isolated output directory. Rebuild Python resources after backend changes before packaging. See `PHASE4.md` for measured results and remaining platform checks.
+`scripts/profile-graph.cjs` creates only explicitly manual fixtures in isolated storage, exercises a persisted drag at 100/300/1,000 objects and reports graph loading, DOM count, payload size, heap and frame intervals. Native acceptance uses actual Tauri/WebKit, the installed package and Xvfb. `DRAGONTRIP_VALIDATION_DIR` selects an isolated output directory. Rebuild Python resources after backend changes before packaging. See [current release verification](BUILD-0.9.1.md) for package checks and platform limits; `PHASE4.md` preserves earlier measurements.
 
 ## Offline import contracts (0.6.0)
 
@@ -52,8 +52,8 @@ Version 3 adds checklist/workflow/workflow_run knowledge records. Preserve neste
 
 ## Archive v4 and drafts (0.8.0)
 
-New exports use archive v4 and preserve append-only `content.retests` (finding records only). Imports read v1–v4; retests in a declared pre-v4 archive are rejected. Normal record editing must retain existing retests; append through `/projects/{pid}/knowledge/{kid}/retests` with the current update revision. Device-local drafts use `/projects/{pid}/drafts/{key}` and the existing configuration table; they are not project archive content. See [delivery contract](DELIVERY.md).
+0.8.0 introduced archive v4 and append-only `content.retests` (finding records only). Retests in a declared pre-v4 archive are rejected. Normal record editing must retain existing retests; append through `/projects/{pid}/knowledge/{kid}/retests` with the current update revision. Legacy device-local drafts use `/projects/{pid}/drafts/{key}` and the existing configuration table; those rows are not project archive content. Current research recovery uses the v5 workspace contract below. See [delivery contract](DELIVERY.md).
 
 ## Archive v5 and workspace (0.9.0)
 
-Research workspace cells use `/projects/{pid}/workspace` and `/projects/{pid}/workspace/{key}` with numeric revision, `value.data` and a permanent `closed` tombstone for each draft ID. v5 includes these cells and remaps embedded project references on import. Imports still read v1–v4. Legacy 0.8 note/finding/path drafts migrate at startup without deleting old rows; report composition stays on the legacy draft API and is not transferred. [Current recovery contract](HTB-WORKSPACE.md).
+Research workspace cells use `/projects/{pid}/workspace` and `/projects/{pid}/workspace/{key}` with numeric revision, `value.data` and a permanent `closed` tombstone for each draft ID. v5 includes these cells and remaps embedded project references on import. Imports read v1–v5. Legacy 0.8 note/finding/path drafts migrate at startup without deleting old rows; report composition stays on the legacy draft API and is not transferred. [Current recovery contract](HTB-WORKSPACE.md).

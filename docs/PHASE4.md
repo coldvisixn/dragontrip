@@ -1,5 +1,7 @@
 # Phase 4 — Product polish (0.4.0)
 
+**Historical implementation and measurement record.** Package versions and environment limitations below belong to that snapshot. See [current release verification](BUILD-0.9.1.md) and [installation](INSTALL.md) for the published package.
+
 ## Implemented behavior
 
 - **Knowledge completion:** GFM Markdown headings, lists/checklists, tables, fenced code and preview; evidence/screenshot upload and image preview; authenticated original-file export; knowledge links to files and scans; paginated Timeline and project-wide search. Vault contents are excluded from search.
