@@ -2,9 +2,9 @@
 
 # DRAGONTRIP
 
-**Your investigation, connected.**
+**From recon to report. Keep the evidence connected.**
 
-An offline-first desktop workspace for security assessments: discover infrastructure, connect the evidence, track findings and turn your work into a report.
+Your local pentest workspace: bring Nmap, Burp and Nuclei results into one project, map the attack surface, document findings and build a Markdown report. No Dragontrip account required.
 
 [Download v0.5.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.5.0) · [Installation](docs/INSTALL.md) · [Русский](README.ru.md) · [Documentation](docs/README.md)
 
@@ -15,17 +15,21 @@ An offline-first desktop workspace for security assessments: discover infrastruc
 
 </div>
 
-![Dragontrip infrastructure graph in the packaged desktop application](docs/screenshots/phase4-native-graph.png)
+![Dragontrip grouped workspace navigation](docs/screenshots/navigation/navigation-expanded.png)
 
-Dragontrip keeps recon results, infrastructure relationships, notes, findings, evidence and follow-up tasks in one local project. It is designed for Kali Linux users working on authorized assessments, labs and investigation workflows.
+Dragontrip is for pentesters and security researchers who want to carry an assessment from raw tool output to findings with traceable evidence. Keep infrastructure, web applications, notes, checklists and follow-up work together on your own machine.
 
-**Current version: 0.5.0 — early preview.** An installable Debian package is available for Linux x86_64 (`amd64`). The local package has passed installed-Debian/WebKit checks, and [installed Kali Rolling CI](https://github.com/coldvisixn/dragontrip/actions/runs/38942229914) has passed for the release commit. Testing on a 4 GB VirtualBox VM remains separate. Windows, macOS and ARM packages are not provided.
+**MVP · Linux x86_64 · Open source.** The current source is **0.7.1**. The published installer is still **[0.5.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.5.0)**; source features described below require building this checkout until a newer installer is published. The interface is in English.
 
-**Research foundation (0.6.0):** Adds project scope, offline Nmap/Burp/Nuclei imports and an application-focused web map. The published download above remains 0.5.0. See [scope/import usage and exact limitations](docs/IMPORTS.md), [audit and staged plan](docs/RESEARCH-WORKSPACE.md), and [local build verification](docs/BUILD-0.6.0.md).
+## One project, from first import to handoff
 
-**0.7.0 development update:** four-state methodologies and guided, saved recon sequences now complement the 0.6.0 import/web-map stage. [Usage and limitations](docs/METHODOLOGIES.md) · [Local package verification](docs/BUILD-0.7.0.md).
+1. **Set the boundaries.** Record included and excluded IPs, networks, domains and web origins.
+2. **Bring your results.** Preview and import Nmap XML, Burp saved-items/issue XML or HTTP Nuclei JSONL. Keep original sources and inspect what each import adds or changes.
+3. **Follow the connections.** Move between the infrastructure graph, web applications, method-specific endpoints and the observations behind them.
+4. **Build the case.** Link findings, notes and evidence to objects. Record methodology coverage and turn follow-up work into tasks.
+5. **Prepare the handoff.** Compose a Markdown report or transfer a project with its evidence in a portable `.dtproj` archive.
 
-**0.7.1:** a grouped sidebar, section tabs and a persistent compact mode simplify navigation. [Screenshots and behavior](docs/NAVIGATION.md).
+For live recon, use Nmap, WhatWeb, ProjectDiscovery httpx or ffuf through validated profiles and a cancellable queue. Saved recon workflows preview their scope and parameters; you explicitly launch each step. [Import formats and limits](docs/IMPORTS.md) · [Methodologies and workflows](docs/METHODOLOGIES.md).
 
 ## Get started
 
@@ -47,16 +51,18 @@ sudo apt install nmap whatweb httpx-toolkit ffuf
 
 The desktop package bundles its frontend and Python backend. You do not need Node.js, Rust, pip or Docker to run it. Recon tools are detected from your system; ProjectDiscovery **httpx** (`httpx-toolkit` on Kali) is different from the Python library with the same name.
 
-Create a project, scan an authorized IPv4 target, inspect discovered objects in the graph, then link your findings and tasks to the evidence. See [the first-project walkthrough](docs/USAGE.md) and [installation/troubleshooting](docs/INSTALL.md).
+In the published 0.5.0 installer, create a project, scan an authorized IPv4 target, inspect the graph, then link findings and tasks to the evidence. See [the first-project walkthrough](docs/USAGE.md) and [installation/troubleshooting](docs/INSTALL.md).
 
 ## What you can do
 
 | Workspace | Capabilities |
 | --- | --- |
+| **Scope and imports** | Include/exclude scope; previewed Nmap/Burp/Nuclei imports, preserved sources, import comparison and application/endpoint views. |
 | **Recon** | Nmap, WhatWeb, ProjectDiscovery httpx and ffuf adapters; Quick/Full/Service profiles; saved profiles; a bounded queue with cancellation and scan history. |
 | **Infrastructure graph** | Hosts, services, URLs and custom objects; typed relationships; Inspector; saved positions and viewport; search, pan/zoom and a minimap. |
 | **Investigation knowledge** | Markdown notes, severity/status/remediation findings and ordered, manually authored investigation paths, linked to objects and source scans. |
 | **Evidence** | Screenshot/file attachments, SHA-256 metadata, original XML/JSON artifacts, authenticated previews, project Timeline and unified search. |
+| **Methodologies and workflows** | Four-state web/service review checklists; saved, ordered recon actions with scope preview and explicit step launch. |
 | **Task planning** | A five-status board with priorities, owners, deadlines, templates and object links; project progress, overdue work and risk overview. |
 | **Reporting** | Configurable Markdown reports with executive summary, finding filters, remediation, inventory, task plan and evidence references; preview and Downloads export. |
 | **Credential vault** | Password-derived encryption, explicit reveal/hide/lock and idle expiry. Vault entries are kept out of search and ordinary reports. |
@@ -65,7 +71,7 @@ Create a project, scan an authorized IPv4 target, inspect discovered objects in 
 
 ![Task board in the installed 0.5.0 application](docs/screenshots/0.5.0-native-tasks.png)
 
-Screenshots show manual test fixtures and local validation projects. New projects start empty.
+Screenshots show isolated validation projects. The workspace image shows 0.7.1; the task-board image shows 0.5.0. New projects start empty.
 
 ## Local by design
 
@@ -77,14 +83,15 @@ Recon tools send network traffic to the targets you approve. Use Dragontrip only
 
 ## Scope and current limits
 
-- Recon targets are individual IPv4 addresses or IPv4 web origins, depending on the adapter. CIDR ranges, IPv6 and hostname scope are not currently supported.
+- Live recon accepts individual IPv4 addresses or IPv4 web origins, depending on the adapter. Offline scope/imports also support domains, CIDR and IPv6; that support does not enable live scanning of those target forms.
+- Imports use specific Nmap XML, Burp XML and HTTP Nuclei JSONL formats. Binary `.burp` projects, HAR and Nessus imports are not supported. Nuclei results can be imported; there is no built-in Nuclei runner.
 - Scan profiles use validated tool options; there is no arbitrary shell-command runner or automatic exploitation.
 - Reports export Markdown. PDF/HTML reporting is not implemented. Report composition resets when leaving its page.
 - Terminal history retains a bounded tail; artifact retention is manual.
-- Archives containing 0.5.0 task records require the updated importer. Back up before upgrading and avoid reopening an upgraded database with an older binary.
+- Current project exports use archive format v3 and read v1/v2. Older apps cannot read v3. Back up before upgrading and avoid reopening an upgraded database with an older binary.
 - Large-graph and memory measurements are documented; results from a cloud container do not replace testing on your own VM.
 
-See [the roadmap](docs/ROADMAP.md) and [0.5.0 build verification](docs/BUILD-0.5.0.md) for exact behavior and test evidence.
+Published 0.5.0 has passed [installed Kali Rolling CI](https://github.com/coldvisixn/dragontrip/actions/runs/38942229914). Later local verification is documented for [0.7.0](docs/BUILD-0.7.0.md) and [0.7.1 navigation](docs/NAVIGATION.md). A fresh Kali/VirtualBox run for later source versions remains separate. There are no Windows, macOS or ARM installers. See [the roadmap](docs/ROADMAP.md).
 
 ## Build and contribute
 

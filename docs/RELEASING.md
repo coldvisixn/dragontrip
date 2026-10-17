@@ -14,8 +14,8 @@ User-facing installers belong in [GitHub Releases](https://github.com/coldvisixn
 From the intended release commit, for example:
 
 ```bash
-git tag -a v0.5.0 -m "Dragontrip 0.5.0"
-git push origin v0.5.0
+git tag -a v0.7.1 -m "Dragontrip 0.7.1"
+git push origin v0.7.1
 ```
 
 [The release workflow](../.github/workflows/release.yml) checks the tag against version metadata, builds the Linux `amd64` package on Ubuntu 24.04, runs backend/UI/frozen-backend checks and native Tauri/WebKit planning acceptance, and verifies package metadata/checksums. Only the publish job receives `contents: write`.
@@ -34,7 +34,7 @@ Kali Rolling CI and real VirtualBox hardware acceptance remain separate from the
 
 Suggested **About** description:
 
-> Offline-first security assessment workspace for Kali Linux: recon, infrastructure graph, evidence, findings, task planning and Markdown reports.
+> From recon to report: a local pentest workspace connecting Nmap, Burp and Nuclei results, infrastructure, findings and evidence. Open-source MVP for Linux.
 
 Suggested topics: `kali-linux`, `linux`, `security-tools`, `reconnaissance`, `pentesting`, `tauri`, `react`, `fastapi`, `sqlite`, `investigation`.
 
