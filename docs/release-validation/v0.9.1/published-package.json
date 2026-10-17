@@ -1,0 +1,60 @@
+{
+  "version": "0.9.1",
+  "architecture": "amd64",
+  "tag": "v0.9.1",
+  "source_commit": "85072990d515f9db37c76adf7e10fbb92e2b0a85",
+  "annotated_tag_object": "7a0c4d7fd9328ea0af0cb89b157f0943bae4b63a",
+  "release_url": "https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.1",
+  "published_at": "2026-10-17T20:27:52Z",
+  "prerelease": true,
+  "assets": [
+    {
+      "name": "dragontrip_0.9.1_amd64.deb",
+      "url": "https://github.com/coldvisixn/dragontrip/releases/download/v0.9.1/dragontrip_0.9.1_amd64.deb",
+      "size_bytes": 63057764,
+      "sha256": "f9a474f4f4922a4a05d078e661016e283b6fe6a970a385fecdb82d6e40c28174"
+    },
+    {
+      "name": "dragontrip_0.9.1_amd64.deb.sha256",
+      "url": "https://github.com/coldvisixn/dragontrip/releases/download/v0.9.1/dragontrip_0.9.1_amd64.deb.sha256",
+      "size_bytes": 93,
+      "sha256": "14e6edfe2fb8a69ff88c27253de39da4a9d78f51cdd08c2039b3df1261b62274"
+    }
+  ],
+  "release_workflow": {
+    "id": 39066091106,
+    "url": "https://github.com/coldvisixn/dragontrip/actions/runs/39066091106",
+    "conclusion": "success",
+    "build_job": 117493959800,
+    "kali_installed_job": 117495483375,
+    "publish_job": 117496028310
+  },
+  "reviewed_source_checks": {
+    "pull_request": 17,
+    "head": "bbe843744442cba4bbfa42b8eefab37e3c17691d",
+    "linux_kali_run": 39065068646,
+    "security_run": 39065068650,
+    "tree_matches_release_commit": true
+  },
+  "public_download_verification": {
+    "date_utc": "2026-10-17",
+    "checksum_file": "passed",
+    "github_asset_digests_and_sizes": "passed",
+    "debian_metadata": {
+      "version": "0.9.1",
+      "architecture": "amd64"
+    },
+    "baseline": "published 0.9.0",
+    "upgrade": "passed",
+    "preserved": [
+      "records",
+      "retests",
+      "original evidence",
+      "objects",
+      "encrypted vault decryption",
+      "legacy draft recovery",
+      "portable v5 archive"
+    ]
+  },
+  "scope": "Linux x86_64; Kali Rolling container acceptance. No physical/VirtualBox, Windows, macOS or ARM validation claimed."
+}

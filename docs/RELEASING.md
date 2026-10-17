@@ -14,11 +14,11 @@ User-facing installers belong in [GitHub Releases](https://github.com/coldvisixn
 From the intended release commit, for example:
 
 ```bash
-git tag -a v0.8.0 -m "Dragontrip 0.8.0"
-git push origin v0.8.0
+git tag -a v0.9.1 -m "Dragontrip 0.9.1"
+git push origin v0.9.1
 ```
 
-[The release workflow](../.github/workflows/release.yml) checks the tag against version metadata, builds the Linux `amd64` package on Ubuntu 24.04, runs backend/UI/frozen-backend checks and native Tauri/WebKit planning acceptance, and verifies package metadata/checksums. Only the publish job receives `contents: write`.
+[The release workflow](../.github/workflows/release.yml) checks the tag against version metadata, builds the Linux `amd64` package on Ubuntu 24.04, runs backend/UI/frozen-backend checks, published-version upgrade checks and native Tauri/WebKit acceptance, and verifies package metadata/checksums. A separate Kali Rolling job installs and exercises that exact package before publication. Only the publish job receives `contents: write`.
 
 On success it creates a release containing exactly the installer and matching `.deb.sha256`, using the per-version release notes. Versions starting with `0.` or containing a prerelease suffix are marked **Pre-release**. This makes the explicit version link the reliable download entry point; do not assume GitHub's `/releases/latest` includes preview releases.
 
@@ -28,7 +28,7 @@ The workflow uses the repository's short-lived `GITHUB_TOKEN`; no personal acces
 
 Check the release workflow result and the public release page. Download both assets, verify the checksum, install the exact `.deb` in the supported environment and verify launcher/backend/UI behavior. Update platform claims only with corresponding evidence. The CI-built package can differ byte-for-byte from a local Debian build; publish its own checksum.
 
-Kali Rolling CI and real VirtualBox hardware acceptance remain separate from the release's Ubuntu WebKit smoke. Do not label a release as verified on platforms that were not tested.
+Kali Rolling container acceptance is a required release gate. Physical / VirtualBox acceptance remains a separate check; container results do not establish resource use or behavior in a particular VM. Do not label a release as verified on platforms that were not tested.
 
 ## Repository presentation
 
