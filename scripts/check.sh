@@ -7,6 +7,7 @@ if ! command -v cargo >/dev/null; then
   exit 1
 fi
 
+python3 scripts/check-vendored-gtk.py
 npm run lint
 npm run format:check
 .venv/bin/python -m pytest -q

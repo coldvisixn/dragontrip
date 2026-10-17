@@ -22,13 +22,17 @@ This is a source and local regression audit, not a penetration test of deployed 
 
 The dependency-audit workflow checks lockfiles on pull requests, pushes to `main`, manual runs and a weekly schedule. It includes development dependencies, uses read-only repository permissions and pins its actions to verified commit SHAs. Dependabot remains responsible for proposing dependency updates.
 
-## Remaining upstream dependency concerns
+## GTK security backport and remaining maintenance concern
 
-The Linux Tauri chain requires GTK 3 and `glib 0.18.5`. RustSec [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html) describes undefined behavior in `VariantStrIter`, fixed in `glib >=0.20.0`. Simply adding a second newer `glib` dependency does not replace GTK's incompatible 0.18 dependency.
+The Linux Tauri chain requires GTK 3 and `glib 0.18.5`. RustSec [RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html) describes undefined behavior in `VariantStrIter`, fixed upstream in `glib >=0.20.0`. Simply adding a second newer `glib` dependency does not replace GTK's incompatible 0.18 dependency.
 
-No calls to `VariantStrIter` / `array_iter_str` were found in Dragontrip or the inspected Tauri, Wry, Tao, Muda, GTK, GDK and Gio sources. That search is not proof of non-reachability. The dependency warning remains open and has not been suppressed. A coordinated supported GTK/Tauri upgrade or a maintained, tested backport is required to remove it; introducing an unmaintained local GTK fork was not treated as a routine version bump.
+This branch now supplies a compatible backport through `[patch.crates-io]`: the published GLib source plus the two-line upstream correction from an immutable output pointer to a mutable one. GTK's public API and types remain unchanged. The repository owns this narrowly scoped backport until a supported upstream stack includes it.
 
-RustSec also reports [RUSTSEC-2024-0370](https://rustsec.org/advisories/RUSTSEC-2024-0370.html): the transitive build dependency `proc-macro-error 1.0.4` is unmaintained. This is a maintenance warning rather than a separately confirmed Dragontrip exploit. Its consumers must migrate to a maintained alternative; no advisory was ignored to obtain a clean result.
+`src-tauri/vendor/gtk-compat.patch` records the entire change; original crate/archive hashes and licensing are retained. `scripts/check-vendored-gtk.py` reverses the patch in a temporary copy and verifies every file against the published source hashes, and rejects a lockfile that no longer selects the backport. Quick checks and the security workflow run this verification. Linux packaging and release CI run `gtk_security` tests with optimization enabled, covering every affected iterator entry point and mixed/empty iteration.
+
+Cargo audit does not match locally patched path packages against registry advisories. Its reduced warning count is therefore not the proof of repair: the exact source diff, provenance check and optimized behavioral regression are required evidence. No advisory IDs are added to an ignore list; the Rust audit now rejects `unsound` warnings.
+
+RustSec still reports [RUSTSEC-2024-0370](https://rustsec.org/advisories/RUSTSEC-2024-0370.html): the transitive build dependency `proc-macro-error 1.0.4` is unmaintained. This is a maintenance warning rather than a separately confirmed Dragontrip exploit. The apparent replacement `proc-macro-error2` is also unmaintained ([RUSTSEC-2026-0173](https://rustsec.org/advisories/RUSTSEC-2026-0173.html)), so it was not introduced. Removing this remaining warning requires migrating the upstream GLib/GTK macro consumers to a different diagnostics API; their locked build dependency remains visible rather than introducing an untested macro rewrite into a security fix.
 
 ## Other reviewed boundaries
 
@@ -46,6 +50,7 @@ RustSec also reports [RUSTSEC-2024-0370](https://rustsec.org/advisories/RUSTSEC-
 - `npm run lint`, `npm run format:check`, `npm run build`, `cargo fmt --check`, `pip check`, and `git diff --check` passed.
 - `npm audit`: **0 vulnerabilities** including development dependencies.
 - `pip-audit --strict --disable-pip --no-deps -r backend/requirements-lock.txt`: **0 known vulnerabilities**. Installed application/dev packages match the lockfile.
-- `cargo-audit 0.22.2`: **0 vulnerability entries, 2 informational warnings** (`glib` unsoundness and unmaintained `proc-macro-error`, detailed above). Database snapshot: `999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b` from `RustSec/advisory-db`. A zero vulnerability count must not be read as resolution of those warnings.
+- `cargo-audit 0.22.2 --deny unsound`: **0 vulnerability entries, 1 maintenance warning** (unmaintained build dependency `proc-macro-error`, detailed above). GLib is checked separately through the source/provenance and behavioral checks above. Database snapshot: `999ec89d5d3f10f20be14750ec8c2d8b44e0ac9b` from `RustSec/advisory-db`.
 - PyInstaller backend rebuilt successfully. Real HTTP, migrations and restart-persistence smoke checks passed against the new frozen backend.
-- A new full desktop installer and interactive Linux/Kali acceptance were not run as part of this audit. The repository's existing desktop CI remains responsible for those checks before release.
+- Optimized GLib iteration regression: **2 passed** using the patched source against the system GLib runtime. Running the identical tests against the original published 0.18.5 source reproduced **SIGSEGV**. The same tests also run against the application's complete dependency tree in packaging/release CI.
+- Full desktop packaging and interactive Linux/Kali acceptance are verified by the PR's **Linux build and verification** workflow. Check the run matching the PR's current commit before release; local backend/API checks alone do not establish full desktop acceptance.

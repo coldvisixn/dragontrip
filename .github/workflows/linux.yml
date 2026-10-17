@@ -137,6 +137,8 @@ jobs:
           npm run desktop:build
           rm -f docs/native-profile.json docs/screenshots/native-graph.png docs/screenshots/native-recon.png
       - run: .venv/bin/python scripts/smoke-packaged.py
+      - name: Verify GTK safety backport with optimization enabled
+        run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml --test gtk_security
       - name: Investigation workspace browser acceptance
         run: |
           node node_modules/playwright-core/cli.js install --with-deps chromium

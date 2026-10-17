@@ -15,3 +15,10 @@ serde = { version = "1", features = ["derive"] }
 getrandom = "0.2"
 libc = "0.2"
 tempfile = "3"
+
+# Compatibility backports for GTK 3; provenance and exact patch are in vendor/.
+[patch.crates-io]
+glib = { path = "vendor/glib" }
+
+[dev-dependencies]
+glib = "0.18.5"

@@ -75,6 +75,8 @@ jobs:
           source .venv/bin/activate
           npm run desktop:build
           python scripts/smoke-packaged.py
+      - name: Verify GTK safety backport with optimization enabled
+        run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml --test gtk_security
       - name: Verify upgrade from published 0.8.0
         run: |
           directory="$RUNNER_TEMP/dragontrip-upgrade"
