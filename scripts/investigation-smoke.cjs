@@ -87,6 +87,19 @@ const { navigate } = require('./navigation.cjs');
     await navigate(page, 'Notes');
     assert.equal(await page.getByLabel('Content', { exact: true }).inputValue(), 'My unsaved reasoning survives navigation and restart.');
     await page.waitForFunction(() => document.querySelector('.draft-status')?.textContent.includes('saved on this device'));
+    // The editor status acknowledges its own draft. Wait for the separate navigation
+    // and editor-pointer cells before deliberately removing the browser recovery copy.
+    let flushed = false;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const cells = await request(`/projects/${pid}/workspace`);
+      const nav = cells.navigation?.value?.data;
+      const editor = cells['knowledge:note']?.value?.data;
+      const draft = cells['draft:' + editor?.draft_id];
+      if (nav?.entries?.[nav.index] === 'Notes' && editor?.editing && !draft?.closed &&
+          draft?.value?.data?.content?.body === 'My unsaved reasoning survives navigation and restart.') { flushed = true; break; }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    assert.ok(flushed, 'SQLite must acknowledge the navigation, editor pointer and text before removing browser recovery');
     console.log('Restart backend and browser context restoration');
     await stop(); await launch();
     // Force recovery from SQLite, independent of browser workspace cache.

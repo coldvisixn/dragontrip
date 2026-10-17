@@ -157,7 +157,13 @@ class Driver:
     def fit_graph(self):
         # The saved viewport can point at a URL after recon. React Flow
         # virtualizes off-screen cards, so fit before asserting their DOM.
-        wait_until(lambda: self.js("return !!document.querySelector('.react-flow__controls-fitview')"))
+        wait_until(lambda: self.js("""
+            const nodes=[...document.querySelectorAll('.react-flow__node')];
+            return !!document.querySelector('.react-flow__controls-fitview') && nodes.length>0 &&
+                nodes.every(node=>getComputedStyle(node).visibility!=='hidden');
+        """))
+        # React Flow measures nodes after their first paint, including virtualized cards.
+        self.call("POST", "/execute/async", {"script": "requestAnimationFrame(()=>requestAnimationFrame(arguments[arguments.length-1]));", "args": []})
         self.js("document.querySelector('.react-flow__controls-fitview').click()")
 
     def fill(self, selector, text):

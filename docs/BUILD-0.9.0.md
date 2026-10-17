@@ -40,3 +40,21 @@ xvfb-run -a dbus-run-session -- python3 scripts/native-delivery-smoke.py /usr/bi
 Screenshots contain only synthetic fixtures: [research](investigation-validation/screenshots/research.png), [memory-only recovery](investigation-validation/screenshots/memory-recovery.png), [compact light theme](investigation-validation/screenshots/compact-light.png). Native tests use real Tauri IPC and filesystem exports. Only the deliberate failure scenario faults storage/HTTP; no native command is replaced. Nested-container WebKit sandbox disabling is a test-environment setting and does not change production defaults.
 
 Browser profiling exercised 100/300/1,000 manual objects, persisted graph dragging, focus filtering and automatic minimap disabling above 500 objects. It ran alongside compilation and is not a hardware performance benchmark. No specific VirtualBox/4 GB performance or human usability-study claim is made. The release workflow independently builds and validates its own package; public release and Kali results are recorded separately after completion.
+
+## Published installer verification — 2026-10-17
+
+[Release v0.9.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.0) was published from `186f24291f54c0c611f03e9d3bac7239021e093c`. [Release workflow](https://github.com/coldvisixn/dragontrip/actions/runs/39024772755) passed its backend/UI, frozen-backend, real 0.8 upgrade, production investigation and native planning/research/methodology/navigation/delivery checks before publishing.
+
+The actual public installer was downloaded independently and checked against its attached sidecar:
+
+- `dragontrip_0.9.0_amd64.deb`: **56,255,844 bytes**.
+- SHA-256: `0d980e3bb83350b638924f14b2a3f6242582e6b35a4fdf23053d9b88cef2810e`.
+- Version/architecture: **0.9.0 / amd64**.
+
+The downloaded file was installed over the local candidate in the Debian test container. Its real Tauri/WebKit acceptance passed restart without browser draft mirrors, evidence upload, finding template/retest, report composition and ZIP export. Deliberate dual-store failure passed navigation, native recovery JSON, actual window-manager close protection and resumed saving. Deleting the saved note while editing then saving a separate record retained the text. [Machine-readable public-package result](investigation-validation/published-package.json).
+
+The local-build checksum above intentionally differs. Always use the checksum attached to the downloaded installer.
+
+[Installed Kali Rolling acceptance](https://github.com/coldvisixn/dragontrip/actions/runs/39041521955/job/117422788256) passed for the independently CI-built 0.9.0 package: launcher, all real recon adapters/scope checks, full native investigation/transfer/restart and resource profiling, with a 4 GiB / 2 CPU container limit. Its source `3f0c3c0` changes only the native test driver's scroll/focus handling relative to the release; application code is unchanged. This is separate from the downloaded-release Debian verification above and from a real VirtualBox machine.
+
+The initial overall run exposed a separate browser-test race: it removed the browser workspace cache after the text draft was acknowledged but before the navigation/editor-pointer cells were acknowledged. Investigation acceptance now explicitly waits for all three SQLite copies before deliberately removing browser recovery. Native fit automation also waits for node measurement after paint; the graph's normal fit behavior was independently checked with a restored zoomed viewport. These are validation-harness changes; published 0.9.0 application bytes remain immutable.
