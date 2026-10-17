@@ -8,7 +8,7 @@ A local desktop workspace for penetration testing and security research. [Englis
 - [Your first investigation](USAGE.md)
 - [Gallery and recorded walkthrough](SHOWCASE.md)
 - [Capabilities, limits and platform status](CAPABILITIES.md)
-- [What's new in 0.9.0](releases/v0.9.0.md)
+- [What's new in 0.9.1](releases/v0.9.1.md)
 
 ## Work in a project
 
@@ -32,7 +32,7 @@ A local desktop workspace for penetration testing and security research. [Englis
 
 ## Verification and implementation history
 
-[0.9.0 published installer and Linux/Kali acceptance](BUILD-0.9.0.md) records exact package checks and their limits. Current installation instructions are in the guides above; older documents below describe specific development snapshots.
+[0.9.1 installer and Linux/Kali acceptance](BUILD-0.9.1.md) records exact package checks and their limits. Current installation instructions are in the guides above; older documents below describe specific development snapshots.
 
 - [0.8.0 verification](BUILD-0.8.0.md) · [0.7.0 verification](BUILD-0.7.0.md) · [0.6.0 verification](BUILD-0.6.0.md)
 - [0.5.0 local Debian build and native checks](BUILD-0.5.0.md) · [resource profile](0.5.0-native-profile.json)

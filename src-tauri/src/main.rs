@@ -183,7 +183,7 @@ fn main() {
         })
         .setup(|app| {
             let mut bytes = [0u8; 32];
-            getrandom::getrandom(&mut bytes).map_err(|e| format!("Cannot generate session token: {e}"))?;
+            getrandom::fill(&mut bytes).map_err(|e| format!("Cannot generate session token: {e}"))?;
             let token: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
             let mut command;
             if cfg!(debug_assertions) {

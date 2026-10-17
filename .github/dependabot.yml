@@ -5,7 +5,14 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # TypeScript 7 is outside typescript-eslint's supported peer range (<6.1).
+    # Revisit major compiler upgrades together with the lint toolchain.
+    ignore:
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
     groups:
+      frontend-build:
+        patterns: [vite, '@vitejs/plugin-react', vitest]
       development-tools:
         dependency-type: development
         update-types: [minor, patch]
@@ -14,6 +21,9 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      pydantic:
+        patterns: [pydantic, pydantic-core, pydantic_core]
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:

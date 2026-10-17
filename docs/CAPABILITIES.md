@@ -39,6 +39,6 @@ Dragontrip is a local desktop workspace for penetration testing and security res
 
 ## Release and platform status
 
-The current published download is **0.9.0**, marked **prerelease / early MVP**, for **Linux x86_64 (amd64)** with an English interface. The `.deb` bundles its frontend, Python interpreter and backend; recon executables are installed separately. Windows, macOS and ARM installers are not provided.
+The current published download is **0.9.1**, marked **prerelease / early MVP**, for **Linux x86_64 (amd64)** with an English interface. The `.deb` bundles its frontend, Python interpreter and backend; recon executables are installed separately. Windows, macOS and ARM installers are not provided.
 
-The public installer passed independent download/checksum verification and installed Debian Tauri/WebKit recovery acceptance. A separate CI-built package with unchanged application code passed the full Linux/Kali workflow, including installed Kali acceptance. These are distinct verification paths; container measurements do not establish performance on a particular VM. A real 4 GB VirtualBox run remains separate. [Exact evidence and limits](BUILD-0.9.0.md) · [Future priorities](ROADMAP.md)
+The release workflow verifies its package on Ubuntu and installs that exact package on Kali before publication. It also checks data and encrypted-vault upgrades from published 0.8.0 and 0.9.0. These are distinct verification paths; container measurements do not establish performance on a particular VM. A real 4 GB VirtualBox run remains separate. [Exact evidence and limits](BUILD-0.9.1.md) · [Future priorities](ROADMAP.md)

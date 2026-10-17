@@ -1,6 +1,6 @@
 # Roadmap
 
-This page separates implemented capabilities from future priorities. [Capabilities and current limits](CAPABILITIES.md) describes the product today; [CHANGELOG.md](../CHANGELOG.md) records version changes and [0.9.0 verification](BUILD-0.9.0.md) records exact platform checks.
+This page separates implemented capabilities from future priorities. [Capabilities and current limits](CAPABILITIES.md) describes the product today; [CHANGELOG.md](../CHANGELOG.md) records version changes and [0.9.1 verification](BUILD-0.9.1.md) records exact platform checks.
 
 ## Available in 0.9.0
 
