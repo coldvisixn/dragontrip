@@ -39,3 +39,23 @@ def check(driver, checks, root):
     driver.click('Save note')
     checks.wait_until(lambda: driver.js("return !!document.querySelector('.knowledge-article')"))
     print('PASS: native memory-only navigation, recovery JSON export, window close guard and resumed saving', flush=True)
+
+    driver.click('Edit note')
+    driver.fill('.knowledge-editor textarea', 'Recovered after deletion of the saved note.')
+    deleted = driver.call('POST', '/execute/async', {'script': """
+      const done=arguments[arguments.length-1];
+      window.__TAURI_INTERNALS__.invoke('backend_connection').then(async c=>{
+        const base='http://127.0.0.1:'+c.port+'/projects/'+localStorage.getItem('dragontrip.project');
+        const headers={Authorization:'Bearer '+c.token};
+        const rows=await (await fetch(base+'/knowledge?kind=note',{headers})).json();
+        const row=rows.find(r=>r.title==='Memory-only recovery fixture');
+        const response=await fetch(base+'/knowledge/'+row.id,{method:'DELETE',headers});
+        return {ok:response.ok,id:row.id};
+      }).then(done).catch(e=>done({error:e.message}));
+    """, 'args': []})
+    assert deleted['ok']
+    driver.click('Save note')
+    checks.wait_until(lambda: driver.js("return document.body.textContent.includes('The saved record was deleted')"))
+    driver.click('Save my version as a separate record')
+    checks.wait_until(lambda: driver.js("return document.querySelector('.knowledge-article .markdown-body')?.textContent.includes('Recovered after deletion of the saved note.')"))
+    print('PASS: native recovery of a deleted note as a separate saved record', flush=True)

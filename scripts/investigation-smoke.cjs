@@ -113,6 +113,19 @@ const { navigate } = require('./navigation.cjs');
     await page.getByRole('button', { name: 'Edit note', exact: true }).waitFor();
     await page.unroute(`**/projects/${pid}?compact=true`);
     assert.equal((await request(`/projects/${pid}/knowledge?kind=note`)).length, 1);
+    console.log('Deleted saved record → recover as a separate note');
+    await page.getByRole('button', { name: 'Edit note', exact: true }).click();
+    await page.getByLabel('Content', { exact: true }).fill('Recover my text after the saved record was deleted.');
+    await request(`/projects/${pid}/knowledge/${notes[0].id}`, 'DELETE');
+    await page.getByRole('button', { name: 'Save note', exact: true }).click();
+    await page.getByText('The saved record was deleted', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Save my version as a separate record', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit note', exact: true }).waitFor();
+    const recovered = await request(`/projects/${pid}/knowledge?kind=note`);
+    assert.equal(recovered.length, 1);
+    assert.notEqual(recovered[0].id, notes[0].id);
+    assert.equal(recovered[0].content.body, 'Recover my text after the saved record was deleted.');
+    assert.ok(!recovered[0].content.record_ids.includes(notes[0].id));
     console.log('Minimum window, themes, compact density and keyboard navigation');
     await page.setViewportSize({ width: 1000, height: 650 });
     for (const theme of ['light', 'dark']) {
@@ -126,7 +139,7 @@ const { navigate } = require('./navigation.cjs');
     await page.keyboard.press('Alt+ArrowLeft');
     await page.getByRole('heading', { name: 'Notes', exact: true }).waitFor();
     assert.deepEqual(errors, []);
-    console.log('PASS: real import, linked note/task, retained unsuccessful result, navigation, SQLite restart recovery, conflict, refresh failure, compact themes and keyboard.');
+    console.log('PASS: real import, linked note/task, retained unsuccessful result, navigation, SQLite restart recovery, conflict, refresh failure, deleted-record copy, compact themes and keyboard.');
   } catch (e) { console.error(e); if (page) { await page.screenshot({ path: join(screenshots, 'failure.png'), fullPage: true }).catch(() => {}); console.error(await page.locator('body').innerText().catch(() => 'Page closed')); } process.exitCode = 1; }
   finally { await browser?.close(); await stop(); rmSync(storage, { recursive: true, force: true }); }
 })();

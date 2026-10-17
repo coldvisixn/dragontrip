@@ -145,8 +145,8 @@ class Driver:
                 const label=arguments[0];
                 const more=document.querySelector('.section-more select');
                 if(more&&[...more.options].some(o=>o.value===label)) {more.value=label;more.dispatchEvent(new Event('change',{bubbles:true}));return true;}
-                const tab=[...document.querySelectorAll('[role=tab]')].find(b=>b.textContent.trim()===label);
-                const button=tab||[...document.querySelectorAll('button:not([data-pages])')].find(b=>b.textContent.trim()===label);
+                const tab=[...document.querySelectorAll('[role=tab]')].find(b=>b.textContent.trim()===label||b.getAttribute('aria-label')===label);
+                const button=tab||[...document.querySelectorAll('button:not([data-pages])')].find(b=>b.textContent.trim()===label||b.getAttribute('aria-label')===label);
                 if(button&&!button.matches(':disabled')){for(let p=button.parentElement;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;button.click();return true;}
                 const group=[...document.querySelectorAll('.sidebar nav button[data-pages]')].find(b=>b.dataset.pages.split('|').includes(label));
                 if(group&&!group.disabled){group.click();return group.dataset.pages.split('|').length===1;}
@@ -409,7 +409,7 @@ def main():
                     wait_until(lambda: driver.js("return document.querySelector('.reference-options')?.textContent.includes('native-evidence.png')"))
                     driver.click('Save note')
                     wait_until(lambda: driver.js("return !!document.querySelector('.markdown-body h1') && document.querySelector('.markdown-body strong')?.textContent==='Verified'"))
-                    driver.js("document.querySelector('button[aria-label=\"Preview native-evidence.png\"]').click()")
+                    driver.click('Preview native-evidence.png')
                     wait_until(lambda: driver.js("return document.querySelector('.evidence-image')?.complete && document.querySelector('.evidence-image')?.naturalWidth>0"))
                     driver.click('Timeline')
                     wait_until(lambda: driver.js("return document.querySelector('.timeline')?.textContent.includes('Evidence attachment added')"))

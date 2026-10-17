@@ -199,8 +199,10 @@ export function Editor({
                 retests: [],
                 record_ids: [
                   ...new Set([
-                    ...((content.record_ids as string[]) || []),
-                    ...(draft.record_id ? [draft.record_id] : []),
+                    ...((content.record_ids as string[]) || []).filter(
+                      (id) => conflict !== null || id !== draft.record_id,
+                    ),
+                    ...(draft.record_id && conflict !== null ? [draft.record_id] : []),
                   ]),
                 ],
               }

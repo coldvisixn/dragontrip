@@ -323,7 +323,11 @@ it('opens a deleted task draft and can recover it as a separate task', async () 
     expect(api).toHaveBeenCalledWith(
       '/projects/p/knowledge',
       'POST',
-      expect.objectContaining({ kind: 'task', request_id: 'deleted-task' }),
+      expect.objectContaining({
+        kind: 'task',
+        request_id: 'deleted-task',
+        content: expect.objectContaining({ record_ids: [] }),
+      }),
     ),
   );
   await waitFor(() => expect(screen.queryByLabelText('Content')).toBeNull());
