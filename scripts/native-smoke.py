@@ -162,7 +162,17 @@ class Driver:
 
     def fill(self, selector, text):
         wait_until(lambda: self.js("const e=document.querySelector(arguments[0]);return !!e && !e.matches(':disabled')", selector))
-        self.js("for(let p=document.querySelector(arguments[0])?.parentElement;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true", selector)
+        self.js("""
+            const element=document.querySelector(arguments[0]);
+            for(let parent=element?.parentElement;parent;parent=parent.parentElement)
+                if(parent.tagName==='DETAILS')parent.open=true;
+            // WebKit's clear command requires the field to be inside the viewport.
+            // Scrolling/focusing uses the real UI; values are still set by WebDriver.
+            if(element.type!=='file'){
+                element.scrollIntoView({block:'center',inline:'nearest'});
+                element.focus({preventScroll:true});
+            }
+        """, selector)
         # Let the native dialog focus/transition finish before WebDriver types.
         time.sleep(.2)
         element = self.call("POST", "/element", {"using": "css selector", "value": selector})
