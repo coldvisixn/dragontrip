@@ -44,3 +44,19 @@ xvfb-run -a dbus-run-session -- python3 scripts/native-delivery-smoke.py /usr/bi
 Native tests require tauri-driver 2.1.0, WebKitWebDriver, Xvfb and the documented desktop dependencies. Nested-container automation disables WebKit sandboxing for that test environment; production settings are unchanged. Chromium bridges connection delivery only; the native scenario uses real IPC. The renderer's existing Evidence chunk warning is non-blocking.
 
 The tagged release workflow repeats its own backend/UI/frozen/package and native planning/research/methodology/navigation/delivery checks before publication. This local record does not claim remote CI success. Kali Rolling installed-package CI and a real 4 GB VirtualBox machine remain separate platform checks. No Windows/macOS/ARM or VM-performance claim is made.
+
+## Published release verification — 2026-10-17
+
+[Release v0.8.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.8.0) was published as a pre-release from commit `d52ebb20c1856d4ef057ab984d3427fb3ef40cc5`. [Release workflow](https://github.com/coldvisixn/dragontrip/actions/runs/39013595541) passed its backend/UI/frozen/package and native planning/research/methodology/navigation/delivery checks before publication.
+
+The actual public installer was downloaded independently, its attached SHA-256 verified, and package metadata checked:
+
+- `dragontrip_0.8.0_amd64.deb`: **56,239,278 bytes**
+- SHA-256: `303c219e6bf913b53a0243cc6bab26285beca3fba71e9115b29604cb637cae40`
+- Version/architecture: `0.8.0 / amd64`
+
+The downloaded package was installed over the local build in the Debian test container. The native delivery scenario passed again with real IPC: onboarding, SQLite draft recovery after full restart without the local mirror, screenshot upload, finding template, retained retest, report-summary recovery and ZIP export containing selected evidence. [Machine-readable public-package verification](delivery-validation/published-package.json).
+
+The earlier local-build checksum above is intentionally different; it is not the checksum of the public download.
+
+[Installed Kali Rolling CI](https://github.com/coldvisixn/dragontrip/actions/runs/39013554996) also passed for the same release source commit, including launcher/native acceptance and resource profiling. It tests the main workflow's own package build, separately from the downloaded release asset above. The Kali container has a 4 GiB / 2 CPU limit; it does not replace acceptance on a real VirtualBox VM.

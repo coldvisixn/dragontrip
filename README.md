@@ -100,7 +100,7 @@ Recon tools send network traffic to the targets you approve. Use Dragontrip only
 - Current project exports use archive format v4 and read v1/v2/v3. Older apps cannot read v4. Back up before upgrading and avoid reopening an upgraded database with an older binary.
 - Large-graph and memory measurements are documented; results from a cloud container do not replace testing on your own VM.
 
-Version 0.8.0 passed local installed-Debian Tauri/WebKit delivery acceptance. The tagged release workflow checks its own package before publication; [exact local evidence and verification limits](docs/BUILD-0.8.0.md). A 4 GB VirtualBox run remains separate. Windows, macOS and ARM installers are not provided. See [the roadmap](docs/ROADMAP.md).
+The published 0.8.0 installer passed the [release workflow](https://github.com/coldvisixn/dragontrip/actions/runs/39013595541), checksum verification after download and installed-Debian Tauri/WebKit delivery acceptance. [Installed Kali Rolling CI](https://github.com/coldvisixn/dragontrip/actions/runs/39013554996) passed for the same release commit. [Exact evidence and verification limits](docs/BUILD-0.8.0.md). A 4 GB VirtualBox run remains separate. Windows, macOS and ARM installers are not provided. See [the roadmap](docs/ROADMAP.md).
 
 ## Build and contribute
 

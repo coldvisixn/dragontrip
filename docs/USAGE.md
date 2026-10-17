@@ -4,11 +4,13 @@
 
 ## 1. Create a project
 
-Use **New project** and name your assessment or lab. Projects keep their graph, scans, findings, notes, tasks and evidence separate. Existing work is restored after restarting the application.
+Use **New project** and name your assessment or lab. Projects keep their graph, scans, findings, notes, tasks and evidence separate. Project overview opens with import/scope/recon actions. Edit its name and description under **Project details**. For a walkthrough, **Create fictional demo** on Dashboard/Projects makes a separate example project without launching tools.
 
 ## 2. Run recon within your scope
 
-Choose **Start scan**, select a profile and enter an authorized target. Adapters accept individual IPv4 addresses or IPv4 web origins, as appropriate; hostnames, ranges and IPv6 are not supported.
+Start with **Import results** if you already have supported Nmap XML, Burp saved-items/issue XML or HTTP Nuclei JSONL. Review the preview before applying it. [Formats and scope rules](IMPORTS.md).
+
+For live recon, choose **Start live recon** from Project overview, or **Start scan** from the graph. Select a profile and enter an authorized target. Adapters accept individual IPv4 addresses or IPv4 web origins, as appropriate; hostnames, ranges and IPv6 are not supported.
 
 Quick/Full/Service profiles, saved profiles and a queue control how work is launched. Review the confirmation before starting. **Scans** provides history and filters. The bottom panel shows queued/running work and bounded terminal output. Cancel through the task controls rather than closing the terminal.
 
@@ -27,7 +29,9 @@ Observed evidence remains distinct from manually authored content. Use **Evidenc
 - **Attack Paths:** ordered, manual investigation plans with planned/validated/blocked steps. They do not execute tools.
 - **Credentials Vault:** encrypted titles, usernames, secrets, notes and object references. Unlock explicitly and reveal only when needed. The master password cannot be recovered.
 
-You can start a linked note/finding from Inspector or create one on its own page. Missing/deleted references are shown explicitly rather than silently replaced.
+You can start a linked note/finding from Inspector or create one on its own page. Missing/deleted references are shown explicitly rather than silently replaced. **Use finding template** inserts blank reproduction/impact headings; paste or drop screenshots into the evidence picker.
+
+Note/finding/plan editors recover a draft when reopened, including after restart. Closing preserves it; **Discard draft** clears it. Drafts are unencrypted and excluded from portable projects, so save records before transferring them. **Record a retest** appends manual verification history: fixed resolves, still present confirms, inconclusive retains status. [Recovery, evidence and retest limits](DELIVERY.md).
 
 ## 5. Plan follow-up
 
@@ -41,22 +45,18 @@ Due dates are interpreted in UTC. Search matches titles/content, including owner
 
 ## 6. Prepare a report
 
-In **Reports**, enter a title and executive summary, choose finding status/minimum severity and select sections. Generate a preview, review it, then choose **Export Markdown**. The report is saved privately to Downloads without overwriting an existing file.
+In **Reports**, choose **Delivery preset** (confirmed findings and inventory) or **Working preset** (active findings and working sections). Enter a title and executive summary, adjust filters/sections and generate a preview. Composition persists per project after leaving the page or restarting.
 
-Reports can include findings/remediation, object inventory, scan history, investigation paths, tasks and optional notes. Evidence references include filenames/checksums; attachment bytes, raw console output and vault entries are excluded. Authored project text can contain sensitive information, so review the deliverable before sharing it.
+Choose **Export format**: Markdown, standalone HTML or ZIP. HTML can be printed in a browser; ZIP contains HTML, Markdown and explicitly selected evidence files. Only checked files are embedded/copied, up to 100 files / 32 MiB. Markdown alone includes filenames/hashes without attachment bytes. Vault records, editor drafts and raw console buffers are excluded, but authored text and selected files may contain sensitive data; review them before sharing.
 
-Changing options clears the preview; export regenerates from current project data. Report composition resets when leaving the page. PDF and HTML exports are not implemented. [Reporting limits](PLANNING.md) are documented separately.
+Changing options clears the preview. Export from the UI checks the content fingerprint; changed report data requires a fresh preview. Files are saved privately to Downloads without overwriting existing files. Native PDF/DOCX export is not implemented. [Current reporting behavior and limits](DELIVERY.md#review-and-export).
 
 ## 7. Save and transfer work
 
-Normal edits persist locally. For a portable copy, use **Projects → Project portability → Export project** and transfer the `.dtproj` archive. Finish or cancel active scans first. Import creates a new project and does not resume historical scans.
+Saved records persist locally. New exports use `.dtproj` v4 for retest history; v1/v2/v3 imports are supported, and older apps reject v4. Device-local drafts are excluded. For a portable copy, use **Projects → Project portability → Export project** and transfer the `.dtproj` archive. Finish or cancel active scans first. Import creates a new project and does not resume historical scans.
 
 Credentials are excluded by default. Including them requires explicit selection, an unlocked vault and a separate archive password; importing them requires an unlocked destination vault. [Data and backups](DATA.md) explain whole-installation backups and upgrade compatibility.
 
 ## Navigation
 
 `Ctrl+K` opens the command palette; `Ctrl+Shift+F` opens project search. The navigation arrows move through visited pages. Inspector and the bottom task panel are resizable. Theme, accent, density, reduced motion and graph detail are under **Settings**.
-
-## 0.8.0 workflow update
-
-New projects open in Project overview with import, scope and live recon actions. Rename a project through Project details. Dashboard/Projects offers an explicit, separate fictional demo. Note/finding/plan editors recover device-local drafts; Reports keeps its options/summary. Findings support a description template, pasted/dropped screenshots and retained manual retests. Reports has delivery/working presets and Markdown, HTML or selected-evidence ZIP output. [Complete workflow and limits](DELIVERY.md).

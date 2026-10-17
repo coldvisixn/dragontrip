@@ -54,7 +54,7 @@ Create a project and follow [your first investigation](USAGE.md). The applicatio
 3. Download the new release's `.deb` and matching checksum, verify them, then install with `sudo apt install ./<new-package>.deb`.
 4. Start Dragontrip. Database migrations run automatically.
 
-Do not open an upgraded database with an older binary. To roll back, restore a matching pre-upgrade backup with the application closed. Archives containing task records introduced in 0.8.0 require the updated importer.
+Do not open an upgraded database with an older binary. To roll back, restore a matching pre-upgrade backup with the application closed. Current archives use format v4 for retest history; imports read v1–v4. Older applications reject v4.
 
 ## Uninstall
 
