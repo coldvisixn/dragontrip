@@ -1,7 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
+import { useProjectState } from './workspace';
 
-export function useNavigation<T extends string>(initial: T) {
-  const [history, setHistory] = useState({ entries: [initial], index: 0 });
+export function useNavigation<T extends string>(initial: T, projectId = 'global') {
+  const [history, setHistory] = useProjectState(projectId, 'navigation', {
+    entries: [initial],
+    index: 0,
+  });
   const navigate = useCallback(
     (page: T) =>
       setHistory((current) =>
@@ -12,11 +16,11 @@ export function useNavigation<T extends string>(initial: T) {
               index: Math.min(current.index + 1, 99),
             },
       ),
-    [],
+    [setHistory],
   );
   const back = useCallback(
     () => setHistory((current) => ({ ...current, index: Math.max(0, current.index - 1) })),
-    [],
+    [setHistory],
   );
   const forward = useCallback(
     () =>
@@ -24,7 +28,7 @@ export function useNavigation<T extends string>(initial: T) {
         ...current,
         index: Math.min(current.entries.length - 1, current.index + 1),
       })),
-    [],
+    [setHistory],
   );
   return {
     page: history.entries[history.index],

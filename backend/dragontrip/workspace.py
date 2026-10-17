@@ -6,7 +6,19 @@ from typing import Literal
 from fastapi import HTTPException, Query
 from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy import select, desc, func
-from .db import Knowledge, Node, Scan, Attachment, now, record, serialize
+from .db import (
+    Knowledge,
+    Node,
+    Scan,
+    Attachment,
+    Configuration,
+    Observation,
+    ImportRun,
+    now,
+    record,
+    serialize,
+    uid,
+)
 
 Kind = Literal[
     "note", "finding", "path", "task", "checklist", "workflow", "workflow_run"
@@ -44,13 +56,29 @@ class WorkflowAction(BaseModel):
     words: list[str] = Field(default_factory=list, max_length=500)
 
 
+class Source(BaseModel):
+    observation_id: str | None = Field(default=None, max_length=300)
+    fingerprint: str | None = Field(default=None, max_length=100)
+    node_id: str | None = Field(default=None, max_length=300)
+    scan_id: str | None = Field(default=None, max_length=300)
+    record_id: str | None = Field(default=None, max_length=300)
+    import_id: str | None = Field(default=None, max_length=300)
+
+
 class Content(BaseModel):
+    step_scan_ids: list[str] = Field(default_factory=list, max_length=8)
+    execution: str = Field(default="", max_length=30)
+    stop_reason: str = Field(default="", max_length=4000)
+    source: Source | None = None
+    record_ids: list[str] = Field(default_factory=list, max_length=50)
+    observation_ids: list[str] = Field(default_factory=list, max_length=50)
+
     checks: list[CheckItem] = Field(default_factory=list, max_length=100)
     actions: list[WorkflowAction] = Field(default_factory=list, max_length=8)
     workflow_id: str | None = Field(default=None, max_length=300)
     body: str = Field(default="", max_length=12000)
     node_ids: list[str] = Field(default_factory=list, max_length=50)
-    scan_ids: list[str] = Field(default_factory=list, max_length=20)
+    scan_ids: list[str] = Field(default_factory=list, max_length=200)
     attachment_ids: list[str] = Field(default_factory=list, max_length=30)
     severity: Literal["info", "low", "medium", "high", "critical"] = "info"
     status: Literal[
@@ -73,6 +101,8 @@ class Content(BaseModel):
 
 
 class KnowledgeInput(BaseModel):
+    expected_updated: str | None = Field(default=None, max_length=100)
+    request_id: str | None = Field(default=None, pattern=r"^[a-zA-Z0-9-]{1,100}$")
     kind: Kind
     title: str = Field(min_length=1, max_length=160)
     content: Content = Field(default_factory=Content)
@@ -104,6 +134,59 @@ class KnowledgeInput(BaseModel):
 
 
 def register_workspace(app, sessions, project):
+    lock = app.state.research_lock
+
+    class Cell(BaseModel):
+        revision: int = Field(ge=0)
+        value: dict | None = None
+        closed: bool = False
+
+    def cell_key(pid, key):
+        if (
+            len(key) > 300
+            or not key
+            or any(
+                c
+                not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:._-"
+                for c in key
+            )
+        ):
+            raise HTTPException(422, "Invalid workspace key")
+        return f"workspace:{pid}:{key}"
+
+    @app.get("/projects/{pid}/workspace")
+    def cells(pid: str):
+        with sessions() as db:
+            project(db, pid)
+            prefix = f"workspace:{pid}:"
+            return {
+                r.id[len(prefix) :]: json.loads(r.value)
+                for r in db.scalars(
+                    select(Configuration).where(
+                        Configuration.id.startswith(prefix, autoescape=True)
+                    )
+                )
+            }
+
+    @app.put("/projects/{pid}/workspace/{key}")
+    def save_cell(pid: str, key: str, body: Cell):
+        if len(body.model_dump_json()) > 200000:
+            raise HTTPException(422, "Workspace item is too large; download your text")
+        with lock, sessions() as db:
+            project(db, pid)
+            identifier = cell_key(pid, key)
+            row = db.get(Configuration, identifier)
+            old = json.loads(row.value) if row else None
+            # Closing a draft is permanent. A delayed autosave cannot resurrect it.
+            if old and (old.get("closed") or old["revision"] >= body.revision):
+                return old
+            if row is None:
+                row = Configuration(id=identifier)
+                db.add(row)
+            row.value = body.model_dump_json()
+            db.commit()
+            return body.model_dump()
+
     def validate_links(db, pid, content, previous=None):
         # An existing deleted reference can be retained during editing, but not added anew.
         previous = previous or {}
@@ -111,6 +194,30 @@ def register_workspace(app, sessions, project):
             s["node_id"] for s in previous.get("steps", [])
         }
         old_scans = set(previous.get("scan_ids", []))
+        source = content.source.model_dump(exclude_none=True) if content.source else {}
+        for model, field in [
+            (Node, "node_id"),
+            (Scan, "scan_id"),
+            (Observation, "observation_id"),
+            (ImportRun, "import_id"),
+            (Knowledge, "record_id"),
+        ]:
+            ids = [source[field]] if source.get(field) else []
+            if model is Observation:
+                ids += content.observation_ids
+            if model is Knowledge:
+                ids += content.record_ids
+            for rid in ids:
+                row = db.get(model, rid)
+                old_source = previous.get("source") or {}
+                if row is None and (
+                    rid == old_source.get(field)
+                    or rid in previous.get("record_ids", [])
+                    or rid in previous.get("observation_ids", [])
+                ):
+                    continue
+                if row is None or row.project_id != pid:
+                    raise HTTPException(422, "Source must belong to this project")
         nodes = (
             set(content.node_ids)
             | {step.node_id for step in content.steps}
@@ -131,6 +238,149 @@ def register_workspace(app, sessions, project):
                     continue
                 if row is None or row.project_id != pid:
                     raise HTTPException(422, "References must belong to this project")
+
+    def source_context(db, pid, kind, identifier):
+        models = {
+            "observation": Observation,
+            "node": Node,
+            "scan": Scan,
+            "record": Knowledge,
+        }
+        if kind not in models:
+            raise HTTPException(422, "Unknown source type")
+        row = db.get(models[kind], identifier)
+        if row is None or row.project_id != pid:
+            raise HTTPException(404, "Source was deleted or is unavailable")
+        return row
+
+    def linked_records(db, pid, kind, source):
+        result = []
+        for row in db.scalars(
+            select(Knowledge).where(
+                Knowledge.project_id == pid,
+                Knowledge.kind.in_(["note", "finding", "task", "path"]),
+            )
+        ):
+            content = json.loads(row.content)
+            ref = content.get("source") or {}
+            linked = (
+                (
+                    kind == "observation"
+                    and (
+                        source.id in content.get("observation_ids", [])
+                        or row.id == source.finding_id
+                        or ref.get("fingerprint") == source.fingerprint
+                        and ref.get("node_id") == source.node_id
+                    )
+                )
+                or (kind == "node" and source.id in content.get("node_ids", []))
+                or (kind == "scan" and source.id in content.get("scan_ids", []))
+                or (kind == "record" and source.id in content.get("record_ids", []))
+            )
+            if linked:
+                result.append(serialize(row))
+        return result
+
+    @app.get("/projects/{pid}/sources/{kind}/{identifier}/records")
+    def source_records(pid: str, kind: str, identifier: str):
+        with sessions() as db:
+            source = source_context(db, pid, kind, identifier)
+            return linked_records(db, pid, kind, source)
+
+    class CreateFromSource(BaseModel):
+        kind: Literal["note", "finding", "task"]
+
+    @app.post("/projects/{pid}/sources/{kind}/{identifier}/records", status_code=201)
+    def create_from_source(
+        pid: str, kind: str, identifier: str, body: CreateFromSource
+    ):
+        with lock, sessions() as db:
+            source = source_context(db, pid, kind, identifier)
+            existing = linked_records(db, pid, kind, source)
+            # Repeated clicks/imports open the existing record of this type.
+            for row in existing:
+                if row["kind"] == body.kind:
+                    return row
+            content = Content(status="todo" if body.kind == "task" else "draft")
+            ref = {kind + "_id": identifier}
+            label = (
+                getattr(source, "label", None)
+                or getattr(source, "title", None)
+                or getattr(source, "target", None)
+            )
+            if kind == "observation":
+                ref.update(
+                    node_id=source.node_id,
+                    import_id=source.run_id,
+                    fingerprint=source.fingerprint,
+                )
+                content.observation_ids = [source.id]
+                content.node_ids = [source.node_id]
+                run = db.get(ImportRun, source.run_id)
+                content.attachment_ids = [run.attachment_id]
+                node = db.get(Node, source.node_id)
+                label = node.label if node else source.locator
+                content.body = f"Observation: {source.locator}\n\nHypothesis: \n\nNext check: \n\nResult: "
+            elif kind == "node":
+                content.node_ids = [source.id]
+                observed = db.scalar(
+                    select(Observation)
+                    .join(ImportRun, ImportRun.id == Observation.run_id)
+                    .where(
+                        Observation.project_id == pid, Observation.node_id == source.id
+                    )
+                    .order_by(ImportRun.created.desc(), Observation.id)
+                    .limit(1)
+                )
+                if observed:
+                    origin = db.get(ImportRun, observed.run_id)
+                    content.observation_ids = [observed.id]
+                    content.attachment_ids = [origin.attachment_id]
+                    ref.update(
+                        observation_id=observed.id,
+                        import_id=origin.id,
+                        fingerprint=observed.fingerprint,
+                    )
+                attrs = json.loads(source.attrs)
+                scan_id = attrs.get("scan_id")
+                if scan_id and db.get(Scan, scan_id):
+                    content.scan_ids = [scan_id]
+                    ref["scan_id"] = scan_id
+            elif kind == "scan":
+                content.scan_ids = [source.id]
+                content.node_ids = [
+                    n.id
+                    for n in db.scalars(select(Node).where(Node.project_id == pid))
+                    if json.loads(n.attrs).get("scan_id") == source.id
+                ][:50]
+            elif kind == "record":
+                parent = json.loads(source.content)
+                content.record_ids = [source.id]
+                for field in [
+                    "node_ids",
+                    "scan_ids",
+                    "attachment_ids",
+                    "observation_ids",
+                ]:
+                    setattr(content, field, parent.get(field, []))
+                content.body = (
+                    f"Hypothesis: {source.title}\n\n{parent.get('body', '')}\n\nCheck: \n\nResult (including unsuccessful checks): "
+                )[:12000]
+            content.source = Source(**ref)
+            if not content.body:
+                content.body = (
+                    f"Observed: {label}\n\nHypothesis: \n\nNext check: \n\nResult: "
+                )
+            row = Knowledge(
+                project_id=pid,
+                kind=body.kind,
+                title=(("Check · " if body.kind == "task" else "") + str(label))[:160],
+                content=content.model_dump_json(),
+            )
+            db.add(row)
+            record(db, pid, f"{body.kind.capitalize()} drafted from {kind}")
+            db.commit()
+            return serialize(row)
 
     @app.get("/projects/{pid}/knowledge")
     def knowledge(
@@ -181,14 +431,19 @@ def register_workspace(app, sessions, project):
 
     @app.post("/projects/{pid}/knowledge", status_code=201)
     def add_knowledge(pid: str, body: KnowledgeInput):
-        with sessions() as db:
+        with lock, sessions() as db:
             project(db, pid)
+            identifier = f"{pid}:entry:{body.request_id}" if body.request_id else uid()
+            existing = db.get(Knowledge, identifier)
+            if existing:
+                return serialize(existing)
             if body.kind == "workflow_run":
                 raise HTTPException(
                     403, "Workflow runs are managed through their launch controls"
                 )
             validate_links(db, pid, body.content)
             row = Knowledge(
+                id=identifier,
                 project_id=pid,
                 kind=body.kind,
                 title=body.title,
@@ -209,7 +464,7 @@ def register_workspace(app, sessions, project):
 
     @app.put("/projects/{pid}/knowledge/{kid}")
     def edit_knowledge(pid: str, kid: str, body: KnowledgeInput):
-        with sessions() as db:
+        with lock, sessions() as db:
             row = db.get(Knowledge, kid)
             if row is None or row.project_id != pid:
                 raise HTTPException(404, "Record not found")
@@ -217,6 +472,16 @@ def register_workspace(app, sessions, project):
                 raise HTTPException(403, "Workflow run history is read-only")
             if row.kind != body.kind:
                 raise HTTPException(422, "Record type cannot be changed")
+            if body.expected_updated and body.expected_updated != row.updated:
+                # A lost success response may be retried without producing a false conflict.
+                if row.title == body.title and json.loads(
+                    row.content
+                ) == body.content.model_dump(mode="json"):
+                    return serialize(row)
+                raise HTTPException(
+                    409,
+                    {"message": "The saved record changed", "current": serialize(row)},
+                )
             validate_links(db, pid, body.content, json.loads(row.content))
             row.title, row.content, row.updated = (
                 body.title,
@@ -229,7 +494,7 @@ def register_workspace(app, sessions, project):
 
     @app.delete("/projects/{pid}/knowledge/{kid}")
     def delete_knowledge(pid: str, kid: str):
-        with sessions() as db:
+        with lock, sessions() as db:
             row = db.get(Knowledge, kid)
             if row is None or row.project_id != pid:
                 raise HTTPException(404, "Record not found")

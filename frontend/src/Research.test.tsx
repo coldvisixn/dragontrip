@@ -124,6 +124,9 @@ it('keeps vhosts separate and exposes method filters and linked investigation ac
   fireEvent.change(screen.getByLabelText('Endpoint method'), { target: { value: 'POST' } });
   expect(screen.queryByRole('button', { name: 'GET http://app.htb/login' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'POST http://app.htb/login' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Add linked finding' }));
-  expect(knowledge).toHaveBeenCalledWith('post', 'Findings');
+  expect(await screen.findByLabelText('Create linked record type')).toBeVisible();
+  fireEvent.change(screen.getByLabelText('Create linked record type'), {
+    target: { value: 'finding' },
+  });
+  expect(screen.getByRole('button', { name: 'Create linked record' })).toBeEnabled();
 });

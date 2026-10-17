@@ -2940,3 +2940,98 @@ summary {
     margin-top: 18px;
   }
 }
+
+/* Investigation workspace: keep primary actions and text usable in compact windows. */
+.editor-fields {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+.draft-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.draft-status details {
+  width: 100%;
+}
+.draft-status details > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 0;
+}
+.draft-conflict {
+  padding: 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+}
+.conflict-versions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.conflict-versions > div {
+  min-width: 0;
+}
+.conflict-versions pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 220px;
+  overflow: auto;
+}
+.draft-conflict button {
+  margin: 5px;
+  white-space: normal;
+}
+.source-actions {
+  padding: 10px 0;
+  display: grid;
+  gap: 8px;
+}
+.source-actions .section-actions {
+  flex-wrap: wrap;
+}
+.source-actions .linked-items button {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.section-more {
+  margin-left: auto;
+  min-width: 0;
+}
+.section-more select {
+  max-width: 220px;
+}
+.memory-warning {
+  margin: 0;
+  padding: 10px;
+}
+.knowledge-editor details > summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.knowledge-editor .dialog-actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 1100px) {
+  .knowledge-layout,
+  .methodology-layout {
+    grid-template-columns: minmax(190px, 0.8fr) minmax(0, 1.6fr);
+  }
+  .task-board {
+    overflow-x: auto;
+  }
+  .conflict-versions {
+    grid-template-columns: 1fr;
+  }
+  .section-tabs-wrap {
+    flex-wrap: wrap;
+  }
+}

@@ -206,6 +206,7 @@ def create_app(token: str, root: Path | None = None, dev=False):
         watchdog.cancel()
         vault_timer.cancel()
         await asyncio.gather(watchdog, vault_timer, return_exceptions=True)
+        await app.state.close_workflows()
         await manager.close()
         app.state.vault.clear()
         engine.dispose()
@@ -609,19 +610,7 @@ def create_app(token: str, root: Path | None = None, dev=False):
                         422, "Select an observed TCP service in this project"
                     )
                 profile = {**profile, "ports": str(attrs["port"])}
-        intrusive = (
-            bool(profile.get("scripts"))
-            or profile["tool"] == "ffuf"
-            or profile["id"] == "full"
-            or profile["rate"] > (100 if profile["tool"] == "nmap" else 10)
-        )
-        if profile["tool"] == "nmap" and profile["ports"]:
-            count = sum(
-                int(v.split("-")[-1]) - int(v.split("-")[0]) + 1
-                for v in profile["ports"].split(",")
-            )
-            intrusive = intrusive or count > 1000
-        if intrusive and not body.confirmed:
+        if recon.requires_confirmation(profile) and not body.confirmed:
             raise HTTPException(422, "Confirm the higher-traffic scan explicitly")
         tool = (await discover_tools(profile["tool"]))[0]
         if not tool["installed"]:

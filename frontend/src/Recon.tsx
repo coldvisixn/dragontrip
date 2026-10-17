@@ -1,3 +1,4 @@
+import { useProjectState } from './workspace';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, type Profile, type Scan, type ScanRequest } from './api';
 
@@ -425,9 +426,9 @@ export function ScanHistory({
   revision: string;
   onSelect: (id: string) => void;
 }) {
-  const [query, setQuery] = useState('');
-  const [status, setStatus] = useState('all');
-  const [tool, setTool] = useState('all');
+  const [query, setQuery] = useProjectState(pid, 'scan_query', '');
+  const [status, setStatus] = useProjectState(pid, 'scan_filter', 'all');
+  const [tool, setTool] = useProjectState(pid, 'scan_tool', 'all');
   const [offset, setOffset] = useState(0);
   const [rows, setRows] = useState<Scan[]>([]);
   const [total, setTotal] = useState(0);

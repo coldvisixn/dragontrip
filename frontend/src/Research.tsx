@@ -1,6 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, uploadFile, fetchEvidence, type Detail, type ObjectNode } from './api';
 import VirtualList from './VirtualList';
+import { useProjectState } from './workspace';
+import { SourceActions } from './SourceActions';
 
 type Rule = { value: string; mode: 'include' | 'exclude' };
 type Preview = {
@@ -197,10 +199,14 @@ export function Observations({
   pid,
   nodeId,
   findingId,
+  focusId,
+  onClearFocus,
 }: {
   pid: string;
   nodeId?: string;
   findingId?: string;
+  focusId?: string;
+  onClearFocus?: () => void;
 }) {
   const [items, setItems] = useState<Observation[]>([]);
   const [total, setTotal] = useState(0);
@@ -215,6 +221,7 @@ export function Observations({
       offset: String(offset),
       ...(nodeId ? { node_id: nodeId } : {}),
       ...(findingId ? { finding_id: findingId } : {}),
+      ...(focusId ? { observation_id: focusId } : {}),
     });
     api<{ items: Observation[]; total: number }>(`/projects/${pid}/observations?${q}`)
       .then((r) => {
@@ -229,14 +236,18 @@ export function Observations({
     return () => {
       live = false;
     };
-  }, [pid, nodeId, findingId, offset]);
-  if (!items.length && !error) return null;
+  }, [pid, nodeId, findingId, focusId, offset]);
+  if (!items.length && !error && !focusId) return null;
   return (
     <section className="import-observations">
       <h3>Imported observations · {total}</h3>
+      {focusId && <button onClick={onClearFocus}>Show all observations for this object</button>}
+      {focusId && !items.length && (
+        <p>Source observation is unavailable. The object and your record are retained.</p>
+      )}
       {error && <p role="alert">{error}</p>}
       {items.map((o) => (
-        <details key={o.id}>
+        <details key={o.id} open={focusId === o.id || undefined}>
           <summary>
             {o.locator} · {new Date(o.created).toLocaleString()}
           </summary>
@@ -279,6 +290,7 @@ export function Observations({
               )}
             </pre>
           </details>
+          <SourceActions pid={pid} source="observation" id={o.id} />
           <SourceEvidence pid={pid} attachmentId={o.attachment_id} />
         </details>
       ))}
@@ -549,7 +561,6 @@ export function WebMap({
   detail,
   onChanged,
   onInspect,
-  onKnowledge,
   onFinding,
 }: {
   detail: Detail;
@@ -560,10 +571,10 @@ export function WebMap({
 }) {
   const pid = detail.project.id;
   const apps = detail.nodes.filter((n) => n.kind === 'application');
-  const [origin, setOrigin] = useState('');
-  const [selected, setSelected] = useState('');
-  const [query, setQuery] = useState('');
-  const [verb, setVerb] = useState('all');
+  const [origin, setOrigin] = useProjectState(pid, 'web_origin', '');
+  const [selected, setSelected] = useProjectState(pid, 'web_node', '');
+  const [query, setQuery] = useProjectState(pid, 'web_query', '');
+  const [verb, setVerb] = useProjectState(pid, 'web_method', 'all');
   const [url, setUrl] = useState('');
   const [method, setMethod] = useState('GET');
   const [ip, setIp] = useState('');
@@ -576,6 +587,17 @@ export function WebMap({
   const endpoints = detail.nodes.filter((n) => n.kind === 'endpoint' && n.attrs.origin === origin);
   const node = detail.nodes.find((n) => n.id === selected);
   const app = apps.find((n) => n.attrs.origin === origin);
+  useEffect(() => {
+    if (origin && !apps.some((a) => a.attrs.origin === origin)) {
+      setOrigin('');
+      setSelected('');
+      setError('The saved application was deleted. Choose another application.');
+    } else if (selected && !detail.nodes.some((n) => n.id === selected)) {
+      setSelected('');
+      setError('The saved endpoint was deleted. Choose another endpoint.');
+    }
+  }, [detail.nodes, origin, selected]);
+
   useEffect(() => {
     let live = true;
     if (selected)
@@ -748,9 +770,8 @@ export function WebMap({
           </p>
           <div className="research-filters">
             <button onClick={() => onInspect(node.id)}>Inspect in graph</button>
-            <button onClick={() => onKnowledge(node.id, 'Notes')}>Add linked observation</button>
-            <button onClick={() => onKnowledge(node.id, 'Findings')}>Add linked finding</button>
           </div>
+          <SourceActions key={'records:' + node.id} pid={pid} source="node" id={node.id} />
           <h3>Linked findings</h3>
           {!findings.length && (
             <p>No linked findings. This does not mean the endpoint has been tested.</p>

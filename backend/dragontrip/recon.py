@@ -8,6 +8,22 @@ from urllib.parse import urlsplit, urlunsplit
 
 from . import nmap
 
+def requires_confirmation(profile):
+    intrusive = (
+        bool(profile.get("scripts"))
+        or profile["tool"] == "ffuf"
+        or profile["id"] == "full"
+        or profile["rate"] > (100 if profile["tool"] == "nmap" else 10)
+    )
+    if profile["tool"] == "nmap" and profile["ports"]:
+        count = sum(
+            int(v.split("-")[-1]) - int(v.split("-")[0]) + 1
+            for v in profile["ports"].split(",")
+        )
+        intrusive = intrusive or count > 1000
+    return intrusive
+
+
 TOOLS = {
     "nmap": "Nmap",
     "whatweb": "WhatWeb",

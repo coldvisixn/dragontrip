@@ -20,6 +20,7 @@ import {
 import { Server, Globe, Pentagon, FileText, Box, Lightbulb, ListTodo, Link } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 import { api, type ObjectNode, type Relation } from './api';
+import { getWorkspace, putWorkspace } from './workspace';
 
 type GraphData = {
   label: string;
@@ -152,11 +153,14 @@ export default function Graph({
     let disposed = false;
     api<Viewport | null>(`/projects/${projectId}/view`)
       .then((value) => {
-        if (!disposed) setView(value && Number.isFinite(value.zoom) ? value : null);
+        if (!disposed) {
+          const cached = getWorkspace<Viewport | null>(projectId, 'graph_view', null);
+          setView(cached || (value && Number.isFinite(value.zoom) ? value : null));
+        }
       })
       .catch((e) => {
         if (!disposed) {
-          setView(null);
+          setView(getWorkspace<Viewport | null>(projectId, 'graph_view', null));
           setViewError(e.message);
         }
       });
@@ -301,6 +305,7 @@ export default function Graph({
         defaultViewport={view || undefined}
         onMoveEnd={(_, viewport) => {
           if (!initialized.current) return;
+          putWorkspace(projectId, 'graph_view', viewport);
           clearTimeout(saveTimer.current);
           saveTimer.current = setTimeout(() => {
             void api(`/projects/${projectId}/view`, 'PUT', viewport).catch((e) =>

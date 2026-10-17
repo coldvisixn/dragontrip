@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Clock3, Search as SearchIcon } from 'lucide-react';
 import { api } from './api';
+import { useProjectState } from './workspace';
 
 export type SearchResult = {
   id: string;
@@ -22,7 +23,7 @@ export function SearchResults({
   const [items, setItems] = useState<SearchResult[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
-  const [category, setCategory] = useState('all');
+  const [category, setCategory] = useProjectState(pid, 'search_category', 'all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => setOffset(0), [query, category]);
@@ -128,7 +129,7 @@ export function ProjectSearch({
   pid: string;
   onOpen: (item: SearchResult) => void;
 }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useProjectState(pid, 'search_query', '');
   return (
     <div className="page">
       <div className="page-heading">
@@ -156,7 +157,7 @@ export function ProjectSearch({
 }
 
 export function Timeline({ pid }: { pid: string }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useProjectState(pid, 'search_query', '');
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<{ id: string; message: string; created: string }[]>([]);
   const [total, setTotal] = useState(0);

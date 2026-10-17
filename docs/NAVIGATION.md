@@ -36,3 +36,7 @@ Reproduce with `npm test`, `npm run build`, then `npm run dev` and `node scripts
 The local development package is `src-tauri/target/release/bundle/deb/dragontrip_0.7.1_amd64.deb`, with a matching `.deb.sha256`. No new GitHub release has been published.
 
 Final local package SHA-256: `27a36978d7d1c4d15277f6eaa51577b8d55fb4430e454c275690b909afdb9b4f`. Check with `sha256sum --check dragontrip_0.7.1_amd64.deb.sha256` in the artifact directory. The final frontend additionally keeps keyboard focus on the active tab during repeated arrow-key navigation.
+
+## Current local-investigation navigation
+
+The working tree now groups project pages into **Research**, **Recon** and **Notebook**, with three frequent tabs per section and a native **More…** selector for secondary pages. Existing command-palette destinations remain available. Navigation history, remembered section pages and editor/filter state are project-scoped and persist locally. See [the HTB workspace guide and current validation](HTB-WORKSPACE.md). Earlier screenshots in this document describe the 0.7.1 release baseline.

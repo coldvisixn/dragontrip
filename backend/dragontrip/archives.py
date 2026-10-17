@@ -27,6 +27,7 @@ from .db import (
     Attachment,
     Credential,
     GraphView,
+    Configuration,
     ScopeRule,
     ImportRun,
     Observation,
@@ -135,7 +136,7 @@ class ObservationRecord(BaseModel):
 
 class Manifest(BaseModel):
     format: Literal["dragontrip-project"]
-    version: Literal[1, 2, 3]
+    version: Literal[1, 2, 3, 4]
     project: dict
     nodes: list[NodeRecord] = Field(max_length=10000)
     edges: list[EdgeRecord] = Field(max_length=50000)
@@ -149,6 +150,7 @@ class Manifest(BaseModel):
     observations: list[ObservationRecord] = Field(
         default_factory=list, max_length=50000
     )
+    workspace: dict[str, dict] = Field(default_factory=dict, max_length=2000)
     view: dict | None = None
     credentials_included: bool = False
 
@@ -170,9 +172,13 @@ def register_archives(app, sessions, project, root):
         output = Path(temporary.name)
         temporary.close()
         try:
-            with app.state.vault.lock, sessions() as db, zipfile.ZipFile(
-                output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=3
-            ) as archive:
+            with (
+                app.state.vault.lock,
+                sessions() as db,
+                zipfile.ZipFile(
+                    output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=3
+                ) as archive,
+            ):
                 p = project(db, pid)
                 # Refuse oversized snapshots in SQL before materializing histories/console tails.
                 estimated = 0
@@ -227,7 +233,7 @@ def register_archives(app, sessions, project, root):
                     )
                 manifest = {
                     "format": "dragontrip-project",
-                    "version": 3,
+                    "version": 4,
                     "project": serialize(p),
                     "nodes": rows(Node),
                     "edges": rows(Edge),
@@ -241,6 +247,21 @@ def register_archives(app, sessions, project, root):
                     "files": {},
                     "credentials_included": body.include_credentials,
                 }
+                prefix = f"workspace:{pid}:"
+                workspace = {
+                    r.id[len(prefix) :]: json.loads(r.value)
+                    for r in db.scalars(
+                        select(Configuration).where(
+                            Configuration.id.startswith(prefix, autoescape=True)
+                        )
+                    )
+                }
+                if (
+                    len(workspace) > 2000
+                    or len(json.dumps(workspace)) > 8 * 1024 * 1024
+                ):
+                    fail("Workspace recovery data exceeds the portable archive limit")
+                manifest["workspace"] = workspace
                 view = db.get(GraphView, pid)
                 manifest["view"] = json.loads(view.value) if view else None
                 total = 0
@@ -417,6 +438,16 @@ def register_archives(app, sessions, project, root):
                     for k in manifest.knowledge
                 ):
                     fail("Methodologies and workflows require archive version 3")
+                if manifest.workspace and manifest.version < 4:
+                    fail("Workspace recovery data requires archive version 4")
+                for key, cell in manifest.workspace.items():
+                    if (
+                        not SAFE_ID.fullmatch(key)
+                        or not isinstance(cell.get("revision"), int)
+                        or len(json.dumps(cell)) > 200000
+                    ):
+                        fail("Invalid workspace recovery item")
+                oid = {row.id: uid() for row in manifest.observations}
                 sid = {row.id: uid() for row in manifest.scans}
                 rid = {row.id: uid() for row in manifest.import_runs}
                 aid = {row.id: uid() for row in manifest.attachments}
@@ -514,8 +545,10 @@ def register_archives(app, sessions, project, root):
                     result = {}
                     for key, entry in value.items():
                         mapping = (
-                            sid
-                            if key in {"scan_id", "scan_ids"}
+                            oid
+                            if key in {"observation_id", "observation_ids"}
+                            else sid
+                            if key in {"scan_id", "scan_ids", "step_scan_ids"}
                             else (
                                 aid
                                 if key in {"attachment_ids", "attachment_id"}
@@ -524,10 +557,16 @@ def register_archives(app, sessions, project, root):
                                     if key in {"node_id", "node_ids", "service_node"}
                                     else (
                                         rid
-                                        if key == "run_id"
+                                        if key in {"run_id", "import_id"}
                                         else (
                                             kid
-                                            if key in {"finding_id", "workflow_id"}
+                                            if key
+                                            in {
+                                                "finding_id",
+                                                "workflow_id",
+                                                "record_id",
+                                                "record_ids",
+                                            }
                                             else None
                                         )
                                     )
@@ -609,15 +648,22 @@ def register_archives(app, sessions, project, root):
                                 )
                             )
                         for row in manifest.knowledge:
+                            content = remap(row.content.model_dump(mode="json"))
+                            if (
+                                row.kind == "workflow_run"
+                                and content.get("execution") == "running"
+                            ):
+                                content.update(
+                                    execution="paused",
+                                    stop_reason="Imported run. Preview and resume explicitly.",
+                                )
                             db.add(
                                 Knowledge(
                                     id=kid[row.id],
                                     project_id=pid,
                                     kind=row.kind,
                                     title=row.title,
-                                    content=json.dumps(
-                                        remap(row.content.model_dump(mode="json"))
-                                    ),
+                                    content=json.dumps(content),
                                     created=row.created,
                                     updated=row.updated,
                                 )
@@ -678,7 +724,7 @@ def register_archives(app, sessions, project, root):
                             json.loads(row.data)
                             db.add(
                                 Observation(
-                                    id=uid(),
+                                    id=oid[row.id],
                                     project_id=pid,
                                     run_id=rid[row.run_id],
                                     node_id=nid[row.node_id],
@@ -686,6 +732,35 @@ def register_archives(app, sessions, project, root):
                                     fingerprint=row.fingerprint,
                                     locator=row.locator,
                                     data=row.data,
+                                )
+                            )
+                        for cell_key, cell in manifest.workspace.items():
+                            value = remap(cell)
+                            # Primitive selections live in their own cells.
+                            mapping = {
+                                "selected_node": nid,
+                                "web_node": nid,
+                                "methodology_node": nid,
+                                "selected_scan": sid,
+                                "observation_focus": oid,
+                                "evidence_focus": aid,
+                                "workflow_run": kid,
+                            }.get(cell_key)
+                            if mapping and isinstance(
+                                (value.get("value") or {}).get("data"), str
+                            ):
+                                old_id = value["value"]["data"]
+                                value["value"]["data"] = mapping.get(old_id, "")
+                            if cell_key == "methodology_work" and (
+                                value.get("value") or {}
+                            ).get("data"):
+                                data = value["value"]["data"]
+                                if isinstance(data, dict) and data.get("id") in kid:
+                                    data["id"] = kid[data["id"]]
+                            db.add(
+                                Configuration(
+                                    id=f"workspace:{pid}:{cell_key}",
+                                    value=json.dumps(value),
                                 )
                             )
                         for row in manifest.events:

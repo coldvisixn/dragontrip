@@ -1,8 +1,9 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { Plus, Search, ListChecks, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Plus, Search, ListChecks } from 'lucide-react';
 import { api, type Detail } from './api';
-import { ObjectLinks } from './Knowledge';
+import { Editor, type KnowledgeRecord } from './Knowledge';
 import Markdown from './Markdown';
+import { useProjectState, getWorkspace, isWorkspaceClosed } from './workspace';
 
 const statuses = ['todo', 'in_progress', 'blocked', 'done', 'cancelled'] as const;
 const names = {
@@ -40,24 +41,6 @@ const empty = (): Task => ({
     node_ids: [],
   },
 });
-const presets = [
-  ['Custom task', '', ''],
-  [
-    'Review exposed services',
-    'Review exposed services',
-    'Review discovered services, confirm their purpose and document unnecessary exposure.',
-  ],
-  [
-    'Validate a finding',
-    'Validate finding and evidence',
-    'Reproduce the observation in the authorized environment, attach evidence and assess impact.',
-  ],
-  [
-    'Verify remediation',
-    'Verify remediation',
-    'Record the original finding, verify the fix and update its status with supporting evidence.',
-  ],
-] as const;
 const overdue = (task: Task) =>
   Boolean(
     task.content.due_date &&
@@ -70,29 +53,58 @@ export default function Tasks({
   focusId,
   onChanged,
   onNode,
+  onSeedConsumed,
 }: {
   detail: Detail;
   focusId?: string;
   onChanged: () => Promise<unknown>;
   onNode: (id: string) => void;
+  onSeedConsumed?: () => void;
 }) {
   const pid = detail.project.id;
   const [items, setItems] = useState<Task[]>([]);
+  const [view, setView] = useProjectState(pid, 'tasks', {
+    editing: false,
+    record_id: focusId || '',
+    draft_id: crypto.randomUUID(),
+    query: '',
+    status: 'all',
+  });
   const [editor, setEditor] = useState<Task>();
-  const [query, setQuery] = useState('');
-  const [status, setStatus] = useState('all');
+  const { query, status } = view;
+  const setQuery = (query: string) => setView((v) => ({ ...v, query }));
+  const setStatus = (status: string) => setView((v) => ({ ...v, status }));
   const [revision, setRevision] = useState(0);
+  useEffect(() => {
+    if (view.editing && isWorkspaceClosed(pid, 'draft:' + view.draft_id))
+      setView((v) => ({ ...v, editing: false }));
+  }, [pid, view.editing, view.draft_id]);
   const [offset, setOffset] = useState(0);
   const [more, setMore] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const busy = false;
   const [error, setError] = useState('');
   useEffect(() => {
     let disposed = false;
-    if (focusId)
-      api<Task>(`/projects/${pid}/knowledge/${focusId}`)
+    const id = focusId || view.record_id;
+    if (id)
+      api<Task>(`/projects/${pid}/knowledge/${id}`)
         .then((row) => {
-          if (!disposed && row.kind === 'task') setEditor(row);
+          if (!disposed && row.kind === 'task') {
+            setEditor(row);
+            if (focusId) {
+              setView((v) => ({
+                ...v,
+                editing: true,
+                record_id: row.id,
+                draft_id:
+                  v.record_id === row.id && getWorkspace(pid, 'draft:' + v.draft_id, null)
+                    ? v.draft_id
+                    : crypto.randomUUID(),
+              }));
+              onSeedConsumed?.();
+            }
+          }
         })
         .catch((e) => {
           if (!disposed) setError(e.message);
@@ -100,7 +112,7 @@ export default function Tasks({
     return () => {
       disposed = true;
     };
-  }, [pid, focusId]);
+  }, [pid, focusId, view.record_id]);
   useEffect(() => {
     let disposed = false;
     setLoading(true);
@@ -130,33 +142,10 @@ export default function Tasks({
     };
   }, [pid, query, status, offset, revision]);
   function edit(row: Task) {
-    if (editor && !window.confirm('Discard unsaved task changes?')) return;
     setEditor(structuredClone(row));
+    setView((v) => ({ ...v, editing: true, record_id: row.id, draft_id: crypto.randomUUID() }));
     setError('');
   }
-  async function save(event: FormEvent) {
-    event.preventDefault();
-    if (!editor) return;
-    setBusy(true);
-    setError('');
-    try {
-      await api(
-        `/projects/${pid}/knowledge${editor.id ? '/' + editor.id : ''}`,
-        editor.id ? 'PUT' : 'POST',
-        { kind: 'task', title: editor.title, content: editor.content },
-      );
-      setEditor(undefined);
-      setOffset(0);
-      setRevision((v) => v + 1);
-      await onChanged();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  const change = (value: Partial<Task['content']>) =>
-    setEditor((old) => (old ? { ...old, content: { ...old.content, ...value } } : old));
   return (
     <div className="page tasks-page">
       <div className="page-heading">
@@ -204,147 +193,34 @@ export default function Tasks({
           ))}
         </select>
       </div>
-      {editor && (
-        <form className="panel task-editor knowledge-editor" onSubmit={save}>
-          <fieldset disabled={busy}>
-            <div className="section-actions">
-              <h2>{editor.id ? 'Edit task' : 'New task'}</h2>
-              <button
-                type="button"
-                disabled={busy}
-                aria-label="Close task editor"
-                onClick={() => {
-                  if (window.confirm('Discard unsaved task changes?')) setEditor(undefined);
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-            {!editor.id && (
-              <label>
-                Task template
-                <select
-                  aria-label="Task template"
-                  defaultValue="0"
-                  onChange={(e) => {
-                    const preset = presets[Number(e.target.value)];
-                    setEditor((old) =>
-                      old
-                        ? { ...old, title: preset[1], content: { ...old.content, body: preset[2] } }
-                        : old,
-                    );
-                  }}
-                >
-                  {presets.map((p, i) => (
-                    <option key={i} value={i}>
-                      {p[0]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <label>
-              Title
-              <input
-                autoFocus
-                required
-                maxLength={160}
-                value={editor.title}
-                onChange={(e) => setEditor({ ...editor, title: e.target.value })}
-              />
-            </label>
-            <div className="form-pair">
-              <label>
-                Status
-                <select
-                  aria-label="Status"
-                  value={editor.content.status}
-                  onChange={(e) => change({ status: e.target.value as Status })}
-                >
-                  {statuses.map((s) => (
-                    <option key={s} value={s}>
-                      {names[s]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Priority
-                <select
-                  aria-label="Priority"
-                  value={editor.content.priority}
-                  onChange={(e) => change({ priority: e.target.value })}
-                >
-                  {['low', 'medium', 'high', 'urgent'].map((s) => (
-                    <option key={s}>{s}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <div className="form-pair">
-              <label>
-                Owner
-                <input
-                  maxLength={100}
-                  value={editor.content.assignee}
-                  onChange={(e) => change({ assignee: e.target.value })}
-                  placeholder="Unassigned"
-                />
-              </label>
-              <label>
-                Due date
-                <input
-                  type="date"
-                  value={editor.content.due_date || ''}
-                  onChange={(e) => change({ due_date: e.target.value || null })}
-                />
-              </label>
-            </div>
-            <label>
-              Description
-              <textarea
-                rows={4}
-                maxLength={12000}
-                value={editor.content.body}
-                onChange={(e) => change({ body: e.target.value })}
-              />
-            </label>
-            <ObjectLinks
+      {view.editing &&
+        (!view.record_id ||
+          editor?.id === view.record_id ||
+          getWorkspace(pid, 'draft:' + view.draft_id, null)) && (
+          <section className="panel task-editor">
+            <Editor
+              key={view.draft_id}
+              draftId={view.draft_id}
               detail={detail}
-              ids={editor.content.node_ids}
-              onChange={(node_ids) => change({ node_ids })}
+              kind="task"
+              record={editor?.id ? (editor as unknown as KnowledgeRecord) : undefined}
+              onCancel={() => {
+                setView((v) => ({ ...v, editing: false }));
+                setRevision((v) => v + 1);
+              }}
+              onSave={() => {
+                if (getWorkspace(pid, 'tasks', view).draft_id !== view.draft_id) return;
+                setView((v) => ({ ...v, editing: false, record_id: '' }));
+                setEditor(undefined);
+                setOffset(0);
+                setRevision((v) => v + 1);
+                void onChanged().catch(() => setError('Task saved. Refresh failed; use Retry.'));
+              }}
             />
-            <div className="dialog-actions">
-              {editor.id && (
-                <button
-                  type="button"
-                  className="danger-button"
-                  disabled={busy}
-                  onClick={async () => {
-                    if (!window.confirm('Delete this task?')) return;
-                    setBusy(true);
-                    try {
-                      await api(`/projects/${pid}/knowledge/${editor.id}`, 'DELETE');
-                      setEditor(undefined);
-                      setOffset(0);
-                      setRevision((v) => v + 1);
-                      await onChanged();
-                    } catch (e) {
-                      setError((e as Error).message);
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  Delete task
-                </button>
-              )}
-              <button className="primary" disabled={busy || !editor.title.trim()}>
-                {busy ? 'Saving…' : 'Save task'}
-              </button>
-            </div>
-          </fieldset>
-        </form>
+          </section>
+        )}
+      {!view.editing && getWorkspace(pid, 'draft:' + view.draft_id, null) && (
+        <button onClick={() => setView((v) => ({ ...v, editing: true }))}>Resume task draft</button>
       )}
       {loading && <p role="status">Loading tasks…</p>}
       <div className="task-board">

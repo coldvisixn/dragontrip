@@ -1,4 +1,6 @@
-"""Four-state manual methodologies and explicitly advanced recon sequences."""
+"""Four-state manual methodologies and bounded recon sequences."""
+
+import asyncio
 
 import json
 import re
@@ -41,6 +43,26 @@ def register_methodologies(
     app, sessions, project, profiles, scan_handler, scan_input, manager
 ):
     lock = app.state.research_lock
+    runners = {}
+
+    # Process-local authorization is deliberately never reconstructed from persisted history.
+    with sessions() as db:
+        for run in db.query(Knowledge).filter_by(kind="workflow_run"):
+            content = json.loads(run.content)
+            if content.get("execution") == "running":
+                content.update(
+                    execution="paused",
+                    stop_reason="Application restarted. Preview and resume explicitly.",
+                )
+                run.content = json.dumps(content)
+        db.commit()
+
+    async def close_runners():
+        for task in list(runners.values()):
+            task.cancel()
+        await asyncio.gather(*list(runners.values()), return_exceptions=True)
+
+    app.state.close_workflows = close_runners
 
     def entry(db, pid, kid, kind):
         row = db.get(Knowledge, kid)
@@ -181,7 +203,7 @@ def register_methodologies(
             "preview_token": token,
             "actions": result,
             "ready": all(not a["error"] for a in result),
-            "notice": "Each step requires an explicit launch. Following steps wait for successful completion; findings never mark a methodology check as tested.",
+            "notice": "Review every target and parameter before launch. Automatic sequences stop on errors and never resume after restart. Checks remain user decisions.",
         }
 
     @app.post("/projects/{pid}/workflows/{wid}/preview")
@@ -241,19 +263,25 @@ def register_methodologies(
             content = json.loads(run.content)
             scans = [
                 serialize(db.get(Scan, sid), exclude={"output"})
-                for sid in content.get("scan_ids", [])
+                for sid in (content.get("step_scan_ids") or content.get("scan_ids", []))
                 if db.get(Scan, sid)
             ]
             return {
                 **plan(db, pid, snapshot(run), run),
                 "run": serialize(run),
                 "scans": scans,
+                "history": [
+                    serialize(db.get(Scan, sid), exclude={"output"})
+                    for sid in content.get("scan_ids", [])
+                    if db.get(Scan, sid)
+                ],
             }
 
     class Launch(BaseModel):
         preview_token: str = Field(max_length=100)
         authorized: Literal[True]
         confirmed: bool = False
+        retry: bool = False
 
     @app.post("/projects/{pid}/workflow-runs/{rid}/next", status_code=201)
     async def launch_next(pid: str, rid: str, body: Launch):
@@ -270,11 +298,34 @@ def register_methodologies(
                     )
                 if content["status"] != "open":
                     raise HTTPException(409, "Run is stopped")
-                previous = [db.get(Scan, sid) for sid in content.get("scan_ids", [])]
+                effective = content.get("step_scan_ids") or content.get("scan_ids", [])
+                previous = [db.get(Scan, sid) for sid in effective]
+                if body.retry:
+                    if not previous or previous[-1].status not in {
+                        "failed",
+                        "cancelled",
+                        "interrupted",
+                    }:
+                        raise HTTPException(
+                            409, "Only a stopped or failed last step can be retried"
+                        )
+                    previous = previous[:-1]
+                if (
+                    content.get("execution") == "running"
+                    and runners.get(rid) is not asyncio.current_task()
+                ):
+                    raise HTTPException(
+                        409, "Pause the automatic sequence before manual launch"
+                    )
                 if any(not s or s.status != "completed" for s in previous):
                     raise HTTPException(
                         409,
-                        "Previous steps must complete successfully; cancel or create a new run after failure",
+                        "Wait for completion or retry the failed step; history is retained",
+                    )
+                if len(content.get("scan_ids", [])) >= 200:
+                    raise HTTPException(
+                        409,
+                        "This run retained 200 attempts. Create a new run to continue.",
                     )
                 index = len(previous)
                 if index >= len(content["actions"]):
@@ -299,10 +350,130 @@ def register_methodologies(
                 run = entry(db, pid, rid, "workflow_run")
                 content = json.loads(run.content)
                 content.setdefault("scan_ids", []).append(result["id"])
+                content["step_scan_ids"] = [s.id for s in previous] + [result["id"]]
+                scan_row = db.get(Scan, result["id"])
+                options = json.loads(scan_row.options)
+                options.update(workflow_id=rid, workflow_step=index + 1)
+                scan_row.options = json.dumps(options)
                 run.content, run.updated = json.dumps(content), now()
-                record(db, pid, f"Workflow step {index+1} queued: {run.title}")
+                record(db, pid, f"Workflow step {index + 1} queued: {run.title}")
                 db.commit()
             return result
+
+    def execution(pid, rid, state, reason):
+        with sessions() as db:
+            run = entry(db, pid, rid, "workflow_run")
+            content = json.loads(run.content)
+            content.update(execution=state, stop_reason=reason)
+            run.content, run.updated = json.dumps(content), now()
+            db.commit()
+
+    async def drive(pid, rid, approved, confirmed):
+        try:
+            while True:
+                preview = run_preview(pid, rid)
+                content = preview["run"]["content"]
+                if content.get("execution") != "running" or content["status"] != "open":
+                    return
+                scans = preview["scans"]
+                if any(s["status"] in {"queued", "running"} for s in scans):
+                    await asyncio.sleep(0.2)
+                    continue
+                failed = next((s for s in scans if s["status"] != "completed"), None)
+                if failed:
+                    execution(
+                        pid,
+                        rid,
+                        "paused",
+                        f"Step {scans.index(failed) + 1}: {failed['status']}. {failed.get('error', '')} Retry explicitly.",
+                    )
+                    return
+                if len(scans) == len(preview["actions"]):
+                    execution(
+                        pid, rid, "completed", "All steps completed. Review results."
+                    )
+                    return
+                if not preview["ready"] or preview["actions"] != approved:
+                    execution(
+                        pid,
+                        rid,
+                        "paused",
+                        "Scope or parameters changed. Preview again before continuing.",
+                    )
+                    return
+                await launch_next(
+                    pid,
+                    rid,
+                    Launch(
+                        preview_token=preview["preview_token"],
+                        authorized=True,
+                        confirmed=confirmed,
+                    ),
+                )
+        except asyncio.CancelledError:
+            with sessions() as db:
+                content = json.loads(entry(db, pid, rid, "workflow_run").content)
+            if content.get("execution") == "running":
+                execution(
+                    pid,
+                    rid,
+                    "paused",
+                    "Application stopped. Preview and resume explicitly.",
+                )
+            raise
+        except Exception as exc:
+            reason = str(exc.detail) if isinstance(exc, HTTPException) else str(exc)
+            execution(pid, rid, "paused", "Sequence stopped: " + reason)
+        finally:
+            if runners.get(rid) is asyncio.current_task():
+                runners.pop(rid, None)
+
+    @app.post("/projects/{pid}/workflow-runs/{rid}/automatic")
+    async def automatic(pid: str, rid: str, body: Launch):
+        async with app.state.workflow_launch_lock:
+            preview = run_preview(pid, rid)
+            if body.preview_token != preview["preview_token"]:
+                raise HTTPException(409, "Preview changed. Review it again.")
+            if not preview["ready"] or preview["run"]["content"]["status"] != "open":
+                raise HTTPException(422, "Resolve preview errors or create a new run")
+            if any(
+                s["status"] not in {"completed", "running", "queued"}
+                for s in preview["scans"]
+            ):
+                raise HTTPException(
+                    409,
+                    "Retry the failed step explicitly before automatic continuation",
+                )
+            if rid in runners:
+                raise HTTPException(409, "Sequence is already running")
+            # All confirmations apply only to this exact preview snapshot.
+            if not body.confirmed and any(
+                recon.requires_confirmation(a["parameters"]) for a in preview["actions"]
+            ):
+                raise HTTPException(
+                    422, "Confirm higher-traffic / diagnostic actions in the preview"
+                )
+            execution(pid, rid, "running", "")
+            runners[rid] = asyncio.create_task(
+                drive(pid, rid, preview["actions"], body.confirmed)
+            )
+            return {"started": True}
+
+    @app.post("/projects/{pid}/workflow-runs/{rid}/pause")
+    async def pause(pid: str, rid: str):
+        async with app.state.workflow_launch_lock:
+            # Let the current tool finish; prevent queueing any subsequent step.
+            execution(
+                pid,
+                rid,
+                "paused",
+                "Paused by user. Current tool may finish; following steps wait.",
+            )
+            task = runners.pop(rid, None)
+            if task:
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+            return {"paused": True}
 
     @app.post("/projects/{pid}/workflow-runs/{rid}/stop")
     async def stop(pid: str, rid: str):
@@ -311,6 +482,7 @@ def register_methodologies(
                 run = entry(db, pid, rid, "workflow_run")
                 content = json.loads(run.content)
                 content["status"] = "dismissed"
+                content.update(execution="cancelled", stop_reason="Cancelled by user")
                 run.content, run.updated = json.dumps(content), now()
                 db.commit()
                 scans = list(content.get("scan_ids", []))

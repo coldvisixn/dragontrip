@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { api, type Detail, type Profile, type Scan } from './api';
+import { api, ApiError, type Detail, type Profile, type Scan } from './api';
+import { useProjectState, putWorkspace, workspaceRevision } from './workspace';
+import { DraftStatus } from './DraftStatus';
 import { AttachmentLinks, LinkedEvidence } from './Evidence';
 
 type Check = { key: string; title: string; state: string; note: string };
@@ -8,6 +10,7 @@ type ResearchRecord = {
   id: string;
   title: string;
   kind: string;
+  updated?: string;
   content: {
     node_ids: string[];
     scan_ids: string[];
@@ -26,6 +29,7 @@ type Plan = {
   actions: (Action & { error: string; scope: string; parameters: Profile })[];
   run?: ResearchRecord;
   scans?: Scan[];
+  history?: Scan[];
 };
 const states = [
   ['not_tested', 'Not tested'],
@@ -37,8 +41,14 @@ const states = [
 export function Methodologies({ detail }: { detail: Detail }) {
   const pid = detail.project.id;
   const [records, setRecords] = useState<ResearchRecord[]>([]);
-  const [selected, setSelected] = useState<ResearchRecord>();
-  const [node, setNode] = useState('');
+  const [selected, setSelected] = useProjectState<ResearchRecord | undefined>(
+    pid,
+    'methodology_work',
+    undefined,
+  );
+  const [conflict, setConflict] = useState<ResearchRecord>();
+  const [copyId, setCopyId] = useProjectState(pid, 'methodology_copy_id', crypto.randomUUID());
+  const [node, setNode] = useProjectState(pid, 'methodology_node', '');
   const [template, setTemplate] = useState('web');
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
@@ -76,22 +86,34 @@ export function Methodologies({ detail }: { detail: Detail }) {
       setBusy(false);
     }
   }
-  async function save() {
+  async function save(copy = false) {
     if (!selected) return;
     setBusy(true);
     setError('');
     setStatus('');
     try {
-      const r = await api<ResearchRecord>(`/projects/${pid}/knowledge/${selected.id}`, 'PUT', {
-        kind: 'checklist',
-        title: selected.title,
-        content: selected.content,
-      });
+      const r = await api<ResearchRecord>(
+        `/projects/${pid}/knowledge${copy ? '' : '/' + selected.id}`,
+        copy ? 'POST' : 'PUT',
+        {
+          kind: 'checklist',
+          expected_updated: copy ? undefined : selected.updated,
+          request_id: copy ? copyId : undefined,
+          title: selected.title,
+          content: selected.content,
+        },
+      );
       setSelected(r);
-      await load();
+      setConflict(undefined);
       setStatus('Methodology saved.');
+      await load().catch(() =>
+        setError('Methodology saved. The list could not refresh; reopen this screen to retry.'),
+      );
     } catch (e) {
-      setError((e as Error).message);
+      if (e instanceof ApiError && e.status === 409) {
+        setConflict((e.detail as { current: ResearchRecord }).current);
+        setCopyId(crypto.randomUUID());
+      } else setError('Your methodology draft is retained. Retry saving: ' + (e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -179,6 +201,48 @@ export function Methodologies({ detail }: { detail: Detail }) {
         {selected && (
           <section className="panel methodology-detail">
             <h2>{selected.title}</h2>
+            <DraftStatus pid={pid} draftKey="methodology_work" value={selected} />
+            {conflict && (
+              <section className="draft-conflict" role="alert">
+                <h3>This methodology changed</h3>
+                <div className="conflict-versions">
+                  <div>
+                    <h4>
+                      My draft ·{' '}
+                      {new Date(workspaceRevision(pid, 'methodology_work')).toLocaleString()}
+                    </h4>
+                    <pre>{JSON.stringify(selected.content.checks, null, 2)}</pre>
+                  </div>
+                  <div>
+                    <h4>Saved version · {conflict.updated}</h4>
+                    <pre>{JSON.stringify(conflict.content.checks, null, 2)}</pre>
+                  </div>
+                </div>
+                <button disabled={busy} onClick={() => void save(true)}>
+                  Save my version as a separate methodology
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    putWorkspace(pid, 'draft:' + crypto.randomUUID(), selected);
+                    setSelected(conflict);
+                    setConflict(undefined);
+                  }}
+                >
+                  Use saved version (retain my text)
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    putWorkspace(pid, 'draft:' + crypto.randomUUID(), selected);
+                    setSelected({ ...selected, updated: conflict.updated });
+                    setConflict(undefined);
+                  }}
+                >
+                  Merge manually in checks below
+                </button>
+              </section>
+            )}
             <div className="coverage-summary">
               {states.map(([key, label]) => (
                 <span className={'coverage-stat ' + key} key={key}>
@@ -252,7 +316,11 @@ export function Methodologies({ detail }: { detail: Detail }) {
               }
             />
             <LinkedEvidence pid={pid} ids={selected.content.attachment_ids || []} />
-            <button className="primary" disabled={busy} onClick={() => void save()}>
+            <button
+              className="primary"
+              disabled={busy || Boolean(conflict)}
+              onClick={() => void save()}
+            >
               Save methodology
             </button>
           </section>
@@ -277,9 +345,9 @@ export function Workflows({
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selected, setSelected] = useState<ResearchRecord>();
   const [plan, setPlan] = useState<Plan>();
-  const [runId, setRunId] = useState('');
-  const [title, setTitle] = useState('Web reconnaissance');
-  const [actions, setActions] = useState<Action[]>([
+  const [runId, setRunId] = useProjectState(pid, 'workflow_run', '');
+  const [title, setTitle] = useProjectState(pid, 'workflow_title', 'Web reconnaissance');
+  const [actions, setActions] = useProjectState<Action[]>(pid, 'workflow_actions', [
     { profile: 'whatweb', target: '', words: [] },
     { profile: 'httpx', target: '', words: [] },
   ]);
@@ -347,15 +415,23 @@ export function Workflows({
     plan.scans?.every((s) => s.status === 'completed'),
   );
   const next = plan?.scans?.length || 0;
+  const automatic = plan?.run?.content.execution === 'running';
+  const retry = Boolean(
+    plan?.scans?.length &&
+    ['failed', 'cancelled', 'interrupted'].includes(plan.scans.at(-1)!.status),
+  );
+  async function control(action: string, payload?: unknown) {
+    await api(`/projects/${pid}/workflow-runs/${runId}/${action}`, 'POST', payload);
+    setPlan(await api<Plan>(`/projects/${pid}/workflow-runs/${runId}/preview`));
+    await load();
+    await onChanged();
+  }
   return (
     <div className="page workflows-page">
       <div className="page-heading">
         <div>
           <h1>Recon workflows</h1>
-          <p>
-            Save an ordered sequence. Review scope and parameters, then explicitly launch each step
-            through the task queue.
-          </p>
+          <p>Review a saved sequence, then run all steps or advance one at a time.</p>
         </div>
       </div>
       {error && (
@@ -537,6 +613,12 @@ export function Workflows({
         <section className="panel workflow-preview">
           <h2>{runId ? 'Run progress' : 'Targets & actions preview'}</h2>
           <p>{plan.notice}</p>
+          {plan.run && (
+            <p role="status">
+              {String(plan.run.content.execution || 'Ready for explicit launch')} ·{' '}
+              {String(plan.run.content.stop_reason || '')}
+            </p>
+          )}
           <div className="workflow-progress">
             {completed} / {plan.actions.length} steps completed
           </div>
@@ -591,6 +673,19 @@ export function Workflows({
               Create run
             </button>
           )}
+          {plan.history && plan.history.length > (plan.scans?.length || 0) && (
+            <details>
+              <summary>All attempts · {plan.history.length}</summary>
+              {plan.history.map((s) => (
+                <p key={s.id}>
+                  <button onClick={() => onScan(s)}>
+                    {s.tool} · {s.target} · {s.status}
+                  </button>
+                  {s.error}
+                </p>
+              ))}
+            </details>
+          )}
           {runId && (
             <>
               {!(allLaunched && completed === plan.actions.length) &&
@@ -615,15 +710,42 @@ export function Workflows({
                       I confirm higher-traffic or diagnostic-script actions where required.
                     </label>
                     <div className="workflow-buttons">
+                      {!automatic && (
+                        <button
+                          className="primary"
+                          disabled={busy || !authorized || !plan.ready || retry}
+                          onClick={() =>
+                            void work(() =>
+                              control('automatic', {
+                                preview_token: plan.preview_token,
+                                authorized: true,
+                                confirmed,
+                              }),
+                            )
+                          }
+                        >
+                          Run remaining sequence
+                        </button>
+                      )}
+                      {automatic && (
+                        <button disabled={busy} onClick={() => void work(() => control('pause'))}>
+                          Pause after current step
+                        </button>
+                      )}
                       <button
                         className="primary"
-                        disabled={busy || !canLaunch || !authorized}
+                        disabled={busy || automatic || (!canLaunch && !retry) || !authorized}
                         onClick={() =>
                           void work(async () => {
                             await api<Scan>(
                               `/projects/${pid}/workflow-runs/${runId}/next`,
                               'POST',
-                              { preview_token: plan.preview_token, authorized: true, confirmed },
+                              {
+                                preview_token: plan.preview_token,
+                                authorized: true,
+                                confirmed,
+                                retry,
+                              },
                             );
                             setAuthorized(false);
                             setConfirmed(false);
@@ -636,7 +758,7 @@ export function Workflows({
                           })
                         }
                       >
-                        Launch step {next + 1}
+                        {retry ? 'Retry failed step' : `Launch step ${next + 1}`}
                       </button>
                       <button
                         disabled={

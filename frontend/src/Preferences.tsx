@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from './api';
+import { readLocal, writeLocal } from './workspace';
 
 export type Appearance = {
   theme: 'dark' | 'light' | 'system';
@@ -18,7 +19,7 @@ export const defaults: Appearance = {
 export function useAppearance() {
   const [value, setValue] = useState<Appearance>(() => {
     try {
-      return { ...defaults, ...JSON.parse(localStorage.getItem('dragontrip.appearance') || '{}') };
+      return { ...defaults, ...JSON.parse(readLocal('dragontrip.appearance') || '{}') };
     } catch {
       return defaults;
     }
@@ -38,7 +39,7 @@ export function useAppearance() {
       root.dataset.reducedMotion = String(value.reduced_motion);
     };
     apply();
-    localStorage.setItem('dragontrip.appearance', JSON.stringify(value));
+    writeLocal('dragontrip.appearance', JSON.stringify(value));
     media.addEventListener?.('change', apply);
     return () => media.removeEventListener?.('change', apply);
   }, [value]);

@@ -4,7 +4,10 @@ import Tasks from './Tasks';
 import Reports from './Reporting';
 import { api, type Detail } from './api';
 
-vi.mock('./api', () => ({ api: vi.fn() }));
+vi.mock('./api', async (original) => ({
+  ...(await original<typeof import('./api')>()),
+  api: vi.fn(),
+}));
 const project = { id: 'lab', name: 'Lab', description: '', created: '', updated: '' };
 const detail: Detail = {
   project,
@@ -26,8 +29,10 @@ describe('planning workflow', () => {
     render(<Tasks detail={detail} onChanged={async () => {}} onNode={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: 'New task' }));
     fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Review service' } });
+    fireEvent.click(screen.getByText('Owner and due date'));
     fireEvent.change(screen.getByLabelText('Owner'), { target: { value: 'Reviewer' } });
     fireEvent.change(screen.getByLabelText('Due date'), { target: { value: '2026-11-01' } });
+    fireEvent.click(screen.getByText('Objects, sources and evidence'));
     fireEvent.click(screen.getByRole('checkbox', { name: /Lab host/ }));
     fireEvent.click(screen.getByRole('button', { name: 'Save task' }));
     await waitFor(() =>

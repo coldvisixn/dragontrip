@@ -1,7 +1,5 @@
 import {
   Activity,
-  ClipboardList,
-  FileText,
   LayoutDashboard,
   Folder,
   Network,
@@ -12,30 +10,39 @@ import {
 
 export const sectionGroups = [
   {
-    id: 'project',
-    label: 'Project',
-    icon: ClipboardList,
-    pages: ['Project overview', 'Targets & scope', 'Task board', 'Timeline', 'Project search'],
-  },
-  {
     id: 'assets',
-    label: 'Assets',
+    label: 'Research',
     icon: Network,
-    pages: ['Network Graph', 'Hosts', 'Web applications'],
+    pages: [
+      'Network Graph',
+      'Hosts',
+      'Web applications',
+      'Project overview',
+      'Methodologies',
+      'Attack Paths',
+    ],
   },
   {
     id: 'recon',
     label: 'Recon',
     icon: Activity,
-    pages: ['Scans', 'Import results', 'Recon workflows'],
+    pages: ['Scans', 'Import results', 'Recon workflows', 'Targets & scope'],
   },
   {
     id: 'investigation',
-    label: 'Investigation',
+    label: 'Notebook',
     icon: ShieldAlert,
-    pages: ['Findings', 'Notes', 'Evidence', 'Attack Paths', 'Methodologies', 'Credentials Vault'],
+    pages: [
+      'Notes',
+      'Findings',
+      'Task board',
+      'Evidence',
+      'Credentials Vault',
+      'Timeline',
+      'Project search',
+      'Reports',
+    ],
   },
-  { id: 'reports', label: 'Reports', icon: FileText, pages: ['Reports'] },
   { id: 'settings', label: 'Settings', icon: Settings, pages: ['Settings', 'Tools'] },
 ] as const;
 export type SectionPage = (typeof sectionGroups)[number]['pages'][number];
@@ -160,7 +167,7 @@ export function SectionTabs({
   onNavigate: (page: WorkspacePage) => void;
 }) {
   const section = sectionFor(page);
-  if (!section || section.pages.length === 1) return null;
+  if (!section) return null;
   return (
     <div className="section-tabs-wrap">
       <span className="section-tabs-label">{section.label}</span>
@@ -169,6 +176,7 @@ export function SectionTabs({
         role="tablist"
         aria-label={section.label + ' sections'}
         onKeyDown={(event) => {
+          if (event.altKey || event.ctrlKey || event.metaKey) return;
           const tabs = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
           const index = tabs.indexOf(document.activeElement as HTMLButtonElement);
           const key = event.key;
@@ -184,7 +192,7 @@ export function SectionTabs({
           tabs[next]?.click();
         }}
       >
-        {section.pages.map((name) => (
+        {section.pages.slice(0, 3).map((name) => (
           <button
             key={name}
             id={tabId(name)}
@@ -199,6 +207,25 @@ export function SectionTabs({
           </button>
         ))}
       </div>
+      {section.pages.length > 3 && (
+        <label className="section-more">
+          <span className="sr-only">More {section.label} pages</span>
+          <select
+            aria-label={'More ' + section.label + ' pages'}
+            value={(section.pages.slice(3) as readonly string[]).includes(page) ? page : ''}
+            onChange={(e) => {
+              if (e.target.value) onNavigate(e.target.value as WorkspacePage);
+            }}
+          >
+            <option value="">More…</option>
+            {section.pages.slice(3).map((name) => (
+              <option key={name} id={tabId(name)} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
     </div>
   );
 }

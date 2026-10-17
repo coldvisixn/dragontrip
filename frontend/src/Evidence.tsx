@@ -65,8 +65,12 @@ export function AttachmentLinks({
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const live = useRef(true);
+  const latest = useRef({ ids, onChange });
+  latest.current = { ids, onChange };
   useEffect(() => {
     let disposed = false;
+    live.current = true;
     api<Attachment[]>(`/projects/${pid}/attachments`)
       .then((v) => {
         if (!disposed) setItems(v);
@@ -76,6 +80,7 @@ export function AttachmentLinks({
       });
     return () => {
       disposed = true;
+      live.current = false;
     };
   }, [pid]);
   async function upload(file?: File) {
@@ -88,12 +93,13 @@ export function AttachmentLinks({
     setError('');
     try {
       const item = await uploadFile<Attachment>(`/projects/${pid}/attachments`, file);
+      if (!live.current) return;
       setItems((rows) => [item, ...rows]);
-      onChange([...ids, item.id]);
+      latest.current.onChange([...new Set([...latest.current.ids, item.id])]);
     } catch (e) {
-      setError((e as Error).message);
+      if (live.current) setError((e as Error).message);
     } finally {
-      setBusy(false);
+      if (live.current) setBusy(false);
       if (input.current) input.current.value = '';
     }
   }

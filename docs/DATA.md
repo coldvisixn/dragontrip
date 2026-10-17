@@ -51,3 +51,5 @@ Terminal history keeps the last 64 KiB per scan, not a full console transcript. 
 ## Uninstall
 
 `sudo apt remove dragontrip` removes the application and retains user data. Archive or back up your work before manually removing a data directory. Uninstalling the application does not uninstall separately installed recon tools.
+
+The current local-investigation work adds project-scoped workspace/draft recovery in the existing Configuration table and archive format **4**, retaining import support for versions 1–3. Retained drafts include text before conflict resolution and are plain project data. Record versions prevent stale saves; closed-draft tombstones reject late autosaves. Active automatic sequences become paused on restart/import and require explicit authorization to continue. See [the recovery and transfer guide](HTB-WORKSPACE.md).

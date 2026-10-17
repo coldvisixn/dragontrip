@@ -17,9 +17,7 @@ async function navigate(page, label) {
     }, label);
   if (!opened) throw new Error('No navigation group contains ' + label);
   const tab = page.getByRole('tab', { name: label, exact: true });
-  if (label !== 'Reports') {
-    await tab.click();
-    await tab.waitFor();
-  }
+  if (await tab.count()) await tab.click();
+  else await page.locator('.section-more select').selectOption(label);
 }
 module.exports = { navigate };

@@ -326,6 +326,7 @@ def register_imports(app, sessions, project, root):
         pid: str,
         node_id: str = "",
         finding_id: str = "",
+        observation_id: str = "",
         run_id: str = "",
         offset: int = Query(0, ge=0),
         limit: int = Query(50, ge=1, le=100),
@@ -337,6 +338,7 @@ def register_imports(app, sessions, project, root):
                 ("node_id", node_id),
                 ("finding_id", finding_id),
                 ("run_id", run_id),
+                ("id", observation_id),
             ]:
                 if value:
                     query = query.filter(getattr(Observation, field) == value)

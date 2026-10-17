@@ -32,3 +32,5 @@ These documents record specific development snapshots. They are evidence/history
 - [Phase 3: investigation knowledge/vault](PHASE3.md)
 - [Phase 2: recon automation](PHASE2.md)
 - [Earlier native validation](VALIDATION.md)
+
+[Local HTB investigation, draft recovery and sequence controls](HTB-WORKSPACE.md).

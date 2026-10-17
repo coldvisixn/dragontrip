@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 import { api, saveArtifact } from './api';
-vi.mock('./api', () => ({ api: vi.fn(), downloadArtifact: vi.fn(), saveArtifact: vi.fn() }));
+vi.mock('./api', async (original) => ({
+  ...(await original<typeof import('./api')>()),
+  api: vi.fn(),
+  downloadArtifact: vi.fn(),
+  saveArtifact: vi.fn(),
+}));
 vi.mock('./Graph', () => ({
   default: ({ objects, onSelect, onMove }: any) => (
     <div>
@@ -62,6 +67,8 @@ beforeEach(() => {
   vi.mocked(api).mockImplementation(async (path, method, body) => {
     if (path === '/projects' && method === 'POST') return { ...project, ...(body as any) };
     if (path === '/projects') return [project];
+    if (path.endsWith('/records')) return [];
+    if (path.endsWith('/workspace')) return {};
     if (path.includes('/observations?')) return { items: [], total: 0 };
     if (path === '/tools') return [{ name: 'Nmap', installed: true, path: '/usr/bin/nmap' }];
     if (path === '/projects/lab?compact=true') return detail;
@@ -81,7 +88,9 @@ describe('workspace', () => {
     await screen.findByRole('button', { name: '8080/tcp · http' });
     fireEvent.click(screen.getByRole('button', { name: '8080/tcp · http' }));
     expect(await screen.findByText('INSPECTOR')).toBeVisible();
+    fireEvent.click(screen.getByText('Object details'));
     expect(screen.getByText('Lab server')).toBeVisible();
+    fireEvent.click(screen.getByText('Source evidence'));
     expect(screen.getByText('<port portid="8080"/>')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Move service' }));
     await waitFor(() =>
@@ -91,7 +100,7 @@ describe('workspace', () => {
       }),
     );
     expect(localStorage.getItem('dragontrip.project')).toBe('lab');
-    fireEvent.click(screen.getByRole('button', { name: 'Terminal Output' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Tool output' }));
     expect(await screen.findByText(/Actual output/)).toBeVisible();
   });
   it('exports source evidence through the native save action', async () => {
@@ -100,6 +109,7 @@ describe('workspace', () => {
     await screen.findByText('Workspace overview');
     fireEvent.click(screen.getByRole('button', { name: /HTB Lab Authorized lab/ }));
     fireEvent.click(await screen.findByRole('button', { name: '8080/tcp · http' }));
+    fireEvent.click(screen.getByText('Source evidence'));
     fireEvent.click(screen.getByRole('button', { name: 'Export source XML' }));
     await waitFor(() => expect(saveArtifact).toHaveBeenCalledWith('scan-1'));
     expect(await screen.findByRole('status')).toHaveTextContent(
@@ -142,15 +152,25 @@ it('keeps tab selection, group memory and collapsed menu through navigation', as
   await screen.findByRole('tab', { name: 'Network Graph' });
   fireEvent.click(screen.getByRole('tab', { name: 'Hosts' }));
   expect(screen.getByRole('tab', { name: 'Hosts' })).toHaveAttribute('aria-selected', 'true');
-  fireEvent.click(screen.getByRole('button', { name: 'Project' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Assets' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Recon' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Research' }));
   expect(screen.getByRole('tab', { name: 'Hosts' })).toHaveAttribute('aria-selected', 'true');
   fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
   await waitFor(() => expect(localStorage.getItem('dragontrip.sidebarCollapsed')).toBe('true'));
   expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Go back' }));
-  expect(screen.getByRole('tab', { name: 'Project overview' })).toHaveAttribute(
-    'aria-selected',
-    'true',
+  expect(screen.getByRole('tab', { name: 'Scans' })).toHaveAttribute('aria-selected', 'true');
+});
+
+it('reopens the current project from Projects at its last research page', async () => {
+  render(<App />);
+  await screen.findByText('Workspace overview');
+  fireEvent.click(screen.getByRole('button', { name: /HTB Lab Authorized lab/ }));
+  await screen.findByRole('tab', { name: 'Hosts' });
+  fireEvent.click(screen.getByRole('tab', { name: 'Hosts' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Projects' }));
+  fireEvent.click(await screen.findByRole('button', { name: /HTB Lab Authorized lab/ }));
+  await waitFor(() =>
+    expect(screen.getByRole('tab', { name: 'Hosts' })).toHaveAttribute('aria-selected', 'true'),
   );
 });

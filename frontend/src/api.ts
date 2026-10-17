@@ -84,11 +84,21 @@ export async function api<T>(path: string, method = 'GET', body?: unknown): Prom
     const error = await response
       .json()
       .catch(() => ({ detail: 'Local API request failed (' + response.status + ')' }));
-    throw new Error(
-      typeof error.detail === 'string' ? error.detail : 'Invalid input. Check your values.',
-    );
+    throw new ApiError(response.status, error.detail);
   }
   return response.json();
+}
+export class ApiError extends Error {
+  constructor(
+    public status: number,
+    public detail: unknown,
+  ) {
+    super(
+      typeof detail === 'string'
+        ? detail
+        : (detail as { message?: string })?.message || 'Invalid input. Check your values.',
+    );
+  }
 }
 export async function uploadFile<T>(
   path: string,

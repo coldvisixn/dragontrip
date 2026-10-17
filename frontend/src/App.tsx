@@ -62,7 +62,17 @@ import { NodeEditor, CustomObjectDetails, RelationshipEditor, PositionEditor } f
 import Preferences, { useAppearance, type Appearance } from './Preferences';
 import ProjectTransfer from './ProjectTransfer';
 import { ProjectSearch, SearchResults, Timeline, type SearchResult } from './ProjectActivity';
+import { SourceActions, type LinkedRecord } from './SourceActions';
 import { useNavigation } from './navigation';
+import {
+  readLocal,
+  writeLocal,
+  useProjectState,
+  useMemoryOnlyDrafts,
+  loadWorkspace,
+  getWorkspace,
+  putWorkspace,
+} from './workspace';
 import {
   PrimaryNavigation,
   SettingsNavigation,
@@ -190,25 +200,50 @@ function Dialog({
   );
 }
 export default function App() {
+  const [pid, setPid] = useState<string | null>(() => readLocal('dragontrip.project'));
+  const memoryDrafts = useMemoryOnlyDrafts();
   const {
     page,
-    navigate: setPage,
+    navigate: navigatePage,
     back,
     forward,
     canBack,
     canForward,
-  } = useNavigation<Page>('Dashboard');
+  } = useNavigation<Page>(pid ? 'Network Graph' : 'Dashboard', pid || 'global');
   const [appearance, setAppearance] = useAppearance();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
-    () => localStorage.getItem('dragontrip.sidebarCollapsed') === 'true',
+    () => readLocal('dragontrip.sidebarCollapsed') === 'true',
   );
-  const rememberedSections = useRef<Partial<Record<string, WorkspacePage>>>({});
+  const [rememberedSections, setRememberedSections] = useProjectState<
+    Partial<Record<string, WorkspacePage>>
+  >(pid || 'global', 'sections', {});
+  const setPage = useCallback(
+    (destination: Page) => {
+      const section = sectionFor(destination);
+      if (section)
+        setRememberedSections((old) =>
+          old[section.id] === destination ? old : { ...old, [section.id]: destination },
+        );
+      navigatePage(destination);
+    },
+    [navigatePage, setRememberedSections],
+  );
   const activeSection = sectionFor(page);
   useEffect(() => {
-    if (activeSection) rememberedSections.current[activeSection.id] = page;
-  }, [page, activeSection]);
+    let live = true;
+    void loadWorkspace(pid || 'global').then(() => {
+      const navigation = getWorkspace(pid || 'global', 'navigation', { entries: [page], index: 0 });
+      if (live && activeSection && navigation.entries[navigation.index] === page)
+        setRememberedSections((old) =>
+          old[activeSection.id] === page ? old : { ...old, [activeSection.id]: page },
+        );
+    });
+    return () => {
+      live = false;
+    };
+  }, [pid, page, activeSection, setRememberedSections]);
   useEffect(() => {
-    localStorage.setItem('dragontrip.sidebarCollapsed', String(sidebarCollapsed));
+    writeLocal('dragontrip.sidebarCollapsed', String(sidebarCollapsed));
   }, [sidebarCollapsed]);
   const [knowledgeSeed, setKnowledgeSeed] = useState<{
     nodeId?: string;
@@ -216,16 +251,27 @@ export default function App() {
     nonce: number;
   }>();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [pid, setPid] = useState<string | null>(() => localStorage.getItem('dragontrip.project'));
-  const [detail, setDetail] = useState<Detail | null>(null);
-  const [evidenceFocus, setEvidenceFocus] = useState<string>();
+  const [projectDetail, setDetail] = useState<Detail | null>(null);
+  const detail = projectDetail?.project.id === pid ? projectDetail : null;
+  const [evidenceFocus, setEvidenceFocus] = useProjectState<string | undefined>(
+    pid || 'global',
+    'evidence_focus',
+    undefined,
+  );
+  const [observationFocus, setObservationFocus] = useProjectState<
+    { observation_id: string; node_id?: string } | undefined
+  >(pid || 'global', 'observation_focus', undefined);
   const [inspected, setInspected] = useState<ObjectNode | null>(null);
   const [tools, setTools] = useState<Tool[]>([]);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useProjectState<string | null>(
+    pid || 'global',
+    'selected_node',
+    null,
+  );
   const [modal, setModal] = useState<'project' | 'scan' | 'node' | 'command' | null>(null);
   const closeModal = useCallback(() => setModal(null), []);
   const [name, setName] = useState('');
@@ -234,10 +280,15 @@ export default function App() {
   const [profileId, setProfileId] = useState('quick');
   const [serviceNode, setServiceNode] = useState<string | undefined>();
   const [query, setQuery] = useState('');
-  const [nodeKind, setNodeKind] = useState('all');
+  const [graphQuery, setGraphQuery] = useProjectState(pid || 'global', 'graph_query', '');
+  const [nodeKind, setNodeKind] = useProjectState(pid || 'global', 'nodeKind', 'all');
   const [bottom, setBottom] = useState(false);
-  const [tab, setTab] = useState('Terminal Output');
-  const [scanId, setScanId] = useState<string | null>(null);
+  const [tab, setTab] = useProjectState(pid || 'global', 'toolTab', 'Terminal Output');
+  const [scanId, setScanId] = useProjectState<string | null>(
+    pid || 'global',
+    'selected_scan',
+    null,
+  );
   const [scan, setScan] = useState<Scan | null>(null);
   const [context, setContext] = useState<{ id: string; x: number; y: number } | null>(null);
   const generation = useRef(0);
@@ -292,12 +343,11 @@ export default function App() {
   useEffect(() => {
     generation.current++;
     setDetail(null);
-    setNodeKind('all');
-    setSelected(null);
     setScan(null);
-    setScanId(null);
+    setInspected(null);
+    setKnowledgeSeed(undefined);
     if (pid) {
-      localStorage.setItem('dragontrip.project', pid);
+      writeLocal('dragontrip.project', pid);
       void refresh(pid).catch((e) => setError(e.message));
     }
   }, [pid, refresh]);
@@ -312,6 +362,16 @@ export default function App() {
     }, 2000);
     return () => clearInterval(timer);
   }, [pid, refresh, refreshProjects, hasActiveScan]);
+  useEffect(() => {
+    if (!detail || detail.project.id !== pid || !selected) return;
+    if (
+      !detail.nodes.some((n) => n.id === selected) &&
+      !detail.edges.some((e) => e.id === selected)
+    ) {
+      setSelected(null);
+      setToast('The previously selected object was deleted. Choose another object to continue.');
+    }
+  }, [detail, pid, selected, setSelected]);
   const viewedScan = scanId || detail?.scans[0]?.id;
   useEffect(() => {
     setScan(null);
@@ -407,6 +467,52 @@ export default function App() {
     window.addEventListener('keydown', key);
     return () => window.removeEventListener('keydown', key);
   }, [pid, modal, back, forward, setPage, object]);
+  useEffect(() => {
+    const record = (event: Event) => {
+      const row = (event as CustomEvent<LinkedRecord>).detail;
+      setKnowledgeSeed({ recordId: row.id, nonce: Date.now() });
+      setPage(
+        row.kind === 'task'
+          ? 'Task board'
+          : row.kind === 'finding'
+            ? 'Findings'
+            : row.kind === 'path'
+              ? 'Attack Paths'
+              : 'Notes',
+      );
+    };
+    const source = (event: Event) => {
+      const { kind, id, node_id } = (
+        event as CustomEvent<{ kind: string; id: string; node_id?: string }>
+      ).detail;
+      if (kind === 'observation') {
+        setObservationFocus({ observation_id: id, node_id });
+        setSelected(node_id || null);
+        setPage('Network Graph');
+        setNodeKind('all');
+      } else if (kind === 'node') {
+        setPage('Network Graph');
+        setSelected(id);
+        setNodeKind('all');
+      } else if (kind === 'scan') {
+        setScanId(id);
+        setPage('Scans');
+        setBottom(true);
+      } else
+        void api<LinkedRecord>(`/projects/${pid}/knowledge/${id}`)
+          .then((row) => {
+            if (activeProject.current === pid)
+              record(new CustomEvent('dragontrip:record', { detail: row }));
+          })
+          .catch((e) => setError(e.message));
+    };
+    window.addEventListener('dragontrip:record', record);
+    window.addEventListener('dragontrip:source', source);
+    return () => {
+      window.removeEventListener('dragontrip:record', record);
+      window.removeEventListener('dragontrip:source', source);
+    };
+  }, [pid, setPage, setSelected, setNodeKind, setScanId]);
   async function perform(action: () => Promise<void>) {
     setBusy(true);
     setError('');
@@ -418,9 +524,25 @@ export default function App() {
       setBusy(false);
     }
   }
-  function openProject(id: string) {
-    setPid(id);
-    setPage('Network Graph');
+  async function openProject(id: string) {
+    await loadWorkspace(id);
+    const history = getWorkspace<{ entries: Page[]; index: number }>(id, 'navigation', {
+      entries: ['Network Graph'],
+      index: 0,
+    });
+    const destination =
+      history.entries
+        .slice(0, history.index + 1)
+        .reverse()
+        .find((p) => !['Projects', 'Dashboard'].includes(p)) || 'Network Graph';
+    if (id === pid) setPage(destination);
+    else {
+      putWorkspace(id, 'navigation', {
+        entries: [...history.entries.slice(0, history.index + 1), destination].slice(-100),
+        index: Math.min(history.index + 1, 99),
+      });
+      setPid(id);
+    }
   }
   function openSearchResult(item: SearchResult) {
     setSelected(null);
@@ -569,19 +691,13 @@ export default function App() {
           page={page}
           hasProject={Boolean(pid)}
           running={running}
-          remembered={rememberedSections.current}
+          remembered={rememberedSections}
           onNavigate={(destination) => {
-            setKnowledgeSeed(undefined);
-            setSelected(null);
             setPage(destination);
           }}
         />
         <div className="sidebar-bottom">
-          <SettingsNavigation
-            page={page}
-            remembered={rememberedSections.current}
-            onNavigate={setPage}
-          />
+          <SettingsNavigation page={page} remembered={rememberedSections} onNavigate={setPage} />
           <button
             className="sidebar-toggle"
             aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -604,6 +720,12 @@ export default function App() {
         </div>
       </aside>
       <div className="workspace">
+        {memoryDrafts > 0 && (
+          <p role="alert" className="form-error memory-warning">
+            {memoryDrafts} draft(s) exist only in memory. Reopen the editor and retry sync or
+            download the draft before closing Dragontrip.
+          </p>
+        )}
         <header className="topbar">
           <div className="breadcrumb">
             <button className="icon-button" aria-label="Go back" disabled={!canBack} onClick={back}>
@@ -628,6 +750,16 @@ export default function App() {
             )}
           </div>
           <div className="top-actions">
+            {scan && (
+              <button
+                onClick={() => {
+                  setBottom((v) => !v);
+                  setTab('Terminal Output');
+                }}
+              >
+                Tool output{running > 0 ? ` · ${running} running` : ''}
+              </button>
+            )}
             <span className="local-pill">
               <span className="dot green" />
               LOCAL ONLY
@@ -647,8 +779,6 @@ export default function App() {
         <SectionTabs
           page={page}
           onNavigate={(destination) => {
-            setKnowledgeSeed(undefined);
-            setSelected(null);
             setPage(destination);
           }}
         />
@@ -874,16 +1004,15 @@ export default function App() {
                       </div>
                     </div>
                     <p className="graph-scope-hint">
-                      Endpoints are collapsed in the overview. Use Web applications or select the
-                      endpoint type to explore them.
+                      Select a target to see observations, planned checks and next actions.
                     </p>
                     <div className="graph-search">
                       <Search size={14} />
                       <input
                         aria-label="Find graph object"
                         placeholder="Find an object…"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
+                        value={graphQuery}
+                        onChange={(e) => setGraphQuery(e.target.value)}
                       />
                       <select
                         aria-label="Graph object type"
@@ -905,7 +1034,7 @@ export default function App() {
                           </option>
                         ))}
                       </select>
-                      {query && (
+                      {graphQuery && (
                         <div className="search-results">
                           {detail.nodes
                             .filter((n) =>
@@ -921,7 +1050,7 @@ export default function App() {
                               ]
                                 .join(' ')
                                 .toLowerCase()
-                                .includes(query.toLowerCase()),
+                                .includes(graphQuery.toLowerCase()),
                             )
                             .slice(0, 20)
                             .map((n) => (
@@ -930,7 +1059,7 @@ export default function App() {
                                 onClick={() => {
                                   setNodeKind('all');
                                   setSelected(n.id);
-                                  setQuery('');
+                                  setGraphQuery('');
                                 }}
                               >
                                 {n.label}
@@ -1131,11 +1260,12 @@ export default function App() {
                 {detail && page in knowledgeKinds && (
                   <Suspense fallback={<div className="loading">Loading workspace…</div>}>
                     <Knowledge
-                      key={detail.project.id + page + (knowledgeSeed?.nonce || '')}
+                      key={detail.project.id + page}
                       detail={detail}
                       kind={knowledgeKinds[page as keyof typeof knowledgeKinds]}
                       nodeId={knowledgeSeed?.nodeId}
                       focusId={knowledgeSeed?.recordId}
+                      onSeedConsumed={() => setKnowledgeSeed(undefined)}
                       onNode={(id) => {
                         setPage('Network Graph');
                         setSelected(id);
@@ -1152,9 +1282,10 @@ export default function App() {
                 {detail && page === 'Task board' && (
                   <Suspense fallback={<div className="loading">Loading tasks…</div>}>
                     <Tasks
-                      key={detail.project.id + (knowledgeSeed?.nonce || '')}
+                      key={detail.project.id}
                       detail={detail}
                       focusId={knowledgeSeed?.recordId}
+                      onSeedConsumed={() => setKnowledgeSeed(undefined)}
                       onChanged={() => refresh(detail.project.id)}
                       onNode={(id) => {
                         setPage('Network Graph');
@@ -1304,7 +1435,7 @@ export default function App() {
               </>
             )}
           </main>
-          {(object || selectedEdge) && (
+          {(page === 'Network Graph' || page === 'Hosts') && (object || selectedEdge) && (
             <aside className="inspector">
               <div className="inspector-title">
                 <span>INSPECTOR</span>
@@ -1340,6 +1471,14 @@ export default function App() {
                               : 'Observed · ') + String(object.attrs.source || 'nmap')}
                     </span>
                   </div>
+                  {pid && (
+                    <SourceActions
+                      key={'records:' + object.id}
+                      pid={pid}
+                      source="node"
+                      id={object.id}
+                    />
+                  )}
                   {object.kind === 'custom' && (
                     <CustomObjectDetails
                       key={object.id}
@@ -1356,8 +1495,8 @@ export default function App() {
                     />
                   )}
                   {object.kind !== 'custom' && (
-                    <div className="inspector-section">
-                      <h3>Attributes</h3>
+                    <details className="inspector-section">
+                      <summary>Object details</summary>
                       {Object.entries(object.attrs)
                         .filter(
                           ([k]) =>
@@ -1375,26 +1514,41 @@ export default function App() {
                             <strong>{String(v) || '—'}</strong>
                           </div>
                         ))}
-                    </div>
+                    </details>
                   )}
-                  {pid && <Observations key={object.id} pid={pid} nodeId={object.id} />}
-                  <PositionEditor
-                    key={object.id + ':' + object.x + ':' + object.y}
-                    node={object}
-                    onSave={async (x, y) => {
-                      await api(
-                        '/projects/' +
-                          pid +
-                          '/nodes/' +
-                          encodeURIComponent(object.id) +
-                          '/position',
-                        'PUT',
-                        { x, y },
-                      );
-                      await refresh(pid!);
-                      notify('Position updated');
-                    }}
-                  />
+                  {pid && (
+                    <Observations
+                      key={object.id}
+                      pid={pid}
+                      nodeId={object.id}
+                      focusId={
+                        observationFocus?.node_id === object.id
+                          ? observationFocus.observation_id
+                          : undefined
+                      }
+                      onClearFocus={() => setObservationFocus(undefined)}
+                    />
+                  )}
+                  <details>
+                    <summary>Graph position</summary>
+                    <PositionEditor
+                      key={object.id + ':' + object.x + ':' + object.y}
+                      node={object}
+                      onSave={async (x, y) => {
+                        await api(
+                          '/projects/' +
+                            pid +
+                            '/nodes/' +
+                            encodeURIComponent(object.id) +
+                            '/position',
+                          'PUT',
+                          { x, y },
+                        );
+                        await refresh(pid!);
+                        notify('Position updated');
+                      }}
+                    />
+                  </details>
                   <div className="inspector-section">
                     <h3>Related objects</h3>
                     {detail?.edges
@@ -1416,29 +1570,6 @@ export default function App() {
                         );
                       })}
                   </div>
-                  <div className="inspector-section">
-                    <h3>Investigation</h3>
-                    <div className="linked-items">
-                      <button
-                        onClick={() => {
-                          setKnowledgeSeed({ nodeId: object.id, nonce: Date.now() });
-                          setSelected(null);
-                          setPage('Notes');
-                        }}
-                      >
-                        Add linked note
-                      </button>
-                      <button
-                        onClick={() => {
-                          setKnowledgeSeed({ nodeId: object.id, nonce: Date.now() });
-                          setSelected(null);
-                          setPage('Findings');
-                        }}
-                      >
-                        Add linked finding
-                      </button>
-                    </div>
-                  </div>
                   {pid && (
                     <Suggestions
                       pid={pid}
@@ -1453,8 +1584,8 @@ export default function App() {
                     />
                   )}
                   {object.attrs.evidence_json != null && (
-                    <div className="inspector-section">
-                      <h3>Source evidence · JSON</h3>
+                    <details className="inspector-section">
+                      <summary>Source evidence · JSON</summary>
                       {object.attrs.evidence_truncated === true && (
                         <p className="muted">
                           Preview truncated. Export the full scan evidence below.
@@ -1472,7 +1603,7 @@ export default function App() {
                       >
                         Export source JSON
                       </button>
-                    </div>
+                    </details>
                   )}
                   {Array.isArray(object.attrs.observations) && (
                     <div className="inspector-section">
@@ -1491,8 +1622,8 @@ export default function App() {
                     </div>
                   )}
                   {object.attrs.evidence_xml != null && (
-                    <div className="inspector-section">
-                      <h3>Source evidence</h3>
+                    <details className="inspector-section">
+                      <summary>Source evidence</summary>
                       <p className="muted">Scan {String(object.attrs.scan_id)}</p>
                       <pre className="evidence">{String(object.attrs.evidence_xml)}</pre>
                       <button
@@ -1506,7 +1637,7 @@ export default function App() {
                         <ArrowDownToLine size={14} />
                         Export source XML
                       </button>
-                    </div>
+                    </details>
                   )}
                   {object.kind === 'custom' && (
                     <div className="inspector-section">
@@ -1563,137 +1694,149 @@ export default function App() {
             </aside>
           )}
         </div>
-        <section className={'bottom-panel ' + (!bottom ? 'collapsed' : '')}>
-          <div className="bottom-tabs">
-            {['Terminal Output', 'Running Tasks', 'Logs', 'Events'].map((t) => (
+        {(bottom || running > 0) && (
+          <section className={'bottom-panel ' + (!bottom ? 'collapsed' : '')}>
+            <div className="bottom-tabs">
+              {['Terminal Output', 'Running Tasks', 'Logs', 'Events'].map((t) => (
+                <button
+                  key={t}
+                  className={tab === t ? 'active' : ''}
+                  onClick={() => {
+                    setTab(t);
+                    setBottom(true);
+                  }}
+                >
+                  {t === 'Terminal Output' && <Terminal size={13} />}
+                  {t}
+                  {t === 'Running Tasks' && running > 0 && <span className="count">{running}</span>}
+                </button>
+              ))}
               <button
-                key={t}
-                className={tab === t ? 'active' : ''}
-                onClick={() => {
-                  setTab(t);
-                  setBottom(true);
-                }}
+                className="collapse"
+                onClick={() => setBottom(!bottom)}
+                aria-label={bottom ? 'Collapse task panel' : 'Expand task panel'}
               >
-                {t === 'Terminal Output' && <Terminal size={13} />}
-                {t}
-                {t === 'Running Tasks' && running > 0 && <span className="count">{running}</span>}
+                <ChevronDown
+                  size={16}
+                  style={{ transform: bottom ? undefined : 'rotate(180deg)' }}
+                />
               </button>
-            ))}
-            <button
-              className="collapse"
-              onClick={() => setBottom(!bottom)}
-              aria-label={bottom ? 'Collapse task panel' : 'Expand task panel'}
-            >
-              <ChevronDown size={16} style={{ transform: bottom ? undefined : 'rotate(180deg)' }} />
-            </button>
-          </div>
-          {bottom && (
-            <div className="bottom-content">
-              {tab === 'Terminal Output' ? (
-                <>
-                  <div className="terminal-heading">
-                    <span>
-                      {scan ? (
-                        <>
-                          {scan.tool || 'nmap'} <span className="mono">{scan.target}</span>
-                          <span className="badge">{scan.status}</span> ·{' '}
-                          {Math.max(
-                            0,
-                            Math.round(
-                              (new Date(scan.ended || Date.now()).getTime() -
-                                new Date(scan.started).getTime()) /
-                                1000,
-                            ),
-                          )}
-                          s
-                        </>
-                      ) : (
-                        'No scan selected'
+            </div>
+            {bottom && (
+              <div className="bottom-content">
+                {tab === 'Terminal Output' ? (
+                  <>
+                    <div className="terminal-heading">
+                      <span>
+                        {scan ? (
+                          <>
+                            {scan.tool || 'nmap'} <span className="mono">{scan.target}</span>
+                            <span className="badge">{scan.status}</span> ·{' '}
+                            {Math.max(
+                              0,
+                              Math.round(
+                                (new Date(scan.ended || Date.now()).getTime() -
+                                  new Date(scan.started).getTime()) /
+                                  1000,
+                              ),
+                            )}
+                            s
+                          </>
+                        ) : (
+                          'No scan selected'
+                        )}
+                      </span>
+                      {scan?.status === 'completed' && (
+                        <button
+                          onClick={() =>
+                            void perform(async () => {
+                              const path = await saveArtifact(
+                                scan.id,
+                                scan.tool && scan.tool !== 'nmap' ? 'json' : 'xml',
+                              );
+                              notify('Evidence saved: ' + path);
+                            })
+                          }
+                        >
+                          Export scan evidence
+                        </button>
                       )}
-                    </span>
-                    {scan?.status === 'completed' && (
-                      <button
-                        onClick={() =>
-                          void perform(async () => {
-                            const path = await saveArtifact(
-                              scan.id,
-                              scan.tool && scan.tool !== 'nmap' ? 'json' : 'xml',
-                            );
-                            notify('Evidence saved: ' + path);
-                          })
-                        }
-                      >
-                        Export scan evidence
-                      </button>
+                      {scan && active(scan) && (
+                        <button
+                          className="danger-button"
+                          onClick={() =>
+                            void perform(async () => {
+                              await api('/scans/' + scan.id + '/cancel', 'POST');
+                              if (pid) await refresh(pid);
+                              notify('Scan cancelled');
+                            })
+                          }
+                        >
+                          <Square size={11} />
+                          Stop scan
+                        </button>
+                      )}
+                    </div>
+                    {pid && scan && (
+                      <SourceActions key={scan.id} pid={pid} source="scan" id={scan.id} />
                     )}
-                    {scan && active(scan) && (
-                      <button
-                        className="danger-button"
-                        onClick={() =>
-                          void perform(async () => {
-                            await api('/scans/' + scan.id + '/cancel', 'POST');
-                            if (pid) await refresh(pid);
-                            notify('Scan cancelled');
-                          })
-                        }
-                      >
-                        <Square size={11} />
-                        Stop scan
-                      </button>
+                    <pre className="terminal">
+                      {scan
+                        ? (scan.command || []).join(' ') +
+                          '\n\n' +
+                          (scan.output || 'Waiting for tool output…') +
+                          (scan.error ? '\n' + scan.error : '')
+                        : 'Tool output will appear here when you start a scan. No shell session is running.'}
+                    </pre>
+                  </>
+                ) : tab === 'Running Tasks' ? (
+                  <div className="task-lines">
+                    {detail?.scans.filter(active).map((s) => (
+                      <div key={s.id}>
+                        <LoaderCircle size={13} className="spin" />
+                        {s.tool || 'nmap'} · {s.target}
+                        <span>{s.status}</span>
+                        <button
+                          onClick={() =>
+                            void perform(async () => {
+                              await api('/scans/' + s.id + '/cancel', 'POST');
+                              await refresh(pid!);
+                            })
+                          }
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ))}
+                    {!running && <span className="muted">No running tasks.</span>}
+                  </div>
+                ) : (
+                  <div className="event-lines">
+                    {(tab === 'Logs'
+                      ? detail?.scans
+                          .filter((s) => s.error)
+                          .map((s) => ({
+                            id: s.id,
+                            created: s.ended || s.started,
+                            message: s.error,
+                          }))
+                      : detail?.events
+                    )?.map((e) => (
+                      <div key={e.id}>
+                        <time>{date(e.created)}</time>
+                        <span>{e.message}</span>
+                      </div>
+                    ))}
+                    {((tab === 'Events' && !detail?.events.length) ||
+                      (tab === 'Logs' && !detail?.scans.some((s) => s.error))) && (
+                      <span className="muted">No {tab.toLowerCase()} to display.</span>
                     )}
                   </div>
-                  <pre className="terminal">
-                    {scan
-                      ? (scan.command || []).join(' ') +
-                        '\n\n' +
-                        (scan.output || 'Waiting for tool output…') +
-                        (scan.error ? '\n' + scan.error : '')
-                      : 'Tool output will appear here when you start a scan. No shell session is running.'}
-                  </pre>
-                </>
-              ) : tab === 'Running Tasks' ? (
-                <div className="task-lines">
-                  {detail?.scans.filter(active).map((s) => (
-                    <div key={s.id}>
-                      <LoaderCircle size={13} className="spin" />
-                      {s.tool || 'nmap'} · {s.target}
-                      <span>{s.status}</span>
-                      <button
-                        onClick={() =>
-                          void perform(async () => {
-                            await api('/scans/' + s.id + '/cancel', 'POST');
-                            await refresh(pid!);
-                          })
-                        }
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  ))}
-                  {!running && <span className="muted">No running tasks.</span>}
-                </div>
-              ) : (
-                <div className="event-lines">
-                  {(tab === 'Logs'
-                    ? detail?.scans
-                        .filter((s) => s.error)
-                        .map((s) => ({ id: s.id, created: s.ended || s.started, message: s.error }))
-                    : detail?.events
-                  )?.map((e) => (
-                    <div key={e.id}>
-                      <time>{date(e.created)}</time>
-                      <span>{e.message}</span>
-                    </div>
-                  ))}
-                  {((tab === 'Events' && !detail?.events.length) ||
-                    (tab === 'Logs' && !detail?.scans.some((s) => s.error))) && (
-                    <span className="muted">No {tab.toLowerCase()} to display.</span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
+                )}
+              </div>
+            )}
+          </section>
+        )}
         <footer className="statusbar">
           <span>
             <ShieldCheck size={12} />

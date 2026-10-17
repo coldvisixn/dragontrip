@@ -29,7 +29,7 @@ Dragontrip is for pentesters and security researchers who want to carry an asses
 4. **Build the case.** Link findings, notes and evidence to objects. Record methodology coverage and turn follow-up work into tasks.
 5. **Prepare the handoff.** Compose a Markdown report or transfer a project with its evidence in a portable `.dtproj` archive.
 
-For live recon, use Nmap, WhatWeb, ProjectDiscovery httpx or ffuf through validated profiles and a cancellable queue. Saved recon workflows preview their scope and parameters; you explicitly launch each step. [Import formats and limits](docs/IMPORTS.md) · [Methodologies and workflows](docs/METHODOLOGIES.md).
+For live recon, use Nmap, WhatWeb, ProjectDiscovery httpx or ffuf through validated profiles and a cancellable queue. Saved recon workflows preview every target and parameter, then run as an explicitly approved sequence or one step at a time. Notes, findings and tasks recover drafts and link back to source observations. [Local HTB investigation and recovery](docs/HTB-WORKSPACE.md). [Import formats and limits](docs/IMPORTS.md) · [Methodologies and workflows](docs/METHODOLOGIES.md).
 
 ## Get started
 
@@ -62,7 +62,7 @@ In the published 0.5.0 installer, create a project, scan an authorized IPv4 targ
 | **Infrastructure graph** | Hosts, services, URLs and custom objects; typed relationships; Inspector; saved positions and viewport; search, pan/zoom and a minimap. |
 | **Investigation knowledge** | Markdown notes, severity/status/remediation findings and ordered, manually authored investigation paths, linked to objects and source scans. |
 | **Evidence** | Screenshot/file attachments, SHA-256 metadata, original XML/JSON artifacts, authenticated previews, project Timeline and unified search. |
-| **Methodologies and workflows** | Four-state web/service review checklists; saved, ordered recon actions with scope preview and explicit step launch. |
+| **Methodologies and workflows** | Four-state web/service review checklists; saved recon sequences with full preview, automatic advancement, pause, cancellation and retained retries. |
 | **Task planning** | A five-status board with priorities, owners, deadlines, templates and object links; project progress, overdue work and risk overview. |
 | **Reporting** | Configurable Markdown reports with executive summary, finding filters, remediation, inventory, task plan and evidence references; preview and Downloads export. |
 | **Credential vault** | Password-derived encryption, explicit reveal/hide/lock and idle expiry. Vault entries are kept out of search and ordinary reports. |
@@ -88,7 +88,7 @@ Recon tools send network traffic to the targets you approve. Use Dragontrip only
 - Scan profiles use validated tool options; there is no arbitrary shell-command runner or automatic exploitation.
 - Reports export Markdown. PDF/HTML reporting is not implemented. Report composition resets when leaving its page.
 - Terminal history retains a bounded tail; artifact retention is manual.
-- Current project exports use archive format v3 and read v1/v2. Older apps cannot read v3. Back up before upgrading and avoid reopening an upgraded database with an older binary.
+- Current project exports use archive format v4 and read v1/v2/v3. Older apps cannot read v4. Back up before upgrading and avoid reopening an upgraded database with an older binary.
 - Large-graph and memory measurements are documented; results from a cloud container do not replace testing on your own VM.
 
 Published 0.5.0 has passed [installed Kali Rolling CI](https://github.com/coldvisixn/dragontrip/actions/runs/38942229914). Later local verification is documented for [0.7.0](docs/BUILD-0.7.0.md) and [0.7.1 navigation](docs/NAVIGATION.md). A fresh Kali/VirtualBox run for later source versions remains separate. There are no Windows, macOS or ARM installers. See [the roadmap](docs/ROADMAP.md).
