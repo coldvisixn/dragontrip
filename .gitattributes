@@ -1,0 +1,5 @@
+# Collapse copied upstream source in reviews; inspect vendor/gtk-compat.patch.
+src-tauri/vendor/glib/** linguist-vendored
+# Preserve the upstream license verbatim and required unified-diff context lines.
+src-tauri/vendor/glib/LICENSE whitespace=-blank-at-eof
+src-tauri/vendor/gtk-compat.patch whitespace=-blank-at-eol
