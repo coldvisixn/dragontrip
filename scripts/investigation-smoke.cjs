@@ -15,7 +15,8 @@ const { navigate } = require('./navigation.cjs');
   const token = randomBytes(32).toString('hex');
   let child, port, browser, page;
   async function launch() {
-    child = spawn(resolve('.venv/bin/python'), ['-m', 'dragontrip'], { cwd: resolve('backend'), env: { ...process.env, DRAGONTRIP_TOKEN: token, DRAGONTRIP_DEV: '1', XDG_DATA_HOME: storage } });
+    const frozen = process.env.DRAGONTRIP_TEST_BACKEND;
+    child = spawn(resolve(frozen || '.venv/bin/python'), frozen ? [] : ['-m', 'dragontrip'], { cwd: resolve('backend'), env: { ...process.env, DRAGONTRIP_TOKEN: token, DRAGONTRIP_DEV: '1', XDG_DATA_HOME: storage } });
     child.stderr.on('data', (d) => process.stderr.write(d));
     port = await new Promise((ok, fail) => {
       const timer = setTimeout(() => fail(new Error('Backend timeout')), 20000);

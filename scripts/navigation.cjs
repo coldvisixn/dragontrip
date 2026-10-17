@@ -7,6 +7,13 @@ async function navigate(page, label) {
     await direct.first().click();
     return;
   }
+  await page.waitForFunction(
+    (name) =>
+      [...document.querySelectorAll('.sidebar nav button[data-pages]')].some(
+        (button) => button.dataset.pages.split('|').includes(name) && !button.disabled,
+      ),
+    label,
+  );
   const opened = await page
     .locator('.sidebar nav button[data-pages]')
     .evaluateAll((buttons, name) => {

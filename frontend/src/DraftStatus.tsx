@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import {
   putWorkspace,
   getWorkspace,
@@ -5,7 +7,17 @@ import {
   retryWorkspace,
   workspaceStatus,
 } from './workspace';
-export function downloadText(value: unknown) {
+export async function downloadText(value: unknown) {
+  if ('__TAURI_INTERNALS__' in window) {
+    try {
+      return await invoke<string>('export_recovery', {
+        draftId: crypto.randomUUID(),
+        content: JSON.stringify(value, null, 2),
+      });
+    } catch (error) {
+      if (!String(error).includes('export_recovery')) throw error;
+    }
+  }
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }),
   );
@@ -14,6 +26,7 @@ export function downloadText(value: unknown) {
   link.download = 'dragontrip-draft.json';
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return 'Recovery download started';
 }
 export function DraftStatus({
   pid,
@@ -26,13 +39,21 @@ export function DraftStatus({
   value: unknown;
   onRestore?: (value: unknown) => void;
 }) {
+  const [message, setMessage] = useState('');
+  const download = (data: unknown) =>
+    void downloadText(data)
+      .then(setMessage)
+      .catch((e) =>
+        setMessage('Download failed: ' + String(e) + '. Your text is retained in the editor.'),
+      );
   return (
     <div className="draft-status" role="status">
       <span>{workspaceStatus(pid, draftKey)}</span>
+      {message && <span>{message}</span>}
       <button type="button" onClick={() => void retryWorkspace(pid, draftKey)}>
         Retry sync
       </button>
-      <button type="button" onClick={() => downloadText(value)}>
+      <button type="button" onClick={() => download(value)}>
         Download draft
       </button>
       <details>
@@ -48,7 +69,7 @@ export function DraftStatus({
                 Use text in current editor
               </button>
             )}
-            <button type="button" onClick={() => downloadText(row.data)}>
+            <button type="button" onClick={() => download(row.data)}>
               Download retained text
             </button>
           </div>

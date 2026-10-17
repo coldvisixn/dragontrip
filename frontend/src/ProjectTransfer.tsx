@@ -21,7 +21,8 @@ export default function ProjectTransfer({
       <h2>Project portability</h2>
       <p className="muted">
         A .dtproj archive contains the graph, notes, findings, paths, tasks, Timeline, scan history
-        and original evidence. Import creates a separate project.
+        and original evidence, including recoverable research drafts. Import creates a separate
+        project.
       </p>
       {error && (
         <p role="alert" className="form-error">

@@ -89,6 +89,45 @@ async function persist(pid: string, key: string, state: Entry) {
   }
   emit();
 }
+function recoverLegacyLocal(pid: string) {
+  try {
+    const prefix = `dragontrip.draft:${pid}:`;
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)!;
+      if (!key.startsWith(prefix)) continue;
+      const match = /^(note|finding|path):(new|[a-f0-9-]{36})$/.exec(key.slice(prefix.length));
+      if (!match) continue;
+      const old = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!old?.value || !old.revision) continue;
+      const [, kind, id] = match;
+      const draftId = `legacy-${kind}-${id}`,
+        draftKey = 'draft:' + draftId;
+      const current = entry(pid, draftKey);
+      const timestamp = Number(old.revision.slice(0, 13));
+      if (current.cell.closed || current.cell.revision >= timestamp) continue;
+      putWorkspace(pid, draftKey, {
+        ...old.value,
+        kind,
+        record_id: id === 'new' ? undefined : id,
+        request_id: draftId,
+        expected_updated: old.value.expectedUpdated,
+        changed: new Date(timestamp).toISOString(),
+      });
+      const pageKey = 'knowledge:' + kind;
+      if (!entry(pid, pageKey).cell.revision)
+        putWorkspace(pid, pageKey, {
+          editing: true,
+          record_id: id === 'new' ? '' : id,
+          draft_id: draftId,
+          query: '',
+          filter: 'all',
+        });
+    }
+  } catch {
+    /* Browser access may fail; server migration and active in-memory drafts remain intact. */
+  }
+}
+
 export function loadWorkspace(pid: string) {
   if (pid === 'global') return Promise.resolve(true);
   let promise = loading.get(pid);
@@ -114,11 +153,13 @@ export function loadWorkspace(pid: string) {
           }
           state.saved = cell.revision;
         }
+        recoverLegacyLocal(pid);
         emit();
         return true;
       })
       .catch(() => {
         loading.delete(pid);
+        recoverLegacyLocal(pid);
         return false;
       });
     loading.set(pid, promise);
@@ -191,6 +232,7 @@ export function memoryOnlyDrafts() {
     ([key, state]) =>
       (key.includes(':draft:') || key.endsWith(':methodology_work')) &&
       !state.cell.closed &&
+      !(state.cell.value?.data as { saved?: boolean })?.saved &&
       !state.local &&
       state.saved < state.cell.revision,
   ).length;
@@ -231,4 +273,17 @@ export function isWorkspaceClosed(pid: string, key: string) {
 
 export function workspaceRevision(pid: string, key: string) {
   return entry(pid, key).cell.revision;
+}
+
+export function memoryDraftValues() {
+  return [...entries]
+    .filter(
+      ([key, state]) =>
+        (key.includes(':draft:') || key.endsWith(':methodology_work')) &&
+        !state.cell.closed &&
+        !(state.cell.value?.data as { saved?: boolean })?.saved &&
+        !state.local &&
+        state.saved < state.cell.revision,
+    )
+    .map(([key, state]) => ({ key, draft: state.cell.value?.data }));
 }

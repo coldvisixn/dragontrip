@@ -29,6 +29,7 @@ export type Content = {
   status: string;
   remediation: string;
   steps: Step[];
+  retests?: { at: string; result: string; note: string }[];
 };
 export type KnowledgeRecord = {
   id: string;
@@ -133,6 +134,7 @@ export function Editor({
   const pid = detail.project.id;
   const draftKey = 'draft:' + draftId;
   const [draft, setDraft] = useProjectState(pid, draftKey, {
+    kind,
     title: record?.title || '',
     content: {
       ...blank(nodeId),
@@ -151,6 +153,7 @@ export function Editor({
   const setContent = (update: (value: Content) => Content) =>
     setDraft({ ...draft, content: update(content), changed: new Date().toISOString() });
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState<KnowledgeRecord | null>();
   const alive = useRef(true);
@@ -179,7 +182,7 @@ export function Editor({
     setContent((c) => ({ ...c, [key]: value }));
   async function save(e?: FormEvent, copy = false) {
     e?.preventDefault();
-    if (saving.current) return;
+    if (saving.current || uploading) return;
     saving.current = true;
     setBusy(true);
     setError('');
@@ -190,7 +193,18 @@ export function Editor({
         {
           kind,
           title: title.trim(),
-          content,
+          content: copy
+            ? {
+                ...content,
+                retests: [],
+                record_ids: [
+                  ...new Set([
+                    ...((content.record_ids as string[]) || []),
+                    ...(draft.record_id ? [draft.record_id] : []),
+                  ]),
+                ],
+              }
+            : content,
           expected_updated: copy ? undefined : draft.expected_updated,
           request_id: draft.request_id,
         },
@@ -220,7 +234,9 @@ export function Editor({
       ...draft,
       expected_updated: conflict.updated,
       title: merge ? title : conflict.title,
-      content: merge ? content : { ...blank(), ...conflict.content },
+      content: merge
+        ? { ...content, retests: conflict.content.retests || [] }
+        : { ...blank(), ...conflict.content },
       recovery: { title, content },
       changed: new Date().toISOString(),
     });
@@ -249,7 +265,11 @@ export function Editor({
             setDraft({
               ...draft,
               title: recovered.title,
-              content: { ...blank(), ...recovered.content },
+              content: {
+                ...blank(),
+                ...recovered.content,
+                retests: kind === 'finding' ? content.retests || [] : [],
+              },
               recovery: { title, content },
               changed: new Date().toISOString(),
             });
@@ -308,17 +328,43 @@ export function Editor({
       )}
       <SourceLinks source={content.source as Parameters<typeof SourceLinks>[0]['source']} />
       <fieldset disabled={busy} className="editor-fields">
+        {kind === 'finding' && (
+          <button
+            type="button"
+            onClick={() =>
+              change(
+                'body',
+                '## Observation\n\n## Steps to reproduce\n\n## Evidence\n\n## Impact\n\n## Next check\n',
+              )
+            }
+          >
+            Use finding template
+          </button>
+        )}
         {!record && (
           <label>
-            Research template
+            {kind === 'task' ? 'Task template' : 'Research template'}
             <select
-              aria-label="Research template"
+              aria-label={kind === 'task' ? 'Task template' : 'Research template'}
               defaultValue=""
               onChange={(e) => {
                 if (e.target.value) change('body', e.target.value);
               }}
             >
               <option value="">Choose a starting point…</option>
+              {kind === 'task' && (
+                <>
+                  <option value="Review discovered services, confirm their purpose and record the result.">
+                    Review exposed services
+                  </option>
+                  <option value="Reproduce the observation, attach evidence and assess its meaning.">
+                    Validate a finding
+                  </option>
+                  <option value="Record the original behavior, verify the fix and preserve the result.">
+                    Verify remediation
+                  </option>
+                </>
+              )}
               <option value={'Observed:\n\nHypothesis:\n\nNext check:\n\nResult:\n'}>
                 Hypothesis and check
               </option>
@@ -514,6 +560,7 @@ export function Editor({
             <label>
               Priority
               <select
+                aria-label="Priority"
                 value={String(content.priority || 'medium')}
                 onChange={(e) => change('priority', e.target.value)}
               >
@@ -548,6 +595,7 @@ export function Editor({
         <details>
           <summary>Objects, sources and evidence</summary>
           <AttachmentLinks
+            onBusyChange={setUploading}
             pid={detail.project.id}
             ids={content.attachment_ids}
             onChange={(ids) => change('attachment_ids', ids)}
@@ -630,6 +678,7 @@ export function Editor({
             className="primary"
             disabled={
               busy ||
+              uploading ||
               conflict !== undefined ||
               !title.trim() ||
               (kind === 'path' && !content.steps.length)
@@ -640,6 +689,106 @@ export function Editor({
         </div>
       </fieldset>
     </form>
+  );
+}
+
+function RetestForm({
+  pid,
+  record,
+  onSaved,
+}: {
+  pid: string;
+  record: KnowledgeRecord;
+  onSaved: (saved: KnowledgeRecord) => void;
+}) {
+  const [note, setNote] = useState('');
+  const [result, setResult] = useState('inconclusive');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  return (
+    <section>
+      <h3>Retest history</h3>
+      {(record.content.retests || []).map((entry, i) => (
+        <div className="panel" key={i}>
+          <strong>
+            {entry.result.replaceAll('_', ' ')} · {new Date(entry.at).toLocaleString()}
+          </strong>
+          <Markdown source={entry.note} />
+        </div>
+      ))}
+      <details>
+        <summary>Record a retest</summary>
+        <p className="muted">
+          Record your manual verification and supporting evidence. Fixed resolves the finding; still
+          present confirms it. History is retained.
+        </p>
+        <form
+          className="knowledge-editor"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            setBusy(true);
+            setError('');
+            try {
+              onSaved(
+                await api(`/projects/${pid}/knowledge/${record.id}/retests`, 'POST', {
+                  result,
+                  note,
+                  expected_updated: record.updated,
+                }),
+              );
+              setNote('');
+            } catch (e) {
+              setError((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          <fieldset className="editor-fields" disabled={busy}>
+            <label>
+              Retest result
+              <select
+                aria-label="Retest result"
+                value={result}
+                onChange={(e) => setResult(e.target.value)}
+              >
+                <option value="inconclusive">Inconclusive</option>
+                <option value="fixed">Fixed</option>
+                <option value="still_present">Still present</option>
+              </select>
+            </label>
+            <label>
+              Retest notes
+              <textarea
+                required
+                maxLength={2000}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="What you tested, the observed result and relevant evidence references…"
+              />
+            </label>
+            <button disabled={!note.trim()}>Save retest</button>
+          </fieldset>
+        </form>
+        {error && (
+          <p role="alert" className="form-error">
+            {error}{' '}
+            <button
+              onClick={async () => {
+                try {
+                  onSaved(await api(`/projects/${pid}/knowledge/${record.id}`));
+                  setError('');
+                } catch (e) {
+                  setError((e as Error).message);
+                }
+              }}
+            >
+              Reload finding
+            </button>
+          </p>
+        )}
+      </details>
+    </section>
   );
 }
 
@@ -926,6 +1075,18 @@ export default function Knowledge({
                 <>
                   <h3>Remediation</h3>
                   <Markdown source={selected.content.remediation || 'Not specified.'} />
+                  <RetestForm
+                    key={selected.id}
+                    pid={pid}
+                    record={selected}
+                    onSaved={(saved) => {
+                      setSelected(saved);
+                      setItems((rows) => rows.map((row) => (row.id === saved.id ? saved : row)));
+                      void onChanged().catch(() =>
+                        setError('Retest saved. Refresh failed; retry loading the list.'),
+                      );
+                    }}
+                  />
                 </>
               )}
               {kind === 'path' && (

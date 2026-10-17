@@ -80,7 +80,7 @@ const { createServer } = require('node:http');
       { port, token, pid },
     );
     await page.goto('http://localhost:1420');
-    await page.getByRole('heading', { name: 'Workspace overview' }).waitFor();
+    await page.locator('.main').waitFor();
     await request(`/projects/${pid}/scope`, 'PUT', {
       rules: [
         { value: '127.0.0.1' },
@@ -143,16 +143,9 @@ const { createServer } = require('node:http');
     await page.locator('.workflow-preview').waitFor();
     assert.equal((await request(`/projects/${pid}/scan-history`)).total, 0);
     await page.getByRole('button', { name: 'Create run', exact: true }).click();
-    await page.getByRole('button', { name: 'Launch step 1', exact: true }).waitFor();
+    await page.getByRole('button', { name: 'Run remaining sequence', exact: true }).waitFor();
     await page.getByLabel('I am authorized to run the displayed target and action.').check();
-    await page.getByRole('button', { name: 'Launch step 1', exact: true }).click();
-    await page.waitForFunction(
-      () => document.querySelector('.workflow-step')?.classList.contains('completed'),
-      { timeout: 90000 },
-    );
-    assert.equal((await request(`/projects/${pid}/scan-history`)).total, 1);
-    await page.getByLabel('I am authorized to run the displayed target and action.').check();
-    await page.getByRole('button', { name: 'Launch step 2', exact: true }).click();
+    await page.getByRole('button', { name: 'Run remaining sequence', exact: true }).click();
     await page
       .getByText('Sequence complete. Methodology coverage still requires an explicit review.', {
         exact: true,
@@ -176,7 +169,7 @@ const { createServer } = require('node:http');
     assert.equal(await page.locator('.methodology-check select').first().inputValue(), 'tested');
     assert.deepEqual(errors, []);
     console.log(
-      'PASS: explicit four-state methodology, persistence, ordered workflow preview, two actual sequential tools on owned loopback target, saved run history and no inferred coverage',
+      'PASS: explicit four-state methodology, persistence, ordered workflow preview, two actual automatically sequenced tools on owned loopback target, saved run history and no inferred coverage',
     );
   } finally {
     await browser?.close();

@@ -350,7 +350,7 @@ def test_portable_archive_preserves_provenance_identity_and_reimport(client):
     assert archive.status_code == 200, archive.text
     with zipfile.ZipFile(io.BytesIO(archive.content)) as z:
         manifest = json.loads(z.read("manifest.json"))
-        assert manifest["version"] == 4
+        assert manifest["version"] == 5
         assert len(manifest["observations"]) == 4
     imported = client.post(
         "/imports", files={"file": ("copy.dtproj", archive.content, "application/zip")}

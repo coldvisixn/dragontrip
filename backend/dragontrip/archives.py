@@ -136,7 +136,7 @@ class ObservationRecord(BaseModel):
 
 class Manifest(BaseModel):
     format: Literal["dragontrip-project"]
-    version: Literal[1, 2, 3, 4]
+    version: Literal[1, 2, 3, 4, 5]
     project: dict
     nodes: list[NodeRecord] = Field(max_length=10000)
     edges: list[EdgeRecord] = Field(max_length=50000)
@@ -233,7 +233,7 @@ def register_archives(app, sessions, project, root):
                     )
                 manifest = {
                     "format": "dragontrip-project",
-                    "version": 4,
+                    "version": 5,
                     "project": serialize(p),
                     "nodes": rows(Node),
                     "edges": rows(Edge),
@@ -438,8 +438,8 @@ def register_archives(app, sessions, project, root):
                     for k in manifest.knowledge
                 ):
                     fail("Methodologies and workflows require archive version 3")
-                if manifest.workspace and manifest.version < 4:
-                    fail("Workspace recovery data requires archive version 4")
+                if manifest.workspace and manifest.version < 5:
+                    fail("Workspace recovery data requires archive version 5")
                 for key, cell in manifest.workspace.items():
                     if (
                         not SAFE_ID.fullmatch(key)
@@ -448,6 +448,10 @@ def register_archives(app, sessions, project, root):
                     ):
                         fail("Invalid workspace recovery item")
                 oid = {row.id: uid() for row in manifest.observations}
+                if manifest.version < 4 and any(
+                    k.content.retests for k in manifest.knowledge
+                ):
+                    fail("Retest history requires archive version 4")
                 sid = {row.id: uid() for row in manifest.scans}
                 rid = {row.id: uid() for row in manifest.import_runs}
                 aid = {row.id: uid() for row in manifest.attachments}
@@ -757,6 +761,12 @@ def register_archives(app, sessions, project, root):
                                 data = value["value"]["data"]
                                 if isinstance(data, dict) and data.get("id") in kid:
                                     data["id"] = kid[data["id"]]
+                            for prefix in ["draft:object:", "object_editing:"]:
+                                if (
+                                    cell_key.startswith(prefix)
+                                    and cell_key[len(prefix) :] in nid
+                                ):
+                                    cell_key = prefix + nid[cell_key[len(prefix) :]]
                             db.add(
                                 Configuration(
                                     id=f"workspace:{pid}:{cell_key}",

@@ -2,6 +2,7 @@
 
 ## Use the application
 
+- [MVP workflow, draft recovery, retests and HTML/ZIP reports](DELIVERY.md)
 - [Grouped navigation and compact sidebar](NAVIGATION.md)
 
 - [Install and update](INSTALL.md) / [Установка на Kali](INSTALL-KALI.md)
@@ -10,7 +11,7 @@
 - [Methodologies and guided recon workflows](METHODOLOGIES.md)
 - [Scope, offline imports and web application map](IMPORTS.md)
 - [Research workspace audit and delivery stages](RESEARCH-WORKSPACE.md)
-- [Planning and report behavior/limits](PLANNING.md)
+- [Task-planning implementation history](PLANNING.md)
 - [Changelog](../CHANGELOG.md) and [roadmap](ROADMAP.md)
 
 ## Build and contribute
@@ -34,3 +35,6 @@ These documents record specific development snapshots. They are evidence/history
 - [Earlier native validation](VALIDATION.md)
 
 [Local HTB investigation, draft recovery and sequence controls](HTB-WORKSPACE.md).
+## MVP research and delivery (0.9.0)
+
+[First project, draft recovery, findings and HTML/ZIP reports](DELIVERY.md) · [Exact local build evidence](BUILD-0.9.0.md) · [Release notes](releases/v0.9.0.md)

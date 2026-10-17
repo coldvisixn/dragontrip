@@ -1,6 +1,8 @@
 """Manual investigation data. No tool execution or mutation of scan evidence."""
 
 import json
+import re
+from datetime import datetime, timezone
 from datetime import date
 from typing import Literal
 from fastapi import HTTPException, Query
@@ -56,6 +58,25 @@ class WorkflowAction(BaseModel):
     words: list[str] = Field(default_factory=list, max_length=500)
 
 
+class RetestEntry(BaseModel):
+    at: str = Field(max_length=100)
+    result: Literal["fixed", "still_present", "inconclusive"]
+    note: str = Field(min_length=1, max_length=2000)
+
+
+class RetestInput(BaseModel):
+    result: Literal["fixed", "still_present", "inconclusive"]
+    note: str = Field(min_length=1, max_length=2000)
+    expected_updated: str = Field(min_length=1, max_length=100)
+
+    @field_validator("note")
+    @classmethod
+    def not_blank(cls, value):
+        if not value.strip():
+            raise ValueError("Describe the retest and supporting evidence")
+        return value.strip()
+
+
 class Source(BaseModel):
     observation_id: str | None = Field(default=None, max_length=300)
     fingerprint: str | None = Field(default=None, max_length=100)
@@ -66,6 +87,7 @@ class Source(BaseModel):
 
 
 class Content(BaseModel):
+    retests: list[RetestEntry] = Field(default_factory=list, max_length=50)
     step_scan_ids: list[str] = Field(default_factory=list, max_length=8)
     execution: str = Field(default="", max_length=30)
     stop_reason: str = Field(default="", max_length=4000)
@@ -116,6 +138,8 @@ class KnowledgeInput(BaseModel):
 
     @model_validator(mode="after")
     def path_steps(self):
+        if self.kind != "finding" and self.content.retests:
+            raise ValueError("Retest history belongs to findings")
         allowed = TASK_STATUSES if self.kind == "task" else RECORD_STATUSES
         if self.content.status not in allowed:
             raise ValueError("Status is not valid for this record type")
@@ -133,8 +157,87 @@ class KnowledgeInput(BaseModel):
         return self
 
 
+def migrate_legacy_drafts(sessions):
+    """Retain 0.8 WebView/SQLite drafts without changing or deleting their source rows."""
+    with sessions() as db:
+        legacy = list(
+            db.scalars(
+                select(Configuration).where(
+                    Configuration.id.startswith("draft:", autoescape=True)
+                )
+            )
+        )
+        newest = {}
+        for row in legacy:
+            match = re.fullmatch(
+                r"draft:([^:]+):(note|finding|path):(new|[a-f0-9-]{36})", row.id
+            )
+            if not match:
+                continue
+            pid, kind, record_id = match.groups()
+            saved = json.loads(row.value)
+            value = saved.get("value")
+            if not value:
+                continue
+            draft_id = f"legacy-{kind}-{record_id}"
+            key = f"workspace:{pid}:draft:{draft_id}"
+            if db.get(Configuration, key):
+                continue
+            timestamp = int(saved["revision"].split("-")[0])
+            data = {
+                **value,
+                "kind": kind,
+                "record_id": None if record_id == "new" else record_id,
+                "expected_updated": value.get("expectedUpdated"),
+                "request_id": draft_id,
+                "changed": datetime.fromtimestamp(
+                    timestamp / 1000, timezone.utc
+                ).isoformat(),
+            }
+            db.add(
+                Configuration(
+                    id=key,
+                    value=json.dumps(
+                        {
+                            "revision": timestamp,
+                            "closed": False,
+                            "value": {"data": data},
+                        }
+                    ),
+                )
+            )
+            marker = (pid, kind)
+            if marker not in newest or timestamp > newest[marker][0]:
+                newest[marker] = (timestamp, draft_id, data["record_id"])
+        for (pid, kind), (timestamp, draft_id, record_id) in newest.items():
+            key = f"workspace:{pid}:knowledge:{kind}"
+            if not db.get(Configuration, key):
+                db.add(
+                    Configuration(
+                        id=key,
+                        value=json.dumps(
+                            {
+                                "revision": timestamp,
+                                "closed": False,
+                                "value": {
+                                    "data": {
+                                        "editing": True,
+                                        "record_id": record_id or "",
+                                        "draft_id": draft_id,
+                                        "query": "",
+                                        "filter": "all",
+                                    }
+                                },
+                            }
+                        ),
+                    )
+                )
+        db.commit()
+
+
 def register_workspace(app, sessions, project):
     lock = app.state.research_lock
+    migrate_legacy_drafts(sessions)
 
     class Cell(BaseModel):
         revision: int = Field(ge=0)
@@ -441,6 +544,8 @@ def register_workspace(app, sessions, project):
                 raise HTTPException(
                     403, "Workflow runs are managed through their launch controls"
                 )
+            if body.content.retests:
+                raise HTTPException(422, "Use the retest controls to append history")
             validate_links(db, pid, body.content)
             row = Knowledge(
                 id=identifier,
@@ -482,13 +587,49 @@ def register_workspace(app, sessions, project):
                     409,
                     {"message": "The saved record changed", "current": serialize(row)},
                 )
-            validate_links(db, pid, body.content, json.loads(row.content))
+            previous = json.loads(row.content)
+            if [r.model_dump() for r in body.content.retests] != previous.get(
+                "retests", []
+            ):
+                raise HTTPException(
+                    409,
+                    {
+                        "message": "Retest history changed; merge with the saved record",
+                        "current": serialize(row),
+                    },
+                )
+            validate_links(db, pid, body.content, previous)
             row.title, row.content, row.updated = (
                 body.title,
                 body.content.model_dump_json(),
                 now(),
             )
             record(db, pid, f"{body.kind.capitalize()} updated")
+            db.commit()
+            return serialize(row)
+
+    @app.post("/projects/{pid}/knowledge/{kid}/retests")
+    def retest(pid: str, kid: str, body: RetestInput):
+        with lock, sessions() as db:
+            row = db.get(Knowledge, kid)
+            if row is None or row.project_id != pid or row.kind != "finding":
+                raise HTTPException(404, "Finding not found")
+            if row.updated != body.expected_updated:
+                raise HTTPException(
+                    409, "Finding changed. Reload it before recording a retest."
+                )
+            content = json.loads(row.content)
+            history = content.get("retests", [])
+            if len(history) >= 50:
+                raise HTTPException(409, "A finding supports up to 50 retests")
+            history.append({"at": now(), "result": body.result, "note": body.note})
+            content["retests"] = history
+            if body.result == "fixed":
+                content["status"] = "resolved"
+            elif body.result == "still_present":
+                content["status"] = "confirmed"
+            row.content, row.updated = json.dumps(content), now()
+            record(db, pid, "Finding retest recorded")
             db.commit()
             return serialize(row)
 
@@ -500,6 +641,10 @@ def register_workspace(app, sessions, project):
                 raise HTTPException(404, "Record not found")
             if row.kind == "workflow_run":
                 raise HTTPException(409, "Workflow run history is retained")
+            if json.loads(row.content).get("retests"):
+                raise HTTPException(
+                    409, "Retest history is retained; dismiss this finding instead"
+                )
             from .db import Observation
 
             if db.query(Observation).filter_by(finding_id=kid).first():

@@ -78,12 +78,18 @@ def main():
                 driver.start(args.application.resolve())
                 checks.wait_until(
                     lambda: driver.js(
-                        "return document.body.textContent.includes('Workspace overview')"
+                        "return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"
                     )
                 )
                 driver.click("New project")
                 driver.fill(".dialog input", "Native planning delivery")
                 driver.click("Create project")
+                checks.wait_until(
+                    lambda: driver.js(
+                        "return !!document.querySelector('.start-project')"
+                    )
+                )
+                driver.navigate("Network Graph", ".graph-toolbar")
                 checks.wait_until(
                     lambda: driver.js(
                         "return !!document.querySelector('.graph-toolbar')"
@@ -200,7 +206,16 @@ def main():
                 )
                 assert exported.read_bytes() == expected.read_bytes()
                 assert exported.stat().st_mode & 0o777 == 0o600
-                driver.click("Add linked observation")
+                driver.js(
+                    "const s=document.querySelector('.endpoint-detail .source-actions select');s.value='note';s.dispatchEvent(new Event('change',{bubbles:true}));"
+                )
+                driver.click("Create linked record")
+                checks.wait_until(
+                    lambda: driver.js(
+                        "return !!document.querySelector('.knowledge-article')"
+                    )
+                )
+                driver.click("Edit note")
                 checks.wait_until(
                     lambda: driver.js(
                         "return !!document.querySelector('.knowledge-editor')"
@@ -231,10 +246,12 @@ def main():
                 driver.start(args.application.resolve())
                 checks.wait_until(
                     lambda: driver.js(
-                        "return document.body.textContent.includes('Workspace overview')"
+                        "return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"
                     )
                 )
                 driver.navigate("Web applications", ".web-map")
+                assert driver.js("return document.querySelector('[aria-label=\"Endpoint method\"]').value==='POST'")
+                driver.js("const m=document.querySelector('[aria-label=\"Endpoint method\"]');m.value='all';m.dispatchEvent(new Event('change',{bubbles:true}));")
                 driver.js(
                     """
                     const s=document.querySelector('[aria-label="Web application"]');

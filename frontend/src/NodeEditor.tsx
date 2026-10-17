@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import type { ObjectNode } from './api';
+import { useProjectState, putWorkspace } from './workspace';
+import { DraftStatus } from './DraftStatus';
 
 export type NodeContent = {
   label: string;
@@ -77,20 +79,34 @@ export function PositionEditor({
 
 export function NodeEditor({
   node,
+  pid,
   onSave,
   onCancel,
 }: {
   node?: ObjectNode;
+  pid: string;
   onSave: (content: NodeContent) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [label, setLabel] = useState(node?.label || '');
-  const [category, setCategory] = useState(String(node?.attrs.category || 'hypothesis'));
-  const [description, setDescription] = useState(String(node?.attrs.description || ''));
-  const [status, setStatus] = useState(String(node?.attrs.status || 'idea'));
-  const [tags, setTags] = useState(
-    (Array.isArray(node?.attrs.tags) ? node.attrs.tags : []).join(', '),
-  );
+  const draftKey = 'draft:object:' + (node?.id || 'new');
+  const defaults = {
+    kind: 'object',
+    saved: true,
+    node_id: node?.id,
+    label: node?.label || '',
+    category: String(node?.attrs.category || 'hypothesis'),
+    description: String(node?.attrs.description || ''),
+    status: String(node?.attrs.status || 'idea'),
+    tags: (Array.isArray(node?.attrs.tags) ? node.attrs.tags : []).join(', '),
+  };
+  const [draft, setDraft] = useProjectState(pid, draftKey, defaults);
+  const { label, category, description, status, tags } = draft;
+  const setLabel = (label: string) => setDraft((old) => ({ ...old, label, saved: false }));
+  const setCategory = (category: string) => setDraft((old) => ({ ...old, category, saved: false }));
+  const setDescription = (description: string) =>
+    setDraft((old) => ({ ...old, description, saved: false }));
+  const setStatus = (status: string) => setDraft((old) => ({ ...old, status, saved: false }));
+  const setTags = (tags: string) => setDraft((old) => ({ ...old, tags, saved: false }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function submit(event: FormEvent) {
@@ -108,6 +124,7 @@ export function NodeEditor({
           .map((t) => t.trim())
           .filter(Boolean),
       });
+      putWorkspace(pid, draftKey, node ? { ...draft, label: label.trim(), saved: true } : defaults);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -116,6 +133,7 @@ export function NodeEditor({
   }
   return (
     <form className="node-editor" onSubmit={submit}>
+      <DraftStatus pid={pid} draftKey={draftKey} value={draft} />
       <label>
         Object label
         <input
@@ -192,16 +210,19 @@ export function NodeEditor({
 
 export function CustomObjectDetails({
   node,
+  pid,
   onSave,
 }: {
   node: ObjectNode;
+  pid: string;
   onSave: (content: NodeContent) => Promise<void>;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useProjectState(pid, 'object_editing:' + node.id, false);
   return (
     <div className="inspector-section">
       {editing ? (
         <NodeEditor
+          pid={pid}
           node={node}
           onCancel={() => setEditing(false)}
           onSave={async (content) => {

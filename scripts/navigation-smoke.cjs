@@ -75,7 +75,7 @@ const { once } = require('node:events');
       { port, token, pid },
     );
     await page.goto('http://localhost:1420');
-    await page.getByRole('heading', { name: 'Workspace overview' }).waitFor();
+    await page.locator('.main').waitFor();
     await request(`/projects/${pid}/scope`, 'PUT', {
       rules: [{ value: 'app.htb' }, { value: 'admin.htb' }, { value: '10.10.10.0/24' }],
     });
@@ -97,20 +97,21 @@ const { once } = require('node:events');
     await navigate(page, 'Web applications');
     await page.getByLabel('Web application', { exact: true }).selectOption('http://app.htb');
     await page.getByRole('button', { name: 'GET http://app.htb/login', exact: true }).click();
-    assert.equal(await page.locator('.sidebar nav button').count(), 8);
+    assert.equal(await page.locator('.sidebar nav button').count(), 6);
     assert.equal(
       await page.getByRole('tab', { name: 'Web applications' }).getAttribute('aria-selected'),
       'true',
     );
     await page.getByRole('button', { name: 'Recon', exact: true }).click();
-    await page.getByRole('button', { name: 'Assets', exact: true }).click();
+    await page.getByRole('button', { name: 'Research', exact: true }).click();
     assert.equal(
       await page.getByRole('tab', { name: 'Web applications' }).getAttribute('aria-selected'),
       'true',
     );
     await page.getByLabel('Web application', { exact: true }).selectOption('http://app.htb');
     await page.getByRole('button', { name: 'GET http://app.htb/login', exact: true }).click();
-    await page.getByRole('button', { name: 'Add linked observation', exact: true }).click();
+    await page.locator('.endpoint-detail .source-actions').getByRole('button', { name: 'Create linked record', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit note', exact: true }).click();
     await page.locator('.knowledge-editor').waitFor();
     assert.equal(
       await page.getByRole('tab', { name: 'Notes', exact: true }).getAttribute('aria-selected'),
@@ -118,7 +119,7 @@ const { once } = require('node:events');
     );
     assert.equal(
       await page
-        .getByRole('button', { name: 'Investigation', exact: true })
+        .getByRole('button', { name: 'Notebook', exact: true })
         .getAttribute('aria-current'),
       'page',
     );
@@ -184,7 +185,7 @@ const { once } = require('node:events');
     assert.ok(smallSidebar.scroll <= smallSidebar.height + 2, JSON.stringify(smallSidebar));
     assert.deepEqual(errors, []);
     console.log(
-      'PASS: 8 sidebar links, grouped tabs, remembered section, deep links, keyboard navigation, Back, collapsed persistence and command palette',
+      'PASS: 6 sidebar links, grouped tabs, remembered section, deep links, keyboard navigation, Back, collapsed persistence and command palette',
     );
   } finally {
     await browser?.close();

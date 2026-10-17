@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "ipc": "native",
+  "checks": [
+    "new-project onboarding",
+    "SQLite draft recovery after full restart without local mirror",
+    "screenshot upload",
+    "finding template",
+    "retained retest",
+    "persistent report summary",
+    "ZIP export with selected screenshot"
+  ],
+  "release_url": "https://github.com/coldvisixn/dragontrip/releases/tag/v0.8.0",
+  "source_commit": "d52ebb20c1856d4ef057ab984d3427fb3ef40cc5",
+  "bytes": 56239278,
+  "sha256": "303c219e6bf913b53a0243cc6bab26285beca3fba71e9115b29604cb637cae40",
+  "download_checksum_verified": true,
+  "installed_platform": "Debian 13, WebKitGTK 2.54",
+  "release_ci": "https://github.com/coldvisixn/dragontrip/actions/runs/39013595541",
+  "kali_source_commit_ci": "https://github.com/coldvisixn/dragontrip/actions/runs/39013554996",
+  "kali_note": "Passed installed-package CI for the same source commit; the main workflow builds its own package separately from the release asset."
+}

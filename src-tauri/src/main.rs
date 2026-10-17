@@ -3,10 +3,13 @@ use serde::Serialize;
 use std::{
     io::{BufRead, BufReader},
     process::{Child, Command, Stdio},
-    sync::{mpsc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc, Mutex,
+    },
     time::Duration,
 };
-use tauri::{Manager, State};
+use tauri::{Emitter, Manager, State};
 
 #[derive(Clone, Serialize)]
 struct Connection {
@@ -16,6 +19,28 @@ struct Connection {
 struct Backend {
     connection: Connection,
     child: Mutex<Child>,
+}
+
+struct CloseGuard(AtomicBool);
+
+#[tauri::command]
+fn set_close_guard(unsafe_work: bool, state: State<CloseGuard>) {
+    state.inner().0.store(unsafe_work, Ordering::SeqCst);
+}
+
+#[tauri::command]
+fn confirm_close(window: tauri::WebviewWindow, state: State<CloseGuard>) -> Result<(), String> {
+    state.inner().0.store(false, Ordering::SeqCst);
+    window.close().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn export_recovery(
+    app: tauri::AppHandle,
+    draft_id: String,
+    content: String,
+) -> Result<String, String> {
+    export_file(app, draft_id, content, true, "dragontrip-draft")
 }
 
 #[tauri::command]
@@ -50,7 +75,7 @@ async fn export_xml(
     scan_id: String,
     content: String,
 ) -> Result<String, String> {
-    export_file(app, scan_id, content, false)
+    export_file(app, scan_id, content, false, "nmap")
 }
 
 #[tauri::command]
@@ -59,7 +84,7 @@ async fn export_json(
     scan_id: String,
     content: String,
 ) -> Result<String, String> {
-    export_file(app, scan_id, content, true)
+    export_file(app, scan_id, content, true, "recon")
 }
 
 fn export_file(
@@ -67,6 +92,7 @@ fn export_file(
     scan_id: String,
     content: String,
     json: bool,
+    prefix: &str,
 ) -> Result<String, String> {
     use std::io::Write;
     let valid_id = scan_id.len() == 36
@@ -94,7 +120,6 @@ fn export_file(
         .write_all(content.as_bytes())
         .map_err(|e| e.to_string())?;
     temporary.as_file().sync_all().map_err(|e| e.to_string())?;
-    let prefix = if json { "recon" } else { "nmap" };
     let extension = if json { "json" } else { "xml" };
     for suffix in 0..100 {
         let filename = if suffix == 0 {
@@ -147,6 +172,15 @@ fn main() {
         std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
     }
     let app = tauri::Builder::default()
+        .manage(CloseGuard(AtomicBool::new(false)))
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.state::<CloseGuard>().inner().0.load(Ordering::SeqCst) {
+                    api.prevent_close();
+                    let _ = window.emit("dragontrip:close-requested", ());
+                }
+            }
+        })
         .setup(|app| {
             let mut bytes = [0u8; 32];
             getrandom::getrandom(&mut bytes).map_err(|e| format!("Cannot generate session token: {e}"))?;
@@ -182,7 +216,7 @@ fn main() {
             app.manage(Backend { connection: Connection {port, token}, child: Mutex::new(child) });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![backend_connection, export_xml, export_json, open_external])
+        .invoke_handler(tauri::generate_handler![backend_connection, export_xml, export_json, export_recovery, open_external, set_close_guard, confirm_close])
         .build(tauri::generate_context!())
         .expect("Dragontrip failed to initialize");
     app.run(|handle, event| {

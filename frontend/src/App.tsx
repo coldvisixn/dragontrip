@@ -1,5 +1,8 @@
 import { ScanForm, ReconSettings, Suggestions, ScanHistory } from './Recon';
 import type { ScanRequest } from './api';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
+import { downloadText } from './DraftStatus';
 import packageInfo from '../../package.json';
 import {
   lazy,
@@ -72,6 +75,7 @@ import {
   loadWorkspace,
   getWorkspace,
   putWorkspace,
+  memoryDraftValues,
 } from './workspace';
 import {
   PrimaryNavigation,
@@ -272,8 +276,48 @@ export default function App() {
     'selected_node',
     null,
   );
-  const [modal, setModal] = useState<'project' | 'scan' | 'node' | 'command' | null>(null);
-  const closeModal = useCallback(() => setModal(null), []);
+  type Modal = 'project' | 'scan' | 'node' | 'command' | null;
+  const [transientModal, setTransientModal] = useState<Modal>(null);
+  const [nodeCreatorOpen, setNodeCreatorOpen] = useProjectState(
+    pid || 'global',
+    'object_creator_open',
+    false,
+  );
+  const modal: Modal = transientModal || (nodeCreatorOpen ? 'node' : null);
+  const setModal = useCallback(
+    (value: Modal | ((old: Modal) => Modal)) => {
+      const next =
+        typeof value === 'function'
+          ? value(transientModal || (nodeCreatorOpen ? 'node' : null))
+          : value;
+      setNodeCreatorOpen(next === 'node');
+      setTransientModal(next === 'node' ? null : next);
+    },
+    [transientModal, nodeCreatorOpen, setNodeCreatorOpen],
+  );
+  const closeModal = useCallback(() => {
+    setNodeCreatorOpen(false);
+    setTransientModal(null);
+  }, [setNodeCreatorOpen]);
+  const [closeWarning, setCloseWarning] = useState(false);
+  useEffect(() => {
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    void invoke('set_close_guard', { unsafeWork: memoryDrafts > 0 }).catch(() => {});
+  }, [memoryDrafts]);
+  useEffect(() => {
+    if (!('__TAURI_INTERNALS__' in window)) return;
+    let disposed = false;
+    const pending = listen('dragontrip:close-requested', () => setCloseWarning(true));
+    void pending
+      .then((unlisten) => {
+        if (disposed) unlisten();
+      })
+      .catch(() => {});
+    return () => {
+      disposed = true;
+      void pending.then((unlisten) => unlisten()).catch(() => {});
+    };
+  }, []);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
@@ -345,6 +389,7 @@ export default function App() {
     setDetail(null);
     setScan(null);
     setInspected(null);
+    setTransientModal(null);
     setKnowledgeSeed(undefined);
     if (pid) {
       writeLocal('dragontrip.project', pid);
@@ -524,17 +569,19 @@ export default function App() {
       setBusy(false);
     }
   }
-  async function openProject(id: string) {
+  async function openProject(id: string, preferred?: Page) {
     await loadWorkspace(id);
     const history = getWorkspace<{ entries: Page[]; index: number }>(id, 'navigation', {
       entries: ['Network Graph'],
       index: 0,
     });
     const destination =
+      preferred ||
       history.entries
         .slice(0, history.index + 1)
         .reverse()
-        .find((p) => !['Projects', 'Dashboard'].includes(p)) || 'Network Graph';
+        .find((p) => !['Projects', 'Dashboard'].includes(p)) ||
+      'Network Graph';
     if (id === pid) setPage(destination);
     else {
       putWorkspace(id, 'navigation', {
@@ -589,7 +636,7 @@ export default function App() {
     await perform(async () => {
       const p = await api<Project>('/projects', 'POST', { name, description });
       await refreshProjects();
-      openProject(p.id);
+      await openProject(p.id, 'Project overview');
       setModal(null);
       notify('Project created');
     });
@@ -827,26 +874,28 @@ export default function App() {
                         New project
                       </button>
                     </div>
-                    <div className="stats">
-                      {[
-                        [Folder, 'Projects', projects.length, 'Independent workspaces'],
-                        [Server, 'Hosts', hostCount, 'In the selected project'],
-                        [Globe, 'Services', serviceCount, 'Evidence from Nmap'],
-                        [Activity, 'Active scans', running, 'Bounded recon queue'],
-                      ].map(([Icon, label, value, hint]) => {
-                        const I = Icon as typeof Folder;
-                        return (
-                          <div className="stat" key={String(label)}>
-                            <div>
-                              <span>{String(label)}</span>
-                              <I size={17} />
+                    {projects.length > 0 && (
+                      <div className="stats">
+                        {[
+                          [Folder, 'Projects', projects.length, 'Independent workspaces'],
+                          [Server, 'Hosts', hostCount, 'In the selected project'],
+                          [Globe, 'Services', serviceCount, 'Evidence from Nmap'],
+                          [Activity, 'Active scans', running, 'Bounded recon queue'],
+                        ].map(([Icon, label, value, hint]) => {
+                          const I = Icon as typeof Folder;
+                          return (
+                            <div className="stat" key={String(label)}>
+                              <div>
+                                <span>{String(label)}</span>
+                                <I size={17} />
+                              </div>
+                              <strong>{String(value)}</strong>
+                              <small>{String(hint)}</small>
                             </div>
-                            <strong>{String(value)}</strong>
-                            <small>{String(hint)}</small>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
                     <div className="section-heading">
                       <h2>
                         Your projects <span>{projects.length}</span>
@@ -857,6 +906,26 @@ export default function App() {
                       </button>
                     </div>
                     {projectCards}
+                    <section className="panel start-project" style={{ marginTop: 20 }}>
+                      <h2>Explore Dragontrip in a minute</h2>
+                      <p>
+                        Create a separate project with fictional objects, a draft finding and a
+                        task. No scans run.
+                      </p>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void perform(async () => {
+                            const example = await api<Project>('/examples', 'POST');
+                            await refreshProjects();
+                            openProject(example.id);
+                            notify('Fictional demo created · no scans launched');
+                          })
+                        }
+                      >
+                        Create fictional demo
+                      </button>
+                    </section>
                     <ProjectTransfer
                       project={current}
                       onImported={async (value) => {
@@ -939,6 +1008,26 @@ export default function App() {
                       </button>
                     </div>
                     {projectCards}
+                    <section className="panel start-project" style={{ marginTop: 20 }}>
+                      <h2>Explore Dragontrip in a minute</h2>
+                      <p>
+                        Create a separate project with fictional objects, a draft finding and a
+                        task. No scans run.
+                      </p>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void perform(async () => {
+                            const example = await api<Project>('/examples', 'POST');
+                            await refreshProjects();
+                            openProject(example.id);
+                            notify('Fictional demo created · no scans launched');
+                          })
+                        }
+                      >
+                        Create fictional demo
+                      </button>
+                    </section>
                     <ProjectTransfer
                       project={current}
                       onImported={async (value) => {
@@ -1306,6 +1395,13 @@ export default function App() {
                       project={detail.project}
                       onTasks={() => setPage('Task board')}
                       onFindings={() => setPage('Findings')}
+                      onImport={() => setPage('Import results')}
+                      onScope={() => setPage('Targets & scope')}
+                      onRecon={startScan}
+                      onProjectChanged={async () => {
+                        await refreshProjects();
+                        if (pid) await refresh(pid);
+                      }}
                     />
                   </Suspense>
                 )}
@@ -1481,6 +1577,7 @@ export default function App() {
                   )}
                   {object.kind === 'custom' && (
                     <CustomObjectDetails
+                      pid={pid!}
                       key={object.id}
                       node={object}
                       onSave={async (content) => {
@@ -1489,8 +1586,12 @@ export default function App() {
                           'PUT',
                           content,
                         );
-                        await refresh(pid!);
-                        notify('Object updated');
+                        notify('Object saved');
+                        await refresh(pid!).catch(() =>
+                          setError(
+                            'Object saved. Refresh failed; reopen the project to reload it.',
+                          ),
+                        );
                       }}
                     />
                   )}
@@ -1888,6 +1989,29 @@ export default function App() {
           )}
         </div>
       )}
+      {closeWarning && (
+        <Dialog title="Unsaved work is only in memory" onClose={() => setCloseWarning(false)}>
+          <p>
+            The browser storage and local backend could not retain some text. Keep Dragontrip open
+            to retry saving, or download a recovery copy before closing.
+          </p>
+          <div className="dialog-actions">
+            <button onClick={() => setCloseWarning(false)}>Keep working</button>
+            <button
+              onClick={() =>
+                void downloadText(memoryDraftValues())
+                  .then((path) => notify(path))
+                  .catch((e) => setError('Recovery download failed: ' + e.message))
+              }
+            >
+              Download recovery copy
+            </button>
+            <button className="danger-button" onClick={() => void invoke('confirm_close')}>
+              Close without saving
+            </button>
+          </div>
+        </Dialog>
+      )}
       {modal === 'project' && (
         <Dialog title="Create a project" onClose={closeModal}>
           <form onSubmit={submitProject}>
@@ -1945,6 +2069,7 @@ export default function App() {
             handles.
           </p>
           <NodeEditor
+            pid={pid!}
             onCancel={closeModal}
             onSave={async (content) => {
               const node = await api<ObjectNode>('/projects/' + pid + '/nodes', 'POST', {
@@ -1952,10 +2077,13 @@ export default function App() {
                 x: 200,
                 y: 450,
               });
-              await refresh(pid!);
-              setSelected(node.id);
               closeModal();
               notify('Custom object saved');
+              const updated = await refresh(pid!).catch(() => {
+                setError('Object saved. Refresh failed; reopen the project to reload it.');
+                return undefined;
+              });
+              if (updated && activeProject.current === pid) setSelected(node.id);
             }}
           />
         </Dialog>

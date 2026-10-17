@@ -78,12 +78,14 @@ def main():
                 driver.start(args.application.resolve())
                 checks.wait_until(
                     lambda: driver.js(
-                        "return document.body.textContent.includes('Workspace overview')"
+                        "return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"
                     )
                 )
                 driver.click("New project")
                 driver.fill(".dialog input", "Native planning delivery")
                 driver.click("Create project")
+                checks.wait_until(lambda: driver.js("return !!document.querySelector('.start-project')"))
+                driver.navigate("Network Graph", ".graph-toolbar")
                 checks.wait_until(
                     lambda: driver.js(
                         "return !!document.querySelector('.graph-toolbar')"
@@ -100,24 +102,24 @@ def main():
                 driver.navigate("Task board", ".tasks-page")
                 driver.click("New task")
                 driver.fill(
-                    ".task-editor > fieldset > label > input", "Native follow-up task"
+                    '.knowledge-editor input[maxlength="160"]', "Native follow-up task"
                 )
                 driver.fill(
-                    ".task-editor .form-pair input:not([type=date])", "Reviewer"
+                    '.knowledge-editor input[maxlength="100"]', "Reviewer"
                 )
                 driver.js(
-                    "document.querySelector('.task-editor .reference-options input[type=checkbox]').click()"
+                    "document.querySelector('.knowledge-editor .reference-options input[type=checkbox]').click()"
                 )
                 driver.js(
                     """
-                    const element=document.querySelector('.task-editor select[aria-label=Priority]');
+                    const element=document.querySelector('.knowledge-editor select[aria-label=Priority]');
                     element.value='urgent';element.dispatchEvent(new Event('change',{bubbles:true}));
                 """
                 )
                 driver.click("Save task")
                 checks.wait_until(
                     lambda: driver.js(
-                        "return !!document.querySelector('.task-card') && !document.querySelector('.task-editor')"
+                        "return !!document.querySelector('.task-card') && !document.querySelector('.knowledge-editor')"
                     )
                 )
                 assert driver.js(
@@ -131,6 +133,7 @@ def main():
                     "return document.querySelector('.engagement-metrics').textContent.includes('0 / 1')"
                 )
                 driver.navigate("Reports", ".report-options")
+                driver.click("Working preset")
                 driver.click("Generate preview")
                 checks.wait_until(
                     lambda: driver.js(
@@ -151,7 +154,7 @@ def main():
                 driver.start(args.application.resolve())
                 checks.wait_until(
                     lambda: driver.js(
-                        "return document.body.textContent.includes('Workspace overview')"
+                        "return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"
                     )
                 )
                 driver.navigate("Task board", ".tasks-page")

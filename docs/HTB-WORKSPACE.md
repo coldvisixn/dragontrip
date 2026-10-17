@@ -25,7 +25,7 @@ If both browser storage and the backend fail, the editor keeps the text in memor
 
 Methodology selections/check notes are also stored in the workspace and use version-aware saves. Conflicts offer a separate methodology, saved version or manual merge. Original text is retained before switching versions. Methodology coverage remains an explicit user decision.
 
-Draft recovery covers the research Knowledge editors and methodology notes. Custom graph-object forms, report composition, preferences and vault forms retain their existing explicit-save behavior; they are not Knowledge drafts.
+Draft recovery covers the research Knowledge editors and methodology notes. Custom graph-object editors now retain drafts too, including creation dialogs. Report composition retains its existing project-scoped recovery. Preferences and vault forms retain explicit-save behavior. Memory-only research text also prevents native window closure until the user chooses whether to keep working, download recovery JSON or close without saving.
 
 ## Run a saved sequence
 
@@ -41,7 +41,7 @@ Automatic authorization exists only in the current backend process. Restarting o
 
 No physical database migration is needed: project-scoped workspace/recovery cells use the existing Configuration table; new provenance and sequence fields extend existing Knowledge JSON. Old content remains readable with defaults.
 
-Exports now use `.dtproj` **version 4**. Import still accepts versions 1–3. Version 4 transfers workspace state, drafts/recovery text, source observations and sequence attempt history, remapping object, record, observation, scan, import and attachment references into the new project. Workflow authorization is never transferred. Older Dragontrip versions reject version 4; use a complete data-directory backup before upgrading.
+Exports now use `.dtproj` **version 5**. Import still accepts versions 1–4. Version 5 transfers workspace state, drafts/recovery text, source observations and sequence attempt history, remapping object, record, observation, scan, import and attachment references into the new project. Workflow authorization is never transferred. Older Dragontrip versions reject version 5; use a complete data-directory backup before upgrading.
 
 Recovery metadata is plain project data, as are ordinary notes. The archive allows 2,000 workspace items and 8 MiB of recovery metadata within its existing 32 MiB manifest/128 MiB expanded budgets; each workspace item is bounded to 200,000 JSON characters/bytes at API/archive validation. These limits do not change evidence/file limits.
 

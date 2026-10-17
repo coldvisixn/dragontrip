@@ -107,12 +107,15 @@ const { once } = require('node:events');
         { port, token, pid },
       );
       await page.goto('http://localhost:1420');
-      await page.getByRole('heading', { name: 'Workspace overview' }).waitFor();
+      await page.locator('.main').waitFor();
     }
     await openPage();
     await navigate(page, 'Task board');
     await page.getByRole('button', { name: 'New task', exact: true }).click();
-    await page.getByLabel('Task template', { exact: true }).selectOption('3');
+    await page.getByLabel('Task template', { exact: true }).selectOption({ label: 'Verify remediation' });
+    await page.getByText('Owner and due date', { exact: true }).click();
+    await page.getByText('Task options', { exact: true }).click();
+    await page.getByText('Objects, sources and evidence', { exact: true }).click();
     await page.getByLabel('Title', { exact: true }).fill('Verify lab remediation');
     await page.getByLabel('Owner', { exact: true }).fill('Analyst');
     await page.getByLabel('Priority', { exact: true }).selectOption('urgent');
@@ -146,6 +149,7 @@ const { once } = require('node:events');
     await page
       .getByLabel('Executive summary', { exact: true })
       .fill('Local review completed. Follow-up verification remains.');
+    await page.getByRole('button', { name: 'Working preset', exact: true }).click();
     await page.getByRole('button', { name: 'Generate preview', exact: true }).click();
     await page.getByRole('heading', { name: 'Confirmed observation', exact: true }).waitFor();
     assert.match(await page.getByLabel('Report preview').innerText(), /Verify lab remediation/);

@@ -1,8 +1,8 @@
 [package]
 name = "dragontrip"
-version = "0.7.1"
+version = "0.9.0"
 edition = "2021"
-description = "Local offensive security workspace"
+description = "Local pentest workspace: from recon to report"
 license = "MIT"
 
 [build-dependencies]

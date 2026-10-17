@@ -1,6 +1,7 @@
 """Project progress and explicit, credential-free investigation reports."""
 
 import json
+import hashlib
 import tempfile
 from collections import Counter
 from datetime import datetime, timezone
@@ -14,18 +15,22 @@ from sqlalchemy.orm import defer
 
 from .db import Node, Scan, Knowledge, Attachment, now
 from .downloads import export_file
+from .deliverables import selected_evidence, write_deliverable
 
 
 class ReportOptions(BaseModel):
     title: str = Field(default="Investigation report", min_length=1, max_length=160)
     summary: str = Field(default="", max_length=12000)
-    finding_status: Literal["all", "active", "confirmed"] = "active"
+    finding_status: Literal["all", "active", "confirmed"] = "confirmed"
     minimum_severity: Literal["info", "low", "medium", "high", "critical"] = "info"
     include_notes: bool = False
     include_paths: bool = True
     include_tasks: bool = True
     include_inventory: bool = True
     include_scans: bool = True
+    format: Literal["markdown", "html", "bundle"] = "markdown"
+    attachment_ids: list[str] = Field(default_factory=list, max_length=100)
+    expected_preview: str | None = Field(default=None, max_length=64)
 
     @field_validator("title")
     @classmethod
@@ -56,7 +61,7 @@ def text(value):
     )
 
 
-def register_reporting(app, sessions, project):
+def register_reporting(app, sessions, project, root):
     @app.get("/projects/{pid}/overview")
     def overview(pid: str):
         with sessions() as db:
@@ -184,12 +189,14 @@ def register_reporting(app, sessions, project):
                     item[0].id,
                 )
             )
+            generated = now()
+            selected = selected_evidence(db, pid, options.attachment_ids, root)
             lines = [
                 f"# {text(options.title)}",
                 "",
                 f"Project: **{text(p.name)}**",
                 "",
-                f"Generated: {now()}",
+                f"Generated: {generated}",
                 "",
                 p.description or "",
                 "",
@@ -250,6 +257,15 @@ def register_reporting(app, sessions, project):
                     c.get("remediation", "") or "Not specified.",
                     "",
                 ] + links(c)
+                if c.get("retests"):
+                    lines += ["#### Retest history", ""]
+                    for retest in c["retests"]:
+                        lines += [
+                            f"- {text(retest['at'])} · {text(retest['result'])}",
+                            "",
+                            retest["note"],
+                            "",
+                        ]
             if not findings:
                 lines += ["No findings match these report filters.", ""]
             for kind, enabled, heading in [
@@ -300,16 +316,46 @@ def register_reporting(app, sessions, project):
                     ]
                     + [""]
                 )
-            return {"markdown": "\n".join(lines), "finding_count": len(findings)}
+            if selected:
+                lines += ["## Selected evidence files", ""]
+                for item in selected:
+                    lines += [
+                        f"- [{text(item['filename'])}]({item['path']}) · SHA-256 `{item['sha256']}`"
+                    ]
+            markdown = "\n".join(lines)
+            approved = markdown.replace(f"Generated: {generated}", "Generated:", 1)
+            signature = (
+                json.dumps(
+                    options.model_dump(exclude={"expected_preview", "format"}),
+                    sort_keys=True,
+                )
+                + approved
+            )
+            return {
+                "markdown": markdown,
+                "finding_count": len(findings),
+                "preview_token": hashlib.sha256(signature.encode()).hexdigest(),
+            }, selected
 
     @app.post("/projects/{pid}/report/preview")
     def preview(pid: str, options: ReportOptions):
-        return render(pid, options)
+        return render(pid, options)[0]
 
     @app.post("/projects/{pid}/report/export")
     def export(pid: str, options: ReportOptions):
-        report = render(pid, options)
+        report, selected = render(pid, options)
+        if (
+            options.expected_preview
+            and options.expected_preview != report["preview_token"]
+        ):
+            raise HTTPException(
+                409,
+                "Project content changed. Generate and review a fresh preview before exporting.",
+            )
+        if options.format == "markdown" and selected:
+            raise HTTPException(422, "Choose HTML or bundle to include evidence files")
         with tempfile.TemporaryDirectory(prefix="dragontrip-report-") as directory:
-            source = Path(directory) / "report.md"
-            source.write_text(report["markdown"], encoding="utf-8")
-            return export_file(source, f"dragontrip-report-{pid}.md")
+            source = write_deliverable(
+                Path(directory), report, options.title, options.format, selected
+            )
+            return export_file(source, f"dragontrip-report-{pid}{source.suffix}")

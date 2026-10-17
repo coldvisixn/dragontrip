@@ -352,3 +352,32 @@ it('does not open a source-created record in another workspace after unmounting'
   expect(opened).not.toHaveBeenCalled();
   window.removeEventListener('dragontrip:record', opened);
 });
+
+it('imports a 0.8 browser-only draft and never revives it after closure', async () => {
+  localStorage.setItem(
+    'dragontrip.draft:upgrade:note:new',
+    JSON.stringify({
+      revision: '1780000000000-' + 'a'.repeat(32),
+      value: { title: 'Older draft', content: { body: 'browser-only legacy text' } },
+    }),
+  );
+  await loadWorkspace('upgrade');
+  expect(getWorkspace<any>('upgrade', 'draft:legacy-note-new', null).content.body).toBe(
+    'browser-only legacy text',
+  );
+  expect(getWorkspace<any>('upgrade', 'knowledge:note', null).editing).toBe(true);
+  putWorkspace('upgrade', 'draft:legacy-note-new', { title: 'Retained' }, true);
+  resetWorkspaceMemory();
+  await loadWorkspace('upgrade');
+  expect(getWorkspace('upgrade', 'draft:legacy-note-new', null)).toBeNull();
+});
+
+it('does not block closing on an object that has already been saved', () => {
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new Error('Full');
+  });
+  putWorkspace('object-project', 'draft:object:new', { label: 'Persisted object', saved: true });
+  expect(memoryOnlyDrafts()).toBe(0);
+  putWorkspace('object-project', 'draft:object:new', { label: 'Unsaved changes', saved: false });
+  expect(memoryOnlyDrafts()).toBe(1);
+});

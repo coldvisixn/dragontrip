@@ -157,7 +157,7 @@ def test_observation_record_task_links_reimport_and_archive(client):
     archive = client.post(base + "/archive", json={})
     assert archive.status_code == 200, archive.text
     with zipfile.ZipFile(io.BytesIO(archive.content)) as z:
-        assert json.loads(z.read("manifest.json"))["version"] == 4
+        assert json.loads(z.read("manifest.json"))["version"] == 5
     result = client.post("/imports", files={"file": ("lab.dtproj", archive.content)})
     assert result.status_code == 201, result.text
     imported = result.json()["id"]
@@ -362,3 +362,26 @@ def test_whole_sequence_completion_and_confirmation_preflight(client, app, monke
     )
     assert response.status_code == 422
     assert len(client.get(base + "/preview").json()["scans"]) == 0
+
+
+def test_08_drafts_migrate_on_restart_without_resurrection_or_cross_project_leaks(client, tmp_path):
+    pid = project(client)
+    other = project(client)
+    key = f"/projects/{pid}/drafts/note:new"
+    legacy = {
+        "revision": "1780000000000-" + "a" * 32,
+        "value": {"title": "Unfinished 0.8 reasoning", "content": {"body": "only saved draft"}},
+    }
+    assert client.put(key, json=legacy).status_code == 200
+    def restart():
+        return TestClient(create_app(TOKEN, tmp_path, dev=True), base_url="http://127.0.0.1", headers={"Authorization": "Bearer " + TOKEN})
+    with restart() as upgraded:
+        cells = upgraded.get(f"/projects/{pid}/workspace").json()
+        draft = cells["draft:legacy-note-new"]
+        assert draft["value"]["data"]["content"]["body"] == "only saved draft"
+        assert cells["knowledge:note"]["value"]["data"]["editing"]
+        assert upgraded.get(f"/projects/{other}/workspace").json() == {}
+        assert upgraded.get(key).json() == legacy
+        upgraded.put(f"/projects/{pid}/workspace/draft:legacy-note-new", json={**draft, "closed": True, "revision": draft["revision"] + 1})
+    with restart() as again:
+        assert again.get(f"/projects/{pid}/workspace").json()["draft:legacy-note-new"]["closed"]

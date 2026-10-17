@@ -56,7 +56,7 @@ jobs:
       - name: Install Linux build and native-test dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf nmap whatweb webkit2gtk-driver xvfb xauth dbus-x11 scrot xdotool
+          sudo apt-get install -y build-essential pkg-config libssl-dev libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf nmap whatweb webkit2gtk-driver xvfb xauth dbus-x11 scrot xdotool xfwm4 wmctrl
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.9'
@@ -75,6 +75,27 @@ jobs:
           source .venv/bin/activate
           npm run desktop:build
           python scripts/smoke-packaged.py
+      - name: Verify upgrade from published 0.8.0
+        run: |
+          directory="$RUNNER_TEMP/dragontrip-upgrade"
+          mkdir -p "$directory"
+          curl --fail --location --retry 3 https://github.com/coldvisixn/dragontrip/releases/download/v0.8.0/dragontrip_0.8.0_amd64.deb -o "$directory/dragontrip_0.8.0_amd64.deb"
+          echo "303c219e6bf913b53a0243cc6bab26285beca3fba71e9115b29604cb637cae40  $directory/dragontrip_0.8.0_amd64.deb" | sha256sum --check
+          dpkg-deb --extract "$directory/dragontrip_0.8.0_amd64.deb" "$directory/extracted"
+          .venv/bin/python scripts/upgrade-smoke.py "$directory/extracted/usr/lib/Dragontrip/backend/dragontrip-backend"
+      - name: Verify investigation recovery with frozen backend
+        run: |
+          node node_modules/playwright-core/cli.js install --with-deps chromium
+          npx vite preview --config frontend/vite.config.ts --host 127.0.0.1 --port 1420 > /tmp/dragontrip-vite.log 2>&1 &
+          vite_pid=$!
+          trap 'kill "$vite_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 50); do
+            if curl --fail --silent http://127.0.0.1:1420/ > /dev/null; then break; fi
+            sleep 0.2
+          done
+          CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
+            DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
+            node scripts/investigation-smoke.cjs
       - name: Verify package metadata and checksum
         env:
           PACKAGE_VERSION: ${{ steps.version.outputs.version }}
@@ -108,6 +129,11 @@ jobs:
           GSETTINGS_BACKEND: memory
           DRAGONTRIP_VALIDATION_DIR: ${{ runner.temp }}/release-validation
         run: xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-navigation-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
+      - name: Test draft recovery and report bundles in WebKit
+        env:
+          GSETTINGS_BACKEND: memory
+          DRAGONTRIP_VALIDATION_DIR: ${{ runner.temp }}/release-validation
+        run: xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-delivery-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
       - uses: actions/upload-artifact@v4
         with:
           name: release-linux-amd64

@@ -56,21 +56,29 @@ export function AttachmentLinks({
   pid,
   ids,
   onChange,
+  onBusyChange,
 }: {
   pid: string;
   ids: string[];
   onChange: (ids: string[]) => void;
+  onBusyChange?: (busy: boolean) => void;
 }) {
   const [items, setItems] = useState<Attachment[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const live = useRef(true);
-  const latest = useRef({ ids, onChange });
-  latest.current = { ids, onChange };
+  const current = useRef({ ids, onChange, onBusyChange });
+  current.current = { ids, onChange, onBusyChange };
+  const alive = useRef(true);
+  const inFlight = useRef(false);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
   useEffect(() => {
     let disposed = false;
-    live.current = true;
     api<Attachment[]>(`/projects/${pid}/attachments`)
       .then((v) => {
         if (!disposed) setItems(v);
@@ -80,35 +88,70 @@ export function AttachmentLinks({
       });
     return () => {
       disposed = true;
-      live.current = false;
     };
   }, [pid]);
   async function upload(file?: File) {
-    if (!file) return;
+    if (!file || inFlight.current || !alive.current) return;
+    if (current.current.ids.length >= 30) {
+      setError('A record supports up to 30 linked files');
+      return;
+    }
     if (file.size > 10 * 1048576) {
       setError('The maximum attachment size is 10 MiB');
       return;
     }
+    inFlight.current = true;
     setBusy(true);
+    current.current.onBusyChange?.(true);
     setError('');
     try {
       const item = await uploadFile<Attachment>(`/projects/${pid}/attachments`, file);
-      if (!live.current) return;
+      if (!alive.current) return;
       setItems((rows) => [item, ...rows]);
-      latest.current.onChange([...new Set([...latest.current.ids, item.id])]);
+      const next = [...new Set([...current.current.ids, item.id])];
+      current.current.ids = next;
+      current.current.onChange(next);
     } catch (e) {
-      if (live.current) setError((e as Error).message);
+      if (alive.current) setError((e as Error).message);
     } finally {
-      if (live.current) setBusy(false);
-      if (input.current) input.current.value = '';
+      inFlight.current = false;
+      if (alive.current) {
+        setBusy(false);
+        current.current.onBusyChange?.(false);
+        if (input.current) input.current.value = '';
+      }
     }
   }
   return (
-    <fieldset className="reference-picker">
+    <fieldset
+      className="reference-picker"
+      tabIndex={0}
+      aria-label="Evidence upload: paste a screenshot or drop files"
+      onPaste={(event) => {
+        const files = Array.from(event.clipboardData.files).filter((file) =>
+          file.type.startsWith('image/'),
+        );
+        if (files.length) {
+          event.preventDefault();
+          void (async () => {
+            for (const file of files) await upload(file);
+          })();
+        }
+      }}
+      onDragOver={(event) => {
+        if (event.dataTransfer.types.includes('Files')) event.preventDefault();
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        void (async () => {
+          for (const file of Array.from(event.dataTransfer.files)) await upload(file);
+        })();
+      }}
+    >
       <legend>Evidence and screenshots</legend>
       <p className="muted">
         PNG, JPEG, WebP, PDF or UTF-8 text/JSON/XML · 10 MiB per file. Files are retained in the
-        project when you cancel editing.
+        project when you cancel editing. Paste a screenshot here or drop files to attach them.
       </p>
       <label className="file-button">
         <Upload size={14} />

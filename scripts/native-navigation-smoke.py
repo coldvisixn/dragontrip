@@ -78,12 +78,18 @@ def main():
                 driver.start(args.application.resolve())
                 checks.wait_until(
                     lambda: driver.js(
-                        "return document.body.textContent.includes('Workspace overview')"
+                        "return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"
                     )
                 )
                 driver.click("New project")
                 driver.fill(".dialog input", "Native planning delivery")
                 driver.click("Create project")
+                checks.wait_until(
+                    lambda: driver.js(
+                        "return !!document.querySelector('.start-project')"
+                    )
+                )
+                driver.navigate("Network Graph", ".graph-toolbar")
                 checks.wait_until(
                     lambda: driver.js(
                         "return !!document.querySelector('.graph-toolbar')"
@@ -99,7 +105,7 @@ def main():
                     )
                 )
                 assert driver.js(
-                    "return document.querySelectorAll('.sidebar nav button').length===8"
+                    "return document.querySelectorAll('.sidebar nav button').length===6"
                 )
                 assert driver.js(
                     "return document.querySelector('[role=tab][aria-selected=true]').textContent==='Web applications'"
@@ -113,7 +119,7 @@ def main():
                     )
                 )
                 driver.js(
-                    "[...document.querySelectorAll('.sidebar nav button')].find(b=>b.textContent.trim()==='Assets').click()"
+                    "[...document.querySelectorAll('.sidebar nav button')].find(b=>b.textContent.trim()==='Research').click()"
                 )
                 checks.wait_until(
                     lambda: driver.js(
@@ -129,7 +135,16 @@ def main():
                     )
                 )
                 driver.js("document.querySelector('.endpoint-row').click()")
-                driver.click("Add linked observation")
+                driver.js(
+                    "const s=document.querySelector('.endpoint-detail .source-actions select');s.value='note';s.dispatchEvent(new Event('change',{bubbles:true}));"
+                )
+                driver.click("Create linked record")
+                checks.wait_until(
+                    lambda: driver.js(
+                        "return !!document.querySelector('.knowledge-article')"
+                    )
+                )
+                driver.click("Edit note")
                 checks.wait_until(
                     lambda: driver.js(
                         "return !!document.querySelector('.knowledge-editor')"
@@ -170,7 +185,7 @@ def main():
                 driver.start(args.application.resolve())
                 checks.wait_until(
                     lambda: driver.js(
-                        "return document.body.textContent.includes('Workspace overview')"
+                        "return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"
                     )
                 )
                 assert driver.js(
@@ -186,7 +201,7 @@ def main():
                     "return document.querySelector('[role=tab][aria-selected=true]').textContent==='Tools'"
                 )
                 print(
-                    "PASS: installed grouped navigation, eight links, tabs, last section, linked note route, compact sidebar and restart persistence",
+                    "PASS: installed grouped navigation, six links, tabs, last section, linked note route, compact sidebar and restart persistence",
                     flush=True,
                 )
             finally:

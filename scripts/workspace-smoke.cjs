@@ -87,6 +87,7 @@ const { once } = require('node:events');
     await page.getByRole('button', { name: 'New project', exact: true }).click();
     await page.getByLabel('Project name').fill('Investigation workspace');
     await page.getByRole('button', { name: 'Create project', exact: true }).click();
+    await navigate(page, 'Network Graph');
     await page.getByRole('button', { name: 'Custom node', exact: true }).click();
     await page.getByLabel('Object label').fill('Review authentication');
     await page.getByLabel('Category', { exact: true }).selectOption('task');
@@ -145,7 +146,8 @@ const { once } = require('node:events');
     await page.getByRole('button', { name: 'Close dialog' }).click();
     await page.locator('.object-card.custom').click();
     console.log('Checking linked note');
-    await page.getByRole('button', { name: 'Add linked note' }).click();
+    await page.locator('.inspector .source-actions').getByRole('button', { name: 'Create linked record', exact: true }).click();
+    await page.getByRole('button', { name: 'Edit note', exact: true }).click();
     await page.getByLabel('Title', { exact: true }).fill('Session investigation context');
     await page
       .getByLabel('Content', { exact: true })
@@ -171,15 +173,17 @@ const { once } = require('node:events');
     await navigate(page, 'Findings');
     await page.getByRole('button', { name: 'New finding', exact: true }).click();
     await page.getByLabel('Title', { exact: true }).fill('Discarded draft');
-    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Discard draft (retain recovery copy)', exact: true }).click();
     await page.getByRole('button', { name: 'New finding', exact: true }).click();
     assert.equal(await page.getByLabel('Title', { exact: true }).inputValue(), '');
     await page.getByLabel('Title', { exact: true }).fill('Session review finding');
     await page.getByLabel('Severity', { exact: true }).selectOption('high');
     await page.getByLabel('Description and evidence').fill('Manual review evidence and impact.');
+    await page.getByText('Remediation (optional)', { exact: true }).click();
     await page
       .getByLabel('Remediation', { exact: true })
       .fill('Set explicit expiry and verify invalidation.');
+    await page.getByText('Objects, sources and evidence', { exact: true }).click();
     await page.getByRole('checkbox', { name: /Review session handling/ }).check();
     await page.getByRole('button', { name: 'Save finding', exact: true }).click();
     await page
@@ -273,6 +277,7 @@ const { once } = require('node:events');
       );
     await page.getByRole('button', { name: 'Show Markdown preview', exact: true }).click();
     await page.getByRole('heading', { name: 'Boundary documentation', exact: true }).waitFor();
+    await page.getByText('Objects, sources and evidence', { exact: true }).click();
     const screenshot = await page.screenshot();
     await page
       .getByLabel('Upload evidence', { exact: true })

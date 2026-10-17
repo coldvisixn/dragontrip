@@ -76,6 +76,9 @@ describe('planning workflow', () => {
     render(<Reports project={project} />);
     const exportButton = screen.getByRole('button', { name: 'Export Markdown' });
     expect(exportButton).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Generate preview' })).toBeEnabled(),
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Generate preview' }));
     expect(
       await within(screen.getByLabelText('Report preview')).findByText('Review content'),

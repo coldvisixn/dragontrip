@@ -1,6 +1,6 @@
-# Methodologies and guided recon workflows (0.7.0)
+# Methodologies and approved recon workflows (0.9.0)
 
-This development package adds the next usable research scenario to 0.6.0. It does not complete the remaining crawler, finding correlation/retest, or live-domain scanning stages.
+Methodologies record explicit review decisions; saved recon sequences run selected checks within the existing adapter and scope limits. A crawler, automatic finding correlation and live-domain scanning remain outside this release.
 
 ## Methodologies
 
@@ -20,7 +20,7 @@ This checkout also supports **Run remaining sequence** after the complete previe
 
 ## Transfer and limits
 
-Methodologies, workflow templates and run snapshots live in Knowledge records; run scan IDs and selected-service references are project-scoped and remapped on portable transfer. New `.dtproj` exports use version 4. Versions 1/2/3 remain readable; older applications reject version 4. Existing project graphs/notes/evidence and prior 0.6.0 imports remain intact.
+Methodologies, workflow templates and run snapshots live in Knowledge records; run scan IDs and selected-service references are project-scoped and remapped on portable transfer. New `.dtproj` exports use version 5. Versions 1–4 remain readable; older applications reject version 5. Existing project graphs/notes/evidence and prior 0.6.0 imports remain intact.
 
 Custom scan profiles remain application-wide settings and are not bundled in project archives. A transferred sequence referencing an unavailable custom profile is blocked in preview; select/recreate that profile before making a new sequence/run. Built-in profile IDs are portable. Workflow previews do not promise an installed executable; missing tools return actionable launch errors without advancing the sequence. The UI lists the first 100 methodologies/templates/runs, matching existing bounded knowledge queries.
 

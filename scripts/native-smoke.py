@@ -143,9 +143,11 @@ class Driver:
         def clicked():
             return self.js("""
                 const label=arguments[0];
+                const more=document.querySelector('.section-more select');
+                if(more&&[...more.options].some(o=>o.value===label)) {more.value=label;more.dispatchEvent(new Event('change',{bubbles:true}));return true;}
                 const tab=[...document.querySelectorAll('[role=tab]')].find(b=>b.textContent.trim()===label);
                 const button=tab||[...document.querySelectorAll('button:not([data-pages])')].find(b=>b.textContent.trim()===label);
-                if(button&&!button.disabled){button.click();return true;}
+                if(button&&!button.matches(':disabled')){for(let p=button.parentElement;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true;button.click();return true;}
                 const group=[...document.querySelectorAll('.sidebar nav button[data-pages]')].find(b=>b.dataset.pages.split('|').includes(label));
                 if(group&&!group.disabled){group.click();return group.dataset.pages.split('|').length===1;}
                 return false;
@@ -159,11 +161,13 @@ class Driver:
         self.js("document.querySelector('.react-flow__controls-fitview').click()")
 
     def fill(self, selector, text):
-        wait_until(lambda: self.js("return !!document.querySelector(arguments[0])", selector))
+        wait_until(lambda: self.js("const e=document.querySelector(arguments[0]);return !!e && !e.matches(':disabled')", selector))
+        self.js("for(let p=document.querySelector(arguments[0])?.parentElement;p;p=p.parentElement)if(p.tagName==='DETAILS')p.open=true", selector)
         # Let the native dialog focus/transition finish before WebDriver types.
         time.sleep(.2)
         element = self.call("POST", "/element", {"using": "css selector", "value": selector})
         eid = element["element-6066-11e4-a52e-4f735466cecf"]
+        self.call("POST", f"/element/{eid}/clear", {})
         # WebKit's native send-keys ignores literal LF; use the standard Enter key.
         if "\n" in text and self.call("GET", f"/element/{eid}/name").lower() == "textarea":
             text = text.replace("\n", "\ue007")
@@ -266,7 +270,7 @@ def main():
                     started=time.monotonic()
                     driver.start(application)
                     print("Native session launched", flush=True)
-                    wait_until(lambda: driver.js("return document.body.textContent.includes('Workspace overview')"))
+                    wait_until(lambda: driver.js("return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"))
                     # Actual Tauri IPC, not a browser connection shim.
                     assert driver.js("return Boolean(window.__TAURI_INTERNALS__)")
                     print("Dashboard ready", flush=True)
@@ -280,6 +284,8 @@ def main():
                     driver.click("New project")
                     driver.fill(".dialog input", "HTB Native Lab")
                     driver.click("Create project")
+                    wait_until(lambda: driver.js("return !!document.querySelector('.start-project')"))
+                    driver.navigate("Network Graph", ".graph-toolbar")
                     wait_until(lambda: driver.js("return !!document.querySelector('.graph-toolbar')"))
                     driver.click("Start scan")
                     driver.fill(".dialog input:not([type=checkbox])", "127.0.0.1")
@@ -353,8 +359,7 @@ def main():
                     driver.fill('.graph-search input', web_node['label'])
                     wait_until(lambda: driver.js("return !!document.querySelector('.search-results button')"))
                     driver.js("[...document.querySelectorAll('.search-results button')].find(b=>b.textContent.trim()===arguments[0]).click()", web_node['label'])
-                    wait_until(lambda: driver.js("return !!document.querySelector('.object-card.url')"))
-                    driver.js("document.querySelector('.object-card.url').click()")
+                    # Selecting the search result opens Inspector; a second click races graph recentering.
                     wait_until(lambda: driver.js("return document.body.textContent.includes('Source evidence · JSON')"))
                     web_node=next(n for n in driver.graph()['nodes'] if n['kind']=='url')
                     driver.click('Export source JSON')
@@ -461,7 +466,7 @@ def main():
                     started=time.monotonic()
                     driver.start(application)
                     print("Native session launched", flush=True)
-                    wait_until(lambda: driver.js("return document.body.textContent.includes('Workspace overview')"))
+                    wait_until(lambda: driver.js("return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"))
                     driver.click("Network Graph")
                     driver.fit_graph()
                     wait_until(lambda: driver.js("return !!document.querySelector('.object-card.custom')"))
@@ -498,7 +503,7 @@ def main():
                             ""","args":[count]})
                             assert result==count,result
                             driver.js("location.reload()")
-                            wait_until(lambda: driver.js("return document.body.textContent.includes('Workspace overview')"))
+                            wait_until(lambda: driver.js("return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"))
                             driver.click("Network Graph")
                             driver.fit_graph()
                             wait_until(lambda: driver.js("return !!document.querySelector('.object-card.custom')"))

@@ -95,12 +95,14 @@ def main():
                 driver.start(args.application.resolve())
                 checks.wait_until(
                     lambda: driver.js(
-                        "return document.body.textContent.includes('Workspace overview')"
+                        "return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"
                     )
                 )
                 driver.click("New project")
                 driver.fill(".dialog input", "Native planning delivery")
                 driver.click("Create project")
+                checks.wait_until(lambda: driver.js("return !!document.querySelector('.start-project')"))
+                driver.navigate("Network Graph", ".graph-toolbar")
                 checks.wait_until(
                     lambda: driver.js(
                         "return !!document.querySelector('.graph-toolbar')"
@@ -220,7 +222,7 @@ def main():
                 driver.start(args.application.resolve())
                 checks.wait_until(
                     lambda: driver.js(
-                        "return document.body.textContent.includes('Workspace overview')"
+                        "return !!document.querySelector('.main') && !!document.querySelector('.sidebar')"
                     )
                 )
                 driver.navigate("Methodologies", ".methodology-page")
