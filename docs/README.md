@@ -1,40 +1,42 @@
 # Dragontrip documentation
 
-## Use the application
+A local desktop workspace for penetration testing and security research. [English overview](../README.md) · [Описание на русском](../README.ru.md)
 
-- [MVP workflow, draft recovery, retests and HTML/ZIP reports](DELIVERY.md)
-- [Grouped navigation and compact sidebar](NAVIGATION.md)
+## Start here
 
 - [Install and update](INSTALL.md) / [Установка на Kali](INSTALL-KALI.md)
 - [Your first investigation](USAGE.md)
+- [Gallery and recorded walkthrough](SHOWCASE.md)
+- [Capabilities, limits and platform status](CAPABILITIES.md)
+- [What's new in 0.9.0](releases/v0.9.0.md)
+
+## Work in a project
+
+- [Scope, offline imports and the web application map](IMPORTS.md)
+- [Connected research, context, drafts and conflict recovery](HTB-WORKSPACE.md)
+- [Methodologies and approved recon sequences](METHODOLOGIES.md)
+- [Findings, manual retests and reviewed HTML/ZIP exports](DELIVERY.md)
+- [Grouped navigation and compact sidebar](NAVIGATION.md)
 - [Data, encryption, backups and project transfer](DATA.md)
-- [Methodologies and guided recon workflows](METHODOLOGIES.md)
-- [Scope, offline imports and web application map](IMPORTS.md)
-- [Research workspace audit and delivery stages](RESEARCH-WORKSPACE.md)
-- [Task-planning implementation history](PLANNING.md)
-- [Changelog](../CHANGELOG.md) and [roadmap](ROADMAP.md)
 
 ## Build and contribute
 
-- [Development and desktop packaging](DEVELOPMENT.md)
 - [Contribution guide](../CONTRIBUTING.md)
+- [Development and desktop packaging](DEVELOPMENT.md)
 - [Security reporting](../SECURITY.md)
 - [Release process](RELEASING.md)
 - [Recon, knowledge, graph and archive extension contracts](EXTENSIONS.md)
 - [Managed cloud/container build recipe](BUILD-CLOUD.md)
+- [Changelog](../CHANGELOG.md), [roadmap](ROADMAP.md) and [MIT license](../LICENSE)
+- [Repository presentation assets and GitHub settings](media/README.md)
 
 ## Verification and implementation history
 
-These documents record specific development snapshots. They are evidence/history; current installation instructions are in the guides above.
+[0.9.0 published installer and Linux/Kali acceptance](BUILD-0.9.0.md) records exact package checks and their limits. Current installation instructions are in the guides above; older documents below describe specific development snapshots.
 
-- [0.5.0 local Debian build and native checks](BUILD-0.5.0.md)
-- [0.5.0 native resource profile](0.5.0-native-profile.json)
-- [Phase 4: product polish](PHASE4.md)
-- [Phase 3: investigation knowledge/vault](PHASE3.md)
-- [Phase 2: recon automation](PHASE2.md)
+- [0.8.0 verification](BUILD-0.8.0.md) · [0.7.0 verification](BUILD-0.7.0.md) · [0.6.0 verification](BUILD-0.6.0.md)
+- [0.5.0 local Debian build and native checks](BUILD-0.5.0.md) · [resource profile](0.5.0-native-profile.json)
+- [Research workspace audit and delivery stages](RESEARCH-WORKSPACE.md)
+- [Task-planning implementation history](PLANNING.md)
+- [Phase 4: product polish](PHASE4.md) · [Phase 3: knowledge/vault](PHASE3.md) · [Phase 2: recon](PHASE2.md)
 - [Earlier native validation](VALIDATION.md)
-
-[Local HTB investigation, draft recovery and sequence controls](HTB-WORKSPACE.md).
-## MVP research and delivery (0.9.0)
-
-[First project, draft recovery, findings and HTML/ZIP reports](DELIVERY.md) · [Exact local build evidence](BUILD-0.9.0.md) · [Release notes](releases/v0.9.0.md)

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="340" viewBox="0 0 1280 340" role="img" aria-labelledby="title desc">
+  <title id="title">Dragontrip</title>
+  <desc id="desc">A local workspace for security research. The angular Dragontrip mark and a continuous path connect recon, observations and next checks.</desc>
+  <defs>
+    <linearGradient id="bg" x2="1" y2="0.3"><stop stop-color="#11151d"/><stop offset="1" stop-color="#242039"/></linearGradient>
+  </defs>
+  <rect width="1280" height="340" rx="20" fill="url(#bg)"/>
+  <g font-family="Inter, DejaVu Sans, sans-serif">
+    <text x="64" y="119" fill="#f5f3ff" font-size="64" font-weight="700" letter-spacing="4">DRAGONTRIP</text>
+    <text x="66" y="170" fill="#c7c6d5" font-size="27">A local workspace for security research</text>
+    <path d="M68 256H306L356 232H581L628 256H789" fill="none" stroke="#aa98f5" stroke-width="2"/>
+    <g fill="#11151d" stroke="#b8a8ff" stroke-width="3"><circle cx="68" cy="256" r="6"/><circle cx="392" cy="232" r="6"/><circle cx="714" cy="256" r="6"/></g>
+    <g fill="#d3c9ff" font-size="17" letter-spacing="1.5"><text x="64" y="302">RECON</text><text x="360" y="302">OBSERVATIONS</text><text x="642" y="302">NEXT CHECKS</text></g>
+  </g>
+  <svg x="920" y="26" width="278" height="278" viewBox="0 0 512 512">
+    <path d="m108 394 48-270 247-61-88 151 98 39-219 202 27-167-113 106Z" fill="none" stroke="#aa98f5" stroke-width="16" stroke-linejoin="round"/>
+    <path d="m156 124 159 90-94 74" fill="none" stroke="#aa98f5" stroke-width="13"/>
+  </svg>
+</svg>

@@ -1,48 +1,74 @@
 <div align="center">
 
-# DRAGONTRIP
+![Dragontrip — local workspace for security research](docs/media/banner.svg)
 
-**Investigate a machine. Keep your reasoning. Pick up where you left off.**
+# Follow the evidence. Keep the thread.
 
-A local desktop workspace for Hack The Box and similar authorized labs: Nmap, Burp and Nuclei results, observations, hypotheses, findings and next checks in one project. No Dragontrip account required.
+**A local desktop workspace for penetration testing and security research.**
 
-[Download v0.9.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.0) · [Installation](docs/INSTALL.md) · [Русский](README.ru.md) · [Documentation](docs/README.md)
+Connect recon results, observations, hypotheses, findings and next checks in one project — and return with your reasoning intact.
 
-[![Release](https://img.shields.io/github/v/release/coldvisixn/dragontrip?include_prereleases&label=release)](https://github.com/coldvisixn/dragontrip/releases)
+**[Download for Linux · v0.9.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.0)** · [Quick start](#get-started) · [See it in action](docs/SHOWCASE.md) · [Русский](README.ru.md)
+
+[![Release](docs/media/badges/release.svg)](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.0)
 [![Linux build](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Linux%20x86__64-7c6bf0)](docs/INSTALL.md)
+[![Linux x86_64](docs/media/badges/platform.svg)](docs/INSTALL.md)
+[![MIT license](docs/media/badges/license.svg)](LICENSE)
 
 </div>
 
-![Dragontrip project start](docs/investigation-validation/screenshots/research.png)
+![Real Dragontrip interface: imported infrastructure and applications in a fictional portal review](docs/media/research-graph.png)
 
-Dragontrip is for pentesters and security researchers who want to carry an assessment from raw tool output to findings with traceable evidence. Keep infrastructure, web applications, notes, checklists and follow-up work together on your own machine.
+## Keep the investigation together
 
-**0.9.0 · Early MVP · Linux x86_64 · MIT.** Download the `.deb` and matching checksum from the versioned release above. The interface is in English. [Release notes](docs/releases/v0.9.0.md) · [Workflow and limits](docs/DELIVERY.md).
+An assessment leaves more than scanner output: a response worth checking, a hypothesis that did not hold, an unfinished note, a finding with evidence. Dragontrip keeps those pieces connected to their sources and to the work that comes next.
 
-## What's new in 0.9.0
+Built for practicing pentesters, independent security researchers and people learning in authorized labs.
 
-- **Resume your investigation:** project-specific page/tab, target, application/endpoint, searches, filters, graph view and open-editor recovery.
-- **Resolve draft conflicts:** see both versions and timestamps, save a separate record or merge manually, and recover replaced text. Status distinguishes browser, SQLite and memory-only copies.
-- **Write from observations:** create linked notes/hypotheses, draft findings or tasks with known objects, source runs and evidence. Repeated clicks and imports reuse linked records.
-- **Run selected checks:** one full sequence preview, automatic next steps, pause, cancel and explicit retry with attempt history. Restart never resumes network actions.
-- **Less interface overhead:** Research, Recon and Notebook, contextual actions and collapsed optional fields. Existing methodologies, vault, manual retests and reviewed reports remain available.
+- **Follow the source.** Import Nmap, Burp and Nuclei results; move from infrastructure and web endpoints to the observations and original files behind them.
+- **Turn observations into work.** Create a linked note, hypothesis, draft finding or task. Keep unsuccessful checks alongside the leads you pursue.
+- **Resume with context.** Restore project navigation, selections, filters and editor drafts. Resolve conflicting edits with both versions in view and recover replaced text.
+- **Keep your workspace local.** SQLite and evidence files live on your machine. No Dragontrip account or hosted project database is required.
 
-## One project, from first import to handoff
+## From recon to the next check
 
-1. **Set the boundaries.** Record included and excluded IPs, networks, domains and web origins.
-2. **Bring your results.** Preview and import Nmap XML, Burp saved-items/issue XML or HTTP Nuclei JSONL. Keep original sources and inspect what each import adds or changes.
-3. **Follow the connections.** Move between the infrastructure graph, web applications, method-specific endpoints and the observations behind them.
-4. **Build the case.** Link findings, notes and evidence to objects. Record methodology coverage and turn follow-up work into tasks.
-5. **Prepare the handoff.** Compose a Markdown report or transfer a project with its evidence in a portable `.dtproj` archive.
+1. **Define the boundaries.** Record included and excluded targets. Import existing results with a preview, or approve live recon through supported tool profiles.
+2. **Explore what you observed.** Follow hosts, services and applications in the graph; inspect method-specific endpoints and source observations.
+3. **Form a hypothesis.** Create a linked record, collect evidence and decide what needs manual verification. An imported observation alone does not confirm a vulnerability.
+4. **Check and record.** Track follow-up tasks, manual methodology decisions and finding retests. Saved recon sequences can advance automatically after a full preview and approval, with pause, cancel and explicit retry.
+5. **Continue or share.** Reopen the project with its working context, transfer it as `.dtproj`, or export selected work as Markdown, standalone HTML or an evidence ZIP.
 
-For live recon, use Nmap, WhatWeb, ProjectDiscovery httpx or ffuf through validated profiles and a cancellable queue. Saved recon workflows preview every target and parameter, then run as an explicitly approved sequence or one step at a time. Notes, findings and tasks recover drafts and link back to source observations. [Local HTB investigation and recovery](docs/HTB-WORKSPACE.md). [Import formats and limits](docs/IMPORTS.md) · [Methodologies and workflows](docs/METHODOLOGIES.md).
+Reports are one possible result. A useful next check, a disproved hypothesis and a recoverable research notebook are results too.
+
+## In practice
+
+- **Authorized pentest:** bring together Nmap service inventory, Burp endpoint observations and Nuclei HTTP results. Link a suspected access-control issue to its source, plan a manual check and record the outcome before confirming a finding.
+- **Independent research:** keep a hypothesis, its supporting responses and the checks that ruled it out; return later without reconstructing the investigation from terminal history.
+- **Lab or training:** work through an HTB or similar authorized machine, preserve your reasoning across sessions and keep your own methodology notes.
+
+## See the workflow
+
+**[Short recorded walkthrough](docs/SHOWCASE.md#recorded-walkthrough)** · [Full gallery, including light theme](docs/SHOWCASE.md)
+
+<details>
+<summary><strong>Inspect an endpoint and its original observation</strong></summary>
+
+![An imported endpoint response and linked-record actions in the actual application](docs/media/web-observation.png)
+
+</details>
+
+<details>
+<summary><strong>Connect a hypothesis to its source and follow-up work</strong></summary>
+
+![A saved hypothesis with source links and an action to create a linked task](docs/media/linked-note.png)
+
+</details>
+
+Screenshots and the recording use the real application with an isolated, explicitly authored fictional project (`192.0.2.10`, `portal.example.test`). No target requests were sent. New projects start empty; the built-in fictional demo is a separate opt-in project.
 
 ## Get started
 
-1. Open [Releases](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.0) and download **`dragontrip_0.9.0_amd64.deb`** and its **`.sha256`** file from **Assets**. GitHub's “Source code” archives are for developers.
-2. In the folder containing both files, verify and install:
+Download **[`dragontrip_0.9.0_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.9.0/dragontrip_0.9.0_amd64.deb)** and its **[SHA-256 file](https://github.com/coldvisixn/dragontrip/releases/download/v0.9.0/dragontrip_0.9.0_amd64.deb.sha256)** into the same folder. GitHub's “Source code” archives are for developers.
 
 ```bash
 sha256sum --check dragontrip_0.9.0_amd64.deb.sha256
@@ -51,60 +77,36 @@ sudo apt install ./dragontrip_0.9.0_amd64.deb
 dragontrip
 ```
 
-On Kali, install the recon tools you want to use:
+Create a project, choose **Import results**, preview a supported export and open **Research**. For a guided example without your own data, choose **Create fictional demo** on Dashboard or Projects. [First-project guide →](docs/USAGE.md)
+
+For live recon on Kali, install the tools you want to use:
 
 ```bash
 sudo apt install nmap whatweb httpx-toolkit ffuf
 ```
 
-The desktop package bundles its frontend and Python backend. You do not need Node.js, Rust, pip or Docker to run it. Recon tools are detected from your system; ProjectDiscovery **httpx** (`httpx-toolkit` on Kali) is different from the Python library with the same name.
+The `.deb` bundles the frontend and Python backend; Node.js, Rust, pip and Docker are not needed to run it. Recon tools are separate system executables. The httpx adapter needs **ProjectDiscovery httpx** (`httpx-toolkit` on Kali), not the Python library.
 
-Create a project and follow the import/scope/recon actions in Project overview, or explicitly create a separate fictional demo from Dashboard/Projects. See [the first-project walkthrough](docs/USAGE.md) and [installation/troubleshooting](docs/INSTALL.md).
+**Current download:** 0.9.0 is a prerelease (early MVP), with an English interface and a Linux x86_64 installer. Published-package Debian and installed Kali checks are documented in [build verification](docs/BUILD-0.9.0.md); a real 4 GB VirtualBox acceptance remains separate. [Installation, updates and troubleshooting →](docs/INSTALL.md) · [Инструкция для Kali →](docs/INSTALL-KALI.md)
 
-## What you can do
+## Capabilities and boundaries
 
-| Workspace | Capabilities |
-| --- | --- |
-| **Scope and imports** | Include/exclude scope; previewed Nmap/Burp/Nuclei imports, preserved sources, import comparison and application/endpoint views. |
-| **Recon** | Nmap, WhatWeb, ProjectDiscovery httpx and ffuf adapters; Quick/Full/Service profiles; saved profiles; a bounded queue with cancellation and scan history. |
-| **Infrastructure graph** | Hosts, services, URLs and custom objects; typed relationships; Inspector; saved positions and viewport; search, pan/zoom and a minimap. |
-| **Investigation knowledge** | Markdown notes, severity/status/remediation findings with append-only manual retests, finding templates and recoverable drafts; ordered manual plans linked to objects and source scans. |
-| **Evidence** | Upload, paste or drop screenshots/files; SHA-256 metadata, original XML/JSON artifacts, authenticated previews, project Timeline and unified search. |
-| **Methodologies and workflows** | Four-state web/service review checklists; saved recon sequences with full preview, automatic advancement, pause, cancellation and retained retries. |
-| **Task planning** | A five-status board with priorities, owners, deadlines, templates and object links; project progress, overdue work and risk overview. |
-| **Reporting** | Persistent composition, delivery/working presets, preview validation and Downloads export as Markdown, standalone HTML or ZIP with selected evidence. |
-| **Credential vault** | Password-derived encryption, explicit reveal/hide/lock and idle expiry. Vault entries are kept out of search and ordinary reports. |
-| **Portable projects** | `.dtproj` export/import with evidence and remapped identities; importing creates a separate project. Credentials require explicit inclusion and an archive password. |
-| **Desktop preferences** | Theme, accent, density, reduced motion, graph detail, tool paths and a searchable command palette. |
+The workspace also includes manual review methodologies, an infrastructure graph, evidence attachments and source history, a task board, an encrypted credential vault, portable projects and configurable reports. [Full capabilities and current limits →](docs/CAPABILITIES.md) · [What changed in 0.9.0 →](docs/releases/v0.9.0.md)
 
-![Dragontrip report delivery](docs/delivery-validation/screenshots/report-delivery.png)
+- Live recon uses **Nmap, WhatWeb, ProjectDiscovery httpx and ffuf**, with individual IPv4 targets or IPv4 web origins depending on the adapter. Offline domain/CIDR/IPv6 support does not enable live scanning of those forms.
+- Imports support specific Nmap XML, Burp XML and HTTP Nuclei JSONL exports. There is no built-in Nuclei runner, arbitrary shell runner or automatic exploitation.
+- Ordinary project data is **not encrypted**. The vault encrypts credentials separately. Research drafts and retained recovery text travel in `.dtproj` v5; review them before sharing. Report composition stays local. [Storage, backups and recovery →](docs/DATA.md)
+- Reports export Markdown, HTML or ZIP with explicitly selected evidence (100 files / 32 MiB); native PDF/DOCX export is not available. Windows, macOS and ARM installers are not provided.
 
-Screenshots show explicitly authored, isolated validation projects. Real projects start empty; the fictional demo is a separate opt-in project.
+Use Dragontrip only for testing you are authorized to perform. Recon sends traffic to the targets you approve; methodologies and investigation paths record manual work. [Security policy →](SECURITY.md)
 
-## Local by design
+## Documentation and contribution
 
-Project data lives in `${XDG_DATA_HOME:-~/.local/share}/dragontrip/`, backed by SQLite and local evidence files. The desktop manages a loopback-only API with a fresh token on each launch. Project work does not require a hosted Dragontrip account or cloud database.
+[Documentation index](docs/README.md) · [User guide](docs/USAGE.md) · [Imports](docs/IMPORTS.md) · [Recon sequences](docs/METHODOLOGIES.md) · [Drafts and recovery](docs/HTB-WORKSPACE.md) · [Changelog](CHANGELOG.md) · [Roadmap](docs/ROADMAP.md)
 
-Notes, evidence and ordinary project exports contain plain project data. The credentials vault is encrypted separately; it does not encrypt the whole project or protect an already compromised computer. Back up the data directory with the application closed. [Data handling and recovery →](docs/DATA.md)
+Built with **Tauri 2 · React/TypeScript · Python/FastAPI · SQLite**.
 
-Recon tools send network traffic to the targets you approve. Use Dragontrip only where you have permission to test. Investigation paths and tasks document manual work; they do not execute exploits.
-
-## Scope and current limits
-
-- Live recon accepts individual IPv4 addresses or IPv4 web origins, depending on the adapter. Offline scope/imports also support domains, CIDR and IPv6; that support does not enable live scanning of those target forms.
-- Imports use specific Nmap XML, Burp XML and HTTP Nuclei JSONL formats. Binary `.burp` projects, HAR and Nessus imports are not supported. Nuclei results can be imported; there is no built-in Nuclei runner.
-- Scan profiles use validated tool options; there is no arbitrary shell-command runner or automatic exploitation.
-- Reports export Markdown, standalone HTML or ZIP; there is no native PDF/DOCX exporter. HTML can be printed from a browser. Evidence files require explicit selection (100 files / 32 MiB).
-- Research drafts and recovery copies are unencrypted and included in v5 `.dtproj` transfers; review them before sharing. Report composition remains local.
-- Terminal history retains a bounded tail; artifact retention is manual.
-- Current project exports use archive format v5 and read v1/v2/v3/v4. Older apps cannot read v5. Back up before upgrading and avoid reopening an upgraded database with an older binary.
-- Large-graph and memory measurements are documented; results from a cloud container do not replace testing on your own VM.
-
-The published 0.9.0 installer passed its [release workflow](https://github.com/coldvisixn/dragontrip/actions/runs/39024772755), independent download/checksum verification and installed Debian Tauri/WebKit restart/recovery acceptance. Installed [Kali Rolling acceptance](https://github.com/coldvisixn/dragontrip/actions/runs/39042144371) passed for the independently CI-built package with unchanged application code. [Exact evidence and verification limits](docs/BUILD-0.9.0.md). A 4 GB VirtualBox run remains separate. Windows, macOS and ARM installers are not provided. See [the roadmap](docs/ROADMAP.md).
-
-## Build and contribute
-
-The stack is **Tauri 2 + React/TypeScript + Python/FastAPI + SQLite**, packaged with PyInstaller for Linux.
+To build from source, install the [development dependencies and pinned toolchain](docs/DEVELOPMENT.md), then:
 
 ```bash
 git clone https://github.com/coldvisixn/dragontrip.git
@@ -113,12 +115,6 @@ bash scripts/setup.sh
 npm run desktop:dev
 ```
 
-Install the Linux development dependencies and pinned toolchain first: [development and packaging](docs/DEVELOPMENT.md). Contributions, bug reports and reproducible test cases are welcome: [CONTRIBUTING.md](CONTRIBUTING.md).
+[Contributions](CONTRIBUTING.md), [reproducible bug reports](https://github.com/coldvisixn/dragontrip/issues/new/choose) and usability feedback are welcome. Please use fictional or redacted data. Report implementation vulnerabilities through [SECURITY.md](SECURITY.md).
 
-## Documentation
-
-[Installation](docs/INSTALL.md) · [Инструкция для Kali](docs/INSTALL-KALI.md) · [User guide](docs/USAGE.md) · [Data and backups](docs/DATA.md) · [Changelog](CHANGELOG.md) · [Release process](docs/RELEASING.md) · [Security](SECURITY.md)
-
-## License
-
-[MIT](LICENSE). Recon tools installed separately retain their own licenses.
+[MIT licensed](LICENSE). Separately installed recon tools retain their own licenses.

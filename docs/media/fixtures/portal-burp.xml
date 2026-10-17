@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<!-- Authored demonstration fixture. No requests were sent. No credentials or real target data. -->
+<items>
+  <item>
+    <url>https://portal.example.test/account</url>
+    <host ip="192.0.2.10">portal.example.test</host>
+    <method>GET</method>
+    <request>GET /account HTTP/1.1
+Host: portal.example.test
+</request>
+    <status>401</status>
+    <response>HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+
+{"message":"Authentication required","fixture":"fictional demo"}</response>
+  </item>
+  <item>
+    <url>https://portal.example.test/health</url>
+    <host ip="192.0.2.10">portal.example.test</host>
+    <method>GET</method>
+    <request>GET /health HTTP/1.1
+Host: portal.example.test
+</request>
+    <status>200</status>
+    <response>HTTP/1.1 200 OK
+Content-Type: application/json
+
+{"status":"ok","fixture":"fictional demo"}</response>
+  </item>
+</items>

@@ -1,0 +1,17 @@
+{
+  "description": "Local desktop workspace for penetration testing and security research. Connect recon, observations, hypotheses, findings, evidence and follow-up work.",
+  "topics": [
+    "pentesting",
+    "penetration-testing",
+    "security-research",
+    "security-tools",
+    "reconnaissance",
+    "local-first",
+    "desktop-app",
+    "linux",
+    "tauri",
+    "nmap",
+    "burpsuite",
+    "nuclei"
+  ]
+}

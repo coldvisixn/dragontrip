@@ -11,7 +11,7 @@ Open [Releases](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.0) an
 
 GitHub's automatically generated **Source code (zip/tar.gz)** downloads are source snapshots. They do not contain a ready-to-run application. Actions artifacts are intended for development builds; Releases is the user download page.
 
-Version 0.9.0 is an early MVP for Linux x86_64, primarily current Kali Linux. It has local installed-Debian/WebKit acceptance; the tagged release workflow verifies its own package before publication. [Exact checks and platform limits](BUILD-0.9.0.md). Windows, macOS, ARM, older distributions and a specific VM performance guarantee are not provided.
+Version 0.9.0 is a prerelease (early MVP) for Linux x86_64, primarily current Kali Linux. The published installer passed independent checksum and installed-Debian/WebKit recovery checks; a separate CI build with unchanged application code passed installed Kali acceptance. [Exact checks and platform limits](BUILD-0.9.0.md). Windows, macOS, ARM, older distributions and a specific VM performance guarantee are not provided.
 
 Check your architecture with `dpkg --print-architecture`; this package requires `amd64`.
 

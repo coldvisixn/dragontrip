@@ -1,8 +1,8 @@
-# Local investigation workspace
+# Local investigation and recovery
 
 This checkout extends the existing local project model; it adds no customer fields or mandatory finding completeness checks. Notes, findings, tasks, paths and methodologies remain ordinary Knowledge records. Tool observations do not confirm vulnerabilities, access or stage completion.
 
-## Follow a machine
+## Follow an investigation
 
 1. Create/open a project. In **Recon → Import results**, preview Nmap XML, Burp XML or Nuclei HTTP JSONL. For live recon, include explicit targets in **Recon → More… → Targets & scope**.
 2. In **Research**, choose a host/service in the graph or an application/endpoint in Web applications. Imported observations retain their original source evidence.

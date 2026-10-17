@@ -1,6 +1,6 @@
 # Dragontrip 0.9.0: local research and reviewed exports
 
-The MVP is a local workspace for a human-led assessment: **import or recon → linked observations and findings → evidence → reviewed deliverable**. It keeps the existing graph, scope, methodologies, guided workflows, tasks and vault.
+Dragontrip is a local workspace for human-led penetration testing and security research: **import or recon → observations → hypotheses and checks → saved results**. Findings, reports and portable projects are possible outputs; ongoing research and unsuccessful checks belong in the same workspace. The graph, scope, methodologies, recon sequences, tasks and vault support that work. [Capabilities and current release status](CAPABILITIES.md).
 
 ## First project
 
