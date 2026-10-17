@@ -19,7 +19,7 @@ jobs:
     outputs:
       native_required: ${{ steps.changes.outputs.native_required }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Determine whether desktop verification is needed
@@ -44,11 +44,11 @@ jobs:
           with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
               print('native_required=' + str(required).lower(), file=output)
           PYTHON
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '22'
           cache: npm
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: pip
@@ -68,16 +68,16 @@ jobs:
     outputs:
       package_built: ${{ steps.package.outcome == 'success' }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Resolve package version
         run: |
           version="$(node -p "require('./package.json').version")"
           echo "DRAGONTRIP_DEB=dragontrip_${version}_amd64.deb" >> "$GITHUB_ENV"
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: '22'
           cache: npm
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: pip
@@ -92,11 +92,11 @@ jobs:
           cache-on-failure: true
       - name: Linux system dependencies
         run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf nmap whatweb ffuf webkit2gtk-driver xvfb xauth dbus-x11 scrot xdotool xfwm4 wmctrl
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.24.9'
           cache: false
-      - uses: actions/cache/restore@v4
+      - uses: actions/cache/restore@v6
         id: httpx-cache
         with:
           path: |
@@ -108,7 +108,7 @@ jobs:
         run: |
           go install github.com/projectdiscovery/httpx/cmd/httpx@v1.7.1
           echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         if: steps.httpx-cache.outputs.cache-hit != 'true'
         with:
           path: |
@@ -216,7 +216,7 @@ jobs:
         env:
           DRAGONTRIP_VALIDATION_DIR: ${{ runner.temp }}/delivery-native
         run: xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-delivery-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: delivery-acceptance
@@ -239,12 +239,12 @@ jobs:
           message="${message//$'\n'/'%0A'}"
           message="${message//$'\r'/'%0D'}"
           echo "::error::$message"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always() && steps.package.outcome == 'success'
         with:
           name: native-test-driver
           path: ~/.cargo/bin/tauri-driver
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always() && steps.package.outcome == 'success'
         with:
           name: dragontrip-linux-amd64
@@ -317,12 +317,12 @@ jobs:
             echo "::error::$message"
             exit 1
           }
-      - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           name: dragontrip-linux-amd64
           path: artifact
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: native-test-driver
           path: test-driver
@@ -378,7 +378,7 @@ jobs:
           apt-get remove -y dragontrip
           test -f "$HOME/.local/share/dragontrip/uninstall-check"
           test ! -e /usr/bin/dragontrip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: kali-native-validation
           path: |
