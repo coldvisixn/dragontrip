@@ -13,6 +13,16 @@ dependency reconciliation documented in [PR review](PR-REVIEW-0.9.1.md).
 The published checksum belongs to the release workflow's actual package. Local
 builds and earlier PR artifacts may have different bytes and must not reuse it.
 
+## Published result — 2026-10-17
+
+- Release source: `85072990d515f9db37c76adf7e10fbb92e2b0a85` (`v0.9.1`, merged PR #17).
+- [Release build, installed-Kali gate and publication](https://github.com/coldvisixn/dragontrip/actions/runs/39066091106): all passed.
+- [Pre-merge Linux/Kali acceptance](https://github.com/coldvisixn/dragontrip/actions/runs/39065068646) and [security audits](https://github.com/coldvisixn/dragontrip/actions/runs/39065068650): passed; the tested tree matches the release commit.
+- Public installer: **63,057,764 bytes**, SHA-256 `f9a474f4f4922a4a05d078e661016e283b6fe6a970a385fecdb82d6e40c28174`.
+- Both public assets were independently downloaded; their byte lengths and SHA-256 digests match GitHub asset metadata, and the supplied checksum verifies the installer.
+- Extracted public package metadata is `0.9.1` / `amd64`. Its actual frozen backend passed a fresh upgrade from the published 0.9.0 backend, including records, retests, original evidence, objects, encrypted vault decryption, legacy drafts and portable v5 export.
+- [Machine-readable publication evidence](release-validation/v0.9.1/published-package.json) records asset identity, source and workflow/job IDs. This later documentation update does not change or replace the tagged package.
+
 ## Publication gates
 
 The tag must match npm, npm lockfile root metadata, Cargo manifest/lock metadata,
