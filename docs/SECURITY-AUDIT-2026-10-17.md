@@ -20,6 +20,8 @@ This is a source and local regression audit, not a penetration test of deployed 
 
 `tests/test_security.py` adds 22 regressions covering actual streamed body sizes, false lengths, accepted small chunked JSON, rejected multipart uploads, password/credential/malformed-JSON reflection, invalid hosts, numeric headers and non-ASCII authorization. Rejected writes leave no project or evidence records.
 
+`tests/test_security_audit.py` adds 5 monitoring regressions: the copied GLib baseline is included without changing the real lockfile, the verified backport stays visible, new vulnerabilities/unsoundness or a mismatched version fail the audit, and an incomplete auditor run cannot succeed.
+
 The dependency-audit workflow checks lockfiles on pull requests, pushes to `main`, manual runs and a weekly schedule. It includes development dependencies, uses read-only repository permissions and pins its actions to verified commit SHAs. Dependabot remains responsible for proposing dependency updates.
 
 ## GTK security backport and remaining maintenance concern
@@ -45,7 +47,7 @@ RustSec still reports [RUSTSEC-2024-0370](https://rustsec.org/advisories/RUSTSEC
 
 ## Verification
 
-- Python: **124 passed, 1 skipped**. The opt-in live Nmap integration test was skipped; no external assessment targets were scanned.
+- Python: **129 passed, 1 skipped**. The opt-in live Nmap integration test was skipped; no external assessment targets were scanned.
 - UI: **44 passed** across 11 files. The first full run had one asynchronous page-load timeout under concurrent compilation; a focused rerun and a subsequent full run passed without changing application code or weakening the assertion.
 - `npm run lint`, `npm run format:check`, `npm run build`, `cargo fmt --check`, `pip check`, and `git diff --check` passed.
 - `npm audit`: **0 vulnerabilities** including development dependencies.
