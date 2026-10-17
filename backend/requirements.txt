@@ -1,10 +1,11 @@
-fastapi==0.115.12
+fastapi==0.143.3
+starlette==1.8.0
 uvicorn==0.34.2
 SQLAlchemy==2.0.40
 alembic==1.15.2
 defusedxml==0.7.1
 pydantic==2.11.4
-cryptography==46.0.3
-python-multipart==0.0.20
+cryptography==50.0.2
+python-multipart==0.0.32
 Pillow==12.3.0
 markdown-it-py==4.0.0
