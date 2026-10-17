@@ -16,5 +16,20 @@
     "package_source_commit": "3f0c3c0ef300a1d9ca3ac092f17e8786918562de",
     "application_code_unchanged_from_release": true,
     "package_built_independently": true
+  },
+  "final_linux_and_kali_ci": {
+    "passed": true,
+    "workflow_url": "https://github.com/coldvisixn/dragontrip/actions/runs/39042144371",
+    "source_commit": "ce8e879ace701babeac377fe369fa321a5c9ea95",
+    "application_code_unchanged_from_release": true
+  },
+  "downloaded_installer_small_window_full_native": {
+    "passed": true,
+    "screen": "1366x768",
+    "launcher": true,
+    "real_recon": true,
+    "encrypted_transfer": true,
+    "restart": true,
+    "shutdown_during_nmap": true
   }
 }
