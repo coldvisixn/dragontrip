@@ -1,5 +1,7 @@
 # Verification record — 15 October 2026
 
+**Historical verification record.** The package versions, test counts and measurements below describe earlier snapshots. For the current published installer, checksum and Linux/Kali results, see [0.9.1 verification](BUILD-0.9.1.md).
+
 ## Completed checks
 
 - Python 3.12, Rust 1.99.0, Linux x86_64.

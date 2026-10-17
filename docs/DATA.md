@@ -32,15 +32,13 @@ Back up before upgrades. Migrations run at launch; older binaries may not unders
 
 ## Project archives
 
-`.dtproj` archives transfer a project with graph, knowledge, tasks, history and evidence. Import creates a separate project and remaps references. Active imported scans become interrupted and never resume automatically. Archive checksums detect changed evidence.
+`.dtproj` archives transfer a project with graph, knowledge, tasks, history and evidence. Import creates a separate project and remaps references. Active imported scans become interrupted; active automatic recon sequences become paused and require fresh authorization. Neither resumes automatically. Archive checksums detect changed evidence.
 
 Credentials are excluded by default. Including them requires an unlocked vault, explicit opt-in and an independent archive password. The credential payload is encrypted; the rest of the archive is not. Import re-encrypts included credentials under the unlocked destination vault.
 
-Task records added in 0.5.0 require the updated importer. Earlier archives remain supported by 0.5.0. Current limits include a 128 MiB expanded archive, a 32 MiB manifest, 10,000 objects, 50,000 edges, 5,000 scans/knowledge records, 500 attachments and 10 MiB per attachment. [Archive extension contract](EXTENSIONS.md#project-archive-contract) documents validation.
+Current exports use **format v5**; imports read **v1–v5**. Archives include scope, import runs, original sources, methodology/workflow records, finding retests and research workspace recovery, with project references remapped. Older applications reject v5; use a matching full-directory backup for rollback. Imported-source attachments are retained by history and cannot be deleted through ordinary attachment cleanup. [Import limits and provenance](IMPORTS.md) · [Methodology/workflow portability](METHODOLOGIES.md).
 
-0.6.0 adds scope, import runs and immutable source observations through additive migration 0005. New archives use format version 2 and include those records and original sources; version 1 remains readable. Older application versions reject version 2. Imported-source attachments are retained by history and cannot be deleted through ordinary attachment cleanup. [Import limits and provenance](IMPORTS.md).
-
-0.7.0 adds methodology/workflow Knowledge records and archive version 3, including run scan IDs and action references. There is no additional physical database migration. Versions 1/2 remain readable. [Methodology/workflow portability and limits](METHODOLOGIES.md).
+Current limits include a 128 MiB expanded archive, a 32 MiB manifest, 10,000 objects, 50,000 edges, 5,000 scans/knowledge records, 500 attachments and 10 MiB per attachment. [Archive extension contract](EXTENSIONS.md#project-archive-contract) documents validation. Format evolution is recorded in the [changelog](../CHANGELOG.md); 0.9.1 adds no format or database migration.
 
 ## Recoverable drafts (0.9.0)
 
@@ -57,5 +55,3 @@ Terminal history keeps the last 64 KiB per scan, not a full console transcript. 
 ## Uninstall
 
 `sudo apt remove dragontrip` removes the application and retains user data. Archive or back up your work before manually removing a data directory. Uninstalling the application does not uninstall separately installed recon tools.
-
-The current local-investigation work adds project-scoped workspace/draft recovery in the existing Configuration table and archive format **5**, retaining import support for versions 1–4. Retained drafts include text before conflict resolution and are plain project data. Record versions prevent stale saves; closed-draft tombstones reject late autosaves. Active automatic sequences become paused on restart/import and require explicit authorization to continue. See [the recovery and transfer guide](HTB-WORKSPACE.md).

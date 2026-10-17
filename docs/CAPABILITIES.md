@@ -4,7 +4,7 @@ Dragontrip is a local desktop workspace for penetration testing and security res
 
 [Install](INSTALL.md) · [User guide](USAGE.md) · [Gallery](SHOWCASE.md) · [English overview](../README.md) · [Русский](../README.ru.md)
 
-## Available in 0.9.0
+## Available in 0.9.1
 
 | Workspace              | What it supports                                                                                                                                                                                                 | Guide                                                                     |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |

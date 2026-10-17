@@ -37,7 +37,9 @@ For capture experiments, set `DRAGONTRIP_MEDIA_OUTPUT` to a separate directory. 
 
 ## GitHub repository settings
 
-At preparation time, the repository had no About description or topics. The connected GitHub tools expose repository content writes, but no About/topic update operation; the cloud shell's GitHub API access is blocked by its network policy. Therefore these settings must be applied by a maintainer with repository administration access. Git content can still be pushed normally. Do not treat a committed metadata file as applied GitHub settings.
+The repository's About description and topics were checked against the public GitHub API after the 0.9.1 release; they match [`github-metadata.json`](github-metadata.json). The homepage field is empty; the README already links directly to the published installer and release. Social-preview upload status has not been verified. Keep the capture provenance above tied to 0.9.0; do not relabel the existing images as new 0.9.1 captures.
+
+The connected tools expose repository content writes, but no About/topic or social-preview update operation. If repository settings need changing, a maintainer can use the steps below. Committing metadata or an image does not apply GitHub settings.
 
 1. Open [the repository](https://github.com/coldvisixn/dragontrip), click the gear beside **About**, paste the `description` from [`github-metadata.json`](github-metadata.json), add its `topics`, and save.
 2. Download [`social-preview.png`](social-preview.png), open [Settings → General](https://github.com/coldvisixn/dragontrip/settings), scroll to **Social preview**, choose **Edit → Upload an image**, and select that PNG. GitHub has no supported social-preview upload operation in the connected tools.

@@ -1,5 +1,7 @@
 # Phase 2 — Recon Automation (0.2.0)
 
+**Historical implementation record.** For the current release, use [capabilities](CAPABILITIES.md), [installation](INSTALL.md) and [published-package verification](BUILD-0.9.1.md).
+
 Phase 2 adds real recon tools and a persistent, bounded execution queue. Attack Paths, Findings, Notes and Credentials Vault remain Phase 3 features.
 
 ## Available workflows

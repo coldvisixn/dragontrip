@@ -68,7 +68,11 @@
 
 ## Быстрый старт
 
+**Опубликован выпуск 0.9.1.** Обновление содержит исправления безопасности API и зависимостей. Публичный установщик прошёл нативные проверки на Ubuntu и после установки на Kali, а также обновление данных и зашифрованного Vault с 0.8.0 и 0.9.0. [Изменения](docs/releases/v0.9.1.md) · [Проверенный пакет и контрольная сумма](docs/BUILD-0.9.1.md) · [Аудит безопасности](docs/SECURITY-AUDIT-2026-10-17.md).
+
 Скачайте **[`dragontrip_0.9.1_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.9.1/dragontrip_0.9.1_amd64.deb)** и **[файл SHA-256](https://github.com/coldvisixn/dragontrip/releases/download/v0.9.1/dragontrip_0.9.1_amd64.deb.sha256)** в одну папку. Архивы GitHub «Source code» предназначены для разработчиков.
+
+При обновлении сначала закройте Dragontrip и [сохраните копию всей папки данных](docs/DATA.md#back-up-the-installation).
 
 ```bash
 sha256sum --check dragontrip_0.9.1_amd64.deb.sha256

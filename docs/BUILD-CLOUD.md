@@ -1,6 +1,8 @@
 # Reproduce the cloud build
 
-Use the existing checkout. The cloud task is already isolated; do not create a Git worktree unless requested. Python/frontend checks run on the host. GTK/WebKit and packaging checks run in an isolated Debian container because the host image has no desktop development libraries.
+This recipe records the managed-container setup used during 0.4.0 development. Its named container, users and downloaded helper tools are session-specific; check that they exist before reusing the commands. For the current toolchain and standard build, start with [development setup](DEVELOPMENT.md). [0.9.1 verification](BUILD-0.9.1.md) records the published installer and current Ubuntu/Kali checks.
+
+In that setup, Python/frontend checks ran on the host; GTK/WebKit and packaging checks ran in an isolated Debian container because the host had no desktop development libraries. Use the existing checkout unless a separate worktree is needed for your task.
 
 ## Host
 
@@ -15,7 +17,7 @@ npm run build
 .venv/bin/python scripts/smoke-packaged.py
 ```
 
-The prepared cloud installation places a rootless Nmap wrapper under `.build-tools/bin`, backed by packages downloaded from the signed Debian repository. ProjectDiscovery httpx 1.7.1 under `.build-tools/go-bin` came from its official GitHub release and was checked against that release's SHA-256 file. These tools are optional setup artifacts, not shipped inside Dragontrip.
+The original cloud installation placed a rootless Nmap wrapper under `.build-tools/bin`, backed by packages downloaded from the signed Debian repository. ProjectDiscovery httpx 1.7.1 under `.build-tools/go-bin` came from its official GitHub release and was checked against that release's SHA-256 file. These tools are optional session setup artifacts, not shipped inside Dragontrip or created by `setup.sh`.
 
 Rust 1.99.0 is pinned by `rust-toolchain.toml`; use rustup with its normal checksum/TLS verification. Do not replace the version or disable verification to work around installation problems.
 
@@ -23,7 +25,7 @@ For browser checks, start `npm run dev` or a Vite production preview on port 142
 
 ## Native container
 
-The prepared container is named `dragontrip-build-env`, based on `node:22-trixie-slim`. It binds this checkout, the host rustup/cargo directories and the combined CA bundle. Docker's session proxy defaults are retained. On a later task, verify the local daemon and current proxy/CA configuration before reusing or recreating it. Do not dump Docker credentials or disable TLS verification.
+The original container was named `dragontrip-build-env`, based on `node:22-trixie-slim`. It bound the checkout, host rustup/cargo directories and combined CA bundle. Docker's session proxy defaults were retained. Verify the local daemon and current proxy/CA configuration before reusing or recreating it. Do not dump Docker credentials or disable TLS verification.
 
 The container needs:
 
@@ -52,8 +54,9 @@ This override skips only the already-executed frontend build. It does not change
 Install the produced package inside the test container with `dpkg -i`. Reinstall even when the version string is unchanged when validating a freshly built file. Compare installed executable/sidecar digests to an extracted copy of that exact `.deb`.
 
 ```bash
+package_version="$(node -p "require('./package.json').version")"
 docker exec dragontrip-build-env dpkg -i \
-  /workspace/dragontrip/src-tauri/target/release/bundle/deb/dragontrip_0.4.0_amd64.deb
+  "/workspace/dragontrip/src-tauri/target/release/bundle/deb/dragontrip_${package_version}_amd64.deb"
 docker exec -u 1000:1000 \
   -e HOME=/tmp/dragontrip-native-home \
   -e WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1 \

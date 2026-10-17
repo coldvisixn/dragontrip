@@ -86,3 +86,5 @@ This entry does not announce a published release or completion of the later work
 [0.5.0]: https://github.com/coldvisixn/dragontrip/releases/tag/v0.5.0
 
 [0.8.0]: https://github.com/coldvisixn/dragontrip/releases/tag/v0.8.0
+
+[0.9.1]: https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.1

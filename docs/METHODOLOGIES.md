@@ -1,4 +1,4 @@
-# Methodologies and approved recon workflows (0.9.0)
+# Methodologies and approved recon workflows
 
 Methodologies record explicit review decisions; saved recon sequences run selected checks within the existing adapter and scope limits. A crawler, automatic finding correlation and live-domain scanning remain outside this release.
 
@@ -39,4 +39,4 @@ xvfb-run -a dbus-run-session -- python3 scripts/native-methodology-smoke.py /usr
 
 Both smoke scenarios own a loopback HTTP server on port 8089 and isolated user data. Run them sequentially. The browser scenario drives real Nmap and httpx; the native one drives real WhatWeb and httpx, without an IPC shim. Test fixtures/coverage notes are explicitly authored inside isolated validation projects; new user projects remain empty.
 
-[Methodology screenshot](screenshots/methodologies/methodology-coverage.png) · [Completed sequence](screenshots/methodologies/workflow-complete.png). Verification/package details: [BUILD-0.7.0](BUILD-0.7.0.md).
+[Methodology screenshot](screenshots/methodologies/methodology-coverage.png) · [Completed sequence](screenshots/methodologies/workflow-complete.png). [Current package verification](BUILD-0.9.1.md) · [Original 0.7.0 implementation record](BUILD-0.7.0.md).
