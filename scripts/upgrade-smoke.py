@@ -1,6 +1,6 @@
 """Upgrade an isolated project using the actual previous and current frozen backends.
 
-Pass the extracted 0.8.0 backend as baseline. Never opens the user's data directory.
+Pass an extracted published backend as baseline. Never opens the user's data directory.
 """
 import argparse
 import io
@@ -19,8 +19,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('baseline', type=Path)
     parser.add_argument('current', type=Path, nargs='?', default=Path('src-tauri/resources/backend/dragontrip-backend'))
+    parser.add_argument('--baseline-version', default='previous release')
     args = parser.parse_args()
     token = secrets.token_hex(32)
+    vault_password = secrets.token_urlsafe(24)
+    credential_secret = secrets.token_urlsafe(24)
     with tempfile.TemporaryDirectory(prefix='dragontrip-upgrade-') as storage:
         def launch(binary):
             proc = subprocess.Popen([str(binary.resolve())], env={**os.environ, 'XDG_DATA_HOME': storage, 'DRAGONTRIP_TOKEN': token, 'XDG_DOWNLOAD_DIR': storage}, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -43,7 +46,7 @@ def main():
             raise RuntimeError('Backend not ready')
         proc, request = launch(args.baseline)
         try:
-            pid = request('/projects', 'POST', {'name': '0.8 upgrade fixture'})['id']
+            pid = request('/projects', 'POST', {'name': 'Published release upgrade fixture'})['id']
             base = f'/projects/{pid}'
             node = request(base + '/nodes', 'POST', {'label': 'Saved hypothesis', 'description': 'Preserve object context'})
             finding = request(base + '/knowledge', 'POST', {'kind': 'finding', 'title': 'Manual finding', 'content': {'body': 'Original reasoning', 'node_ids': [node['id']]}})
@@ -54,11 +57,18 @@ def main():
             boundary = 'dragontrip-upgrade-fixture'
             data = f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="proof.txt"\r\nContent-Type: text/plain\r\n\r\noriginal evidence\r\n--{boundary}--\r\n'.encode()
             evidence = request(base + '/attachments', 'POST', data, content_type='multipart/form-data; boundary=' + boundary)
+            request('/vault/setup', 'POST', {'password': vault_password})
+            credential = request(base + '/credentials', 'POST', {'title': 'Upgrade credential', 'username': 'fixture-user', 'secret': credential_secret, 'node_ids': [node['id']]})
         finally:
             proc.terminate()
             proc.wait(timeout=15)
         proc, request = launch(args.current)
         try:
+            assert request('/vault')['unlocked'] is False
+            request('/vault/unlock', 'POST', {'password': vault_password})
+            restored_credential = request(base + '/credentials/' + credential['id'])
+            assert restored_credential['secret'] == credential_secret
+            assert restored_credential['node_ids'] == [node['id']]
             assert request(base + '/knowledge/' + finding['id']) == finding
             assert request(base + '/attachments/' + evidence['id'] + '/content', raw=True) == b'original evidence'
             assert request(base)['nodes'][0]['id'] == node['id']
@@ -72,7 +82,7 @@ def main():
             Path(exported['path']).unlink()
             manifest = json.loads(zipfile.ZipFile(io.BytesIO(archive)).read('manifest.json'))
             assert manifest['version'] == 5 and key in manifest['workspace']
-            print('PASS: published 0.8.0 → current frozen backend: records, retests, evidence, objects, draft migration and v5 archive')
+            print(f'PASS: published {args.baseline_version} → current frozen backend: records, retests, evidence, objects, encrypted vault, draft migration and v5 archive')
         finally:
             proc.terminate()
             proc.wait(timeout=15)

@@ -2,6 +2,15 @@
 
 Notable user-facing changes are listed here. Download installers from [Releases](https://github.com/coldvisixn/dragontrip/releases), not the automatic source-code archives.
 
+## [0.9.1] — Security and release maintenance
+
+- Enforce actual API request-body limits, redact passwords/credentials from validation errors and reject malformed loopback/authentication headers safely.
+- Backport GLib's optimized string-iterator safety fix for the GTK 3 runtime; verify upstream source hashes and continue monitoring the original registry baseline for new advisories.
+- Consolidate reviewed dependency updates, including compatible Pydantic/core and Vite/React-plugin pairs; adapt the getrandom 0.4 API. Keep TypeScript 5.9 until the lint toolchain supports 7.
+- Update and pin GitHub Actions; group coupled dependency updates to prevent broken individual update PRs.
+- Require encrypted-vault/data upgrades from published 0.8.0 and 0.9.0, plus real installation/native acceptance of the exact release package on Kali before publishing.
+- Preserve 0.9 project data and portable archive format v5. No new database migration or archive format change.
+
 ## 0.9.0 — Local lab investigation MVP
 
 - Three-section navigation with contextual actions, an unobtrusive tool panel and a simpler observation → hypothesis → check flow.

@@ -126,10 +126,7 @@ def main():
                     )
                 )
                 driver.navigate("Methodologies", ".methodology-page")
-                driver.js(
-                    "const s=document.querySelector('[aria-label=\"Methodology object\"]');s.value=arguments[0];s.dispatchEvent(new Event('change',{bubbles:true}))",
-                    app_node["id"],
-                )
+                driver.select('[aria-label="Methodology object"]', app_node["id"])
                 driver.click("Add methodology")
                 checks.wait_until(
                     lambda: driver.js(
@@ -241,6 +238,16 @@ def main():
                     "PASS: native four-state methodology, explicit notes, two actual sequential WhatWeb/httpx processes, run history and restart persistence",
                     flush=True,
                 )
+            except Exception:
+                # Preserve the actual UI state instead of reporting only a
+                # generic missing-button timeout after the temporary app exits.
+                try:
+                    print(driver.js("return document.body.innerText"), flush=True)
+                    print(driver.js("return [...document.querySelectorAll('select')].map(s=>({label:s.getAttribute('aria-label'),value:s.value,options:[...s.options].map(o=>({value:o.value,text:o.text}))}))"), flush=True)
+                    checks.capture_ui(checks.VALIDATION / "screenshots/native-methodology-failure.png")
+                except Exception:
+                    pass
+                raise
             finally:
                 try:
                     stop_application()

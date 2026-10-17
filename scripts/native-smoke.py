@@ -194,6 +194,18 @@ class Driver:
         self.click(label)
         wait_until(lambda: self.js("return !!document.querySelector(arguments[0])", selector))
 
+    def select(self, selector, value):
+        # API persistence can finish before React refreshes the select's options.
+        # Use the native option click only after the requested UI option exists.
+        option = wait_until(lambda: self.js("""
+            const select=document.querySelector(arguments[0]);
+            if(!select||select.disabled)return null;
+            return [...select.options].find(o=>o.value===arguments[1]&&!o.disabled)||null;
+        """, selector, value))
+        eid = option["element-6066-11e4-a52e-4f735466cecf"]
+        self.call("POST", f"/element/{eid}/click", {})
+        wait_until(lambda: self.js("return document.querySelector(arguments[0])?.value===arguments[1]", selector, value))
+
     def graph(self):
         return self.call("POST", "/execute/async", {"script": """
             const done=arguments[arguments.length-1];

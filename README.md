@@ -8,9 +8,9 @@
 
 Connect recon results, observations, hypotheses, findings and next checks in one project — and return with your reasoning intact.
 
-**[Download for Linux · v0.9.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.0)** · [Quick start](#get-started) · [See it in action](docs/SHOWCASE.md) · [Русский](README.ru.md)
+**[Download for Linux · v0.9.1](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.1)** · [Quick start](#get-started) · [See it in action](docs/SHOWCASE.md) · [Русский](README.ru.md)
 
-[![Release](docs/media/badges/release.svg)](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.0)
+[![Release](docs/media/badges/release.svg)](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.1)
 [![Linux build](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml)
 [![Linux x86_64](docs/media/badges/platform.svg)](docs/INSTALL.md)
 [![MIT license](docs/media/badges/license.svg)](LICENSE)
@@ -68,12 +68,12 @@ Screenshots and the recording use the real application with an isolated, explici
 
 ## Get started
 
-Download **[`dragontrip_0.9.0_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.9.0/dragontrip_0.9.0_amd64.deb)** and its **[SHA-256 file](https://github.com/coldvisixn/dragontrip/releases/download/v0.9.0/dragontrip_0.9.0_amd64.deb.sha256)** into the same folder. GitHub's “Source code” archives are for developers.
+Download **[`dragontrip_0.9.1_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.9.1/dragontrip_0.9.1_amd64.deb)** and its **[SHA-256 file](https://github.com/coldvisixn/dragontrip/releases/download/v0.9.1/dragontrip_0.9.1_amd64.deb.sha256)** into the same folder. GitHub's “Source code” archives are for developers.
 
 ```bash
-sha256sum --check dragontrip_0.9.0_amd64.deb.sha256
+sha256sum --check dragontrip_0.9.1_amd64.deb.sha256
 sudo apt update
-sudo apt install ./dragontrip_0.9.0_amd64.deb
+sudo apt install ./dragontrip_0.9.1_amd64.deb
 dragontrip
 ```
 
@@ -87,11 +87,11 @@ sudo apt install nmap whatweb httpx-toolkit ffuf
 
 The `.deb` bundles the frontend and Python backend; Node.js, Rust, pip and Docker are not needed to run it. Recon tools are separate system executables. The httpx adapter needs **ProjectDiscovery httpx** (`httpx-toolkit` on Kali), not the Python library.
 
-**Current download:** 0.9.0 is a prerelease (early MVP), with an English interface and a Linux x86_64 installer. Published-package Debian and installed Kali checks are documented in [build verification](docs/BUILD-0.9.0.md); a real 4 GB VirtualBox acceptance remains separate. [Installation, updates and troubleshooting →](docs/INSTALL.md) · [Инструкция для Kali →](docs/INSTALL-KALI.md)
+**Current download:** 0.9.1 is a prerelease (early MVP), with an English interface and a Linux x86_64 installer. The release installer is checked on Ubuntu and installed on Kali before publication; see [build verification](docs/BUILD-0.9.1.md). A real 4 GB VirtualBox acceptance remains separate. [Installation, updates and troubleshooting →](docs/INSTALL.md) · [Инструкция для Kali →](docs/INSTALL-KALI.md)
 
 ## Capabilities and boundaries
 
-The workspace also includes manual review methodologies, an infrastructure graph, evidence attachments and source history, a task board, an encrypted credential vault, portable projects and configurable reports. [Full capabilities and current limits →](docs/CAPABILITIES.md) · [What changed in 0.9.0 →](docs/releases/v0.9.0.md)
+The workspace also includes manual review methodologies, an infrastructure graph, evidence attachments and source history, a task board, an encrypted credential vault, portable projects and configurable reports. [Full capabilities and current limits →](docs/CAPABILITIES.md) · [What changed in 0.9.1 →](docs/releases/v0.9.1.md)
 
 - Live recon uses **Nmap, WhatWeb, ProjectDiscovery httpx and ffuf**, with individual IPv4 targets or IPv4 web origins depending on the adapter. Offline domain/CIDR/IPv6 support does not enable live scanning of those forms.
 - Imports support specific Nmap XML, Burp XML and HTTP Nuclei JSONL exports. There is no built-in Nuclei runner, arbitrary shell runner or automatic exploitation.
