@@ -49,5 +49,5 @@ jobs:
           toolchain: '1.99.0'
       - name: Install pinned RustSec auditor
         run: cargo install cargo-audit --version 0.22.2 --locked
-      - name: Audit Rust lockfile, rejecting unsound code too
-        run: cargo audit --file src-tauri/Cargo.lock --deny unsound
+      - name: Audit Rust dependencies including backported registry baselines
+        run: python3 scripts/audit-rust.py

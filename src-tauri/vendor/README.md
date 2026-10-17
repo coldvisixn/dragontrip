@@ -25,9 +25,13 @@ with `--release`, since compiler optimization exposes the original bug. Full
 packaging and native acceptance must pass before shipping the backport.
 
 Cargo's registry auditor does not assess local path packages against upstream
-advisories. The separate provenance check and optimized behavioral regressions
-are therefore mandatory, even when `cargo audit` reports zero vulnerabilities.
-Do not remove them simply to make an audit green.
+advisories. `python3 scripts/audit-rust.py` restores the original registry version
+and archive checksum in a temporary audit lockfile, so future advisories for the
+vendored version are still detected. It reports this single verified backport
+separately after checking the complete source hashes, fails on any vulnerability
+or other unsoundness, and keeps maintenance warnings visible. The real lockfile
+is never modified. The provenance and optimized behavioral checks are mandatory;
+do not remove them simply to make an audit green.
 
 Remove this override when Tauri's supported GTK stack includes the upstream fix.
 Until then, this project owns the small backport and must review new GLib
