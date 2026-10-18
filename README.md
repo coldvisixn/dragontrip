@@ -68,7 +68,7 @@ Screenshots and the recording use the real application with an isolated, explici
 
 ## Get started
 
-**0.10.0 connects the complete investigation.** Set a project goal, approve a recon plan, follow services into web research and keep evidence, tasks and retests linked. The new workspace preserves context and partial results across interruptions. [Release notes](docs/releases/v0.10.0.md) · [Build verification](docs/BUILD-0.10.0.md) · [Audit and before/after evidence](docs/experience/README.ru.md).
+**0.10.0 connects the complete investigation.** Set a project goal, approve a recon plan, follow services into web research and keep evidence, tasks and retests linked. The new workspace preserves context and partial results across interruptions. The published installer passed native Ubuntu and installed-Kali checks; its public download and upgrade from 0.9.1 were verified. [Release notes](docs/releases/v0.10.0.md) · [Build verification](docs/BUILD-0.10.0.md) · [Audit and before/after evidence](docs/experience/README.ru.md).
 
 Download **[`dragontrip_0.10.0_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.10.0/dragontrip_0.10.0_amd64.deb)** and its **[SHA-256 file](https://github.com/coldvisixn/dragontrip/releases/download/v0.10.0/dragontrip_0.10.0_amd64.deb.sha256)** into the same folder. GitHub's “Source code” archives are for developers.
 

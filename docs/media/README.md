@@ -39,7 +39,7 @@ For capture experiments, set `DRAGONTRIP_MEDIA_OUTPUT` to a separate directory. 
 
 ## GitHub repository settings
 
-Updated About text, homepage and topics are prepared in [`github-metadata.json`](github-metadata.json). Applying these repository settings has not yet been verified: this environment blocks GitHub CLI API access, and the connector has no repository-settings operation. Social-preview upload status is also unverified.
+Updated About text, homepage and topics are prepared in [`github-metadata.json`](github-metadata.json). The public About description still contains the previous wording; the new settings were not applied: this environment blocks GitHub CLI API access, and the connector has no repository-settings operation. Social-preview upload status is also unverified.
 
 The connected tools expose repository content writes, but no About/topic or social-preview update operation. If repository settings need changing, a maintainer can use the steps below. Committing metadata or an image does not apply GitHub settings.
 
