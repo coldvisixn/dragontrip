@@ -7,7 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import zipfile
 import pytest
-from dragontrip.db import Node, Project, database
+from dragontrip.db import Node, database
 from dragontrip.import_formats import parse_source, MAX_SOURCE
 from dragontrip.scope import web_url, canonical_rule, classify
 
@@ -350,7 +350,7 @@ def test_portable_archive_preserves_provenance_identity_and_reimport(client):
     assert archive.status_code == 200, archive.text
     with zipfile.ZipFile(io.BytesIO(archive.content)) as z:
         manifest = json.loads(z.read("manifest.json"))
-        assert manifest["version"] == 5
+        assert manifest["version"] == 6
         assert len(manifest["observations"]) == 4
     imported = client.post(
         "/imports", files={"file": ("copy.dtproj", archive.content, "application/zip")}
@@ -413,7 +413,9 @@ def test_upgrade_0004_and_restart_preserve_old_project(tmp_path):
         config.attributes["connection"] = connection
         command.upgrade(config, "0004")
     with sessions() as db:
-        db.add(Project(id="legacy", name="Old engagement"))
+        # Seed the historical schema with historical columns, not today's ORM.
+        from sqlalchemy import text
+        db.execute(text("INSERT INTO projects (id, name, description, created, updated) VALUES ('legacy', 'Old engagement', '', '2026-01-01', '2026-01-01')"))
         db.flush()
         db.add(
             Node(

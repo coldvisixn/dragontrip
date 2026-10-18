@@ -1,5 +1,5 @@
 {
-  "description": "Local desktop workspace for penetration testing and security research. Connect recon, observations, hypotheses, findings, evidence and follow-up work.",
+  "description": "Local security research workspace for Linux: project goals, scoped recon, web observations, linked evidence, tasks, findings and retests. Resume with context.",
   "topics": [
     "pentesting",
     "penetration-testing",
@@ -13,5 +13,6 @@
     "nmap",
     "burp-suite",
     "nuclei"
-  ]
+  ],
+  "homepage": "https://github.com/coldvisixn/dragontrip/releases/tag/v0.10.0"
 }

@@ -1,5 +1,6 @@
 import {
   Activity,
+  Target,
   LayoutDashboard,
   Folder,
   Network,
@@ -10,23 +11,22 @@ import {
 
 export const sectionGroups = [
   {
+    id: 'plan',
+    label: 'Plan',
+    icon: Target,
+    pages: ['Project overview', 'Targets & scope', 'Methodologies'],
+  },
+  {
     id: 'assets',
     label: 'Research',
     icon: Network,
-    pages: [
-      'Network Graph',
-      'Hosts',
-      'Web applications',
-      'Project overview',
-      'Methodologies',
-      'Attack Paths',
-    ],
+    pages: ['Network Graph', 'Hosts', 'Web applications'],
   },
   {
     id: 'recon',
     label: 'Recon',
     icon: Activity,
-    pages: ['Scans', 'Import results', 'Recon workflows', 'Targets & scope'],
+    pages: ['Scans', 'Import results', 'Recon workflows'],
   },
   {
     id: 'investigation',
@@ -36,6 +36,7 @@ export const sectionGroups = [
       'Notes',
       'Findings',
       'Task board',
+      'Attack Paths',
       'Evidence',
       'Credentials Vault',
       'Timeline',
@@ -175,57 +176,49 @@ export function SectionTabs({
         className="section-tabs"
         role="tablist"
         aria-label={section.label + ' sections'}
+        aria-orientation="vertical"
         onKeyDown={(event) => {
           if (event.altKey || event.ctrlKey || event.metaKey) return;
           const tabs = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
           const index = tabs.indexOf(document.activeElement as HTMLButtonElement);
           const key = event.key;
-          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(key)) return;
+          if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(key))
+            return;
           event.preventDefault();
           const next =
             key === 'Home'
               ? 0
               : key === 'End'
                 ? tabs.length - 1
-                : (index + (key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+                : (index + (['ArrowRight', 'ArrowDown'].includes(key) ? 1 : -1) + tabs.length) %
+                  tabs.length;
           tabs[next]?.focus();
           tabs[next]?.click();
         }}
       >
-        {section.pages.slice(0, 3).map((name) => (
+        {section.pages.map((name) => (
           <button
             key={name}
             id={tabId(name)}
             type="button"
+            title={name}
+            aria-label={name}
+            data-short={name
+              .split(/ |&/)
+              .filter(Boolean)
+              .map((word) => word[0])
+              .join('')
+              .slice(0, 3)}
             role="tab"
             aria-selected={page === name}
             aria-controls="workspace-section-panel"
             tabIndex={page === name ? 0 : -1}
             onClick={() => onNavigate(name)}
           >
-            {name}
+            <span>{name}</span>
           </button>
         ))}
       </div>
-      {section.pages.length > 3 && (
-        <label className="section-more">
-          <span className="sr-only">More {section.label} pages</span>
-          <select
-            aria-label={'More ' + section.label + ' pages'}
-            value={(section.pages.slice(3) as readonly string[]).includes(page) ? page : ''}
-            onChange={(e) => {
-              if (e.target.value) onNavigate(e.target.value as WorkspacePage);
-            }}
-          >
-            <option value="">More…</option>
-            {section.pages.slice(3).map((name) => (
-              <option key={name} id={tabId(name)} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
     </div>
   );
 }

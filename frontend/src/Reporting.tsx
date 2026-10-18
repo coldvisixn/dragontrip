@@ -4,6 +4,8 @@ import { api, type Project } from './api';
 import Markdown from './Markdown';
 import { useDraft } from './useDraft';
 import { type Attachment } from './Evidence';
+import type { WorkspacePage } from './WorkspaceNavigation';
+import { useProjectState } from './workspace';
 
 type Overview = {
   objects: Record<string, number>;
@@ -14,6 +16,13 @@ type Overview = {
   active_risks: Record<string, number>;
   attachments: number;
   as_of: string;
+  journey?: {
+    stage: string;
+    page: WorkspacePage;
+    label: string;
+    reason: string;
+    included_targets: string[];
+  };
 };
 const sum = (counts: Record<string, number>) => Object.values(counts).reduce((a, b) => a + b, 0);
 
@@ -25,6 +34,7 @@ export function ProjectOverview({
   onScope,
   onRecon,
   onProjectChanged,
+  onNavigate,
 }: {
   project: Project;
   onTasks: () => void;
@@ -33,10 +43,13 @@ export function ProjectOverview({
   onScope?: () => void;
   onRecon?: () => void;
   onProjectChanged?: () => Promise<unknown>;
+  onNavigate?: (page: WorkspacePage) => void;
 }) {
   const [data, setData] = useState<Overview>();
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
+  const [goal, setGoal] = useProjectState(project.id, 'project_goal_draft', project.goal || '');
+  const [goalSaved, setGoalSaved] = useState('');
   const [saving, setSaving] = useState(false);
   const [revision, setRevision] = useState(0);
   const [error, setError] = useState('');
@@ -71,7 +84,13 @@ export function ProjectOverview({
           <h1>Project overview</h1>
           <p>{project.name} · Investigation progress and current risks.</p>
         </div>
-        <button disabled={loading} onClick={() => setRevision((v) => v + 1)}>
+        <button
+          disabled={loading}
+          onClick={() => {
+            setRevision((v) => v + 1);
+            void onProjectChanged?.();
+          }}
+        >
           <RefreshCw size={15} />
           Refresh
         </button>
@@ -82,6 +101,67 @@ export function ProjectOverview({
         </p>
       )}
       {loading && <p role="status">Loading overview…</p>}
+      <section className="panel project-plan" aria-label="Investigation plan">
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (saving) return;
+            setSaving(true);
+            setError('');
+            setGoalSaved('');
+            try {
+              await api(`/projects/${project.id}/goal`, 'PUT', {
+                expected_goal: project.goal || '',
+                goal,
+              });
+              setGoalSaved('Goal saved. Continue with target scope.');
+              await onProjectChanged?.();
+              setRevision((v) => v + 1);
+            } catch (e) {
+              setError((e as Error).message);
+            } finally {
+              setSaving(false);
+            }
+          }}
+        >
+          <label>
+            Investigation goal
+            <textarea
+              maxLength={2000}
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              placeholder="What question should this investigation answer?"
+            />
+          </label>
+          <button disabled={saving || goal === (project.goal || '')}>Save goal</button>
+          {goalSaved && <p role="status">{goalSaved}</p>}
+        </form>
+        {data?.journey && (
+          <div className="journey-next">
+            <span className="eyebrow">NEXT STEP</span>
+            <h2>{data.journey.label}</h2>
+            <p>{data.journey.reason}</p>
+            <p>
+              Scope:{' '}
+              {data.journey.included_targets.length
+                ? data.journey.included_targets.join(', ')
+                : 'Not defined yet'}
+            </p>
+            <div className="section-actions">
+              {data.journey.stage !== 'goal' && (
+                <button className="primary" onClick={() => onNavigate?.(data.journey!.page)}>
+                  {data.journey.label}
+                </button>
+              )}
+              <button onClick={onScope}>Targets & scope</button>
+              <button onClick={onImport}>Import results</button>
+              {data.journey.included_targets.length > 0 && (
+                <button onClick={onRecon}>Review discovery plan</button>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
       <details className="panel" style={{ marginBottom: 20 }}>
         <summary>Project details</summary>
         <form
@@ -124,7 +204,7 @@ export function ProjectOverview({
       </details>
       {data && (
         <>
-          {sum(data.objects) === 0 && (
+          {sum(data.objects) === 0 && !data.journey && (
             <section className="panel start-project">
               <h2>Start with the evidence you already have</h2>
               <p>

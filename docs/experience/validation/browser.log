@@ -1,0 +1,2 @@
+PASS: actual Nmap → SQLite → React graph → Inspector → drag → manual node/edge → reload persistence
+Browser screenshots saved under /tmp/dragontrip-browser-final. Tauri IPC bridge was injected for browser testing.

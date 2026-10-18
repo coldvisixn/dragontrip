@@ -6,8 +6,8 @@ from pathlib import Path
 
 from .db import Scan, ScopeRule, now, record
 from .scope import classify
-from .graph import ingest, ingest_web
-from . import nmap, recon
+from . import nmap
+from .scan_results import save_outcome
 
 
 class TaskManager:
@@ -32,10 +32,17 @@ class TaskManager:
                     now(),
                     "Application stopped before scan completed",
                 )
-                for extension in ("xml", "json", "words"):
-                    partial = artifacts / f"{scan.id}.{extension}"
-                    if partial.parent == artifacts:
-                        partial.unlink(missing_ok=True)
+                # Preserve bounded raw evidence after a crash; never relaunch a tool.
+                options = json.loads(scan.options)
+                artifact = artifacts / f"{scan.id}.{'xml' if scan.tool == 'nmap' else 'json'}"
+                available = artifact.is_file() and 0 < artifact.stat().st_size <= 16 * 1024 * 1024
+                if artifact.is_file() and artifact.stat().st_size > 16 * 1024 * 1024:
+                    artifact.unlink()
+                options.update(stage="interrupted", result={
+                    **options.get("result", {}), "partial": True,
+                    "artifact_available": available,
+                })
+                scan.options = json.dumps(options)
             db.commit()
         # Wordlists are disposable, including a crash between file creation and DB commit.
         from uuid import UUID
@@ -113,6 +120,9 @@ class TaskManager:
                     )
                 args = json.loads(scan.command)
                 scan.status = "running"
+                options = json.loads(scan.options)
+                options["stage"] = "executing"
+                scan.options = json.dumps(options)
                 scan.started = now()
                 db.commit()
             environment = nmap.external_environment()
@@ -151,21 +161,16 @@ class TaskManager:
                 )
             with self.sessions() as db:
                 scan = db.get(Scan, scan_id)
-                if tool == "nmap":
-                    hosts = await asyncio.to_thread(nmap.parse, artifact, scan.target)
-                    ingest(db, scan, hosts)
-                else:
-                    results = await asyncio.to_thread(
-                        recon.parse, artifact, tool, scan.target
-                    )
-                    ingest_web(db, scan, results)
-                scan.status, scan.ended, scan.exit_code = "completed", now(), str(code)
+                options = json.loads(scan.options)
+                options["stage"] = "saving"
+                scan.options = json.dumps(options)
                 db.commit()
+            # Synchronous transaction: cancellation cannot split projection and completion.
+            save_outcome(self.sessions, scan_id, artifact, "completed", exit_code=str(code))
         except asyncio.CancelledError:
             if proc:
                 await self.stop_process(proc)
             self.finish(scan_id, "cancelled", "Cancelled by user", proc)
-            artifact.unlink(missing_ok=True)
         except Exception as exc:
             if proc:
                 await self.stop_process(proc)
@@ -179,7 +184,6 @@ class TaskManager:
                 ),
                 proc,
             )
-            artifact.unlink(missing_ok=True)
         finally:
             self.processes.pop(scan_id, None)
             self.tasks.pop(scan_id, None)
@@ -188,6 +192,25 @@ class TaskManager:
     def finish(self, scan_id, status, error, proc):
         with self.sessions() as db:
             scan = db.get(Scan, scan_id)
+            if scan.status not in {"queued", "running"}:
+                return
+            extension = "xml" if scan.tool == "nmap" else "json"
+        try:
+            save_outcome(self.sessions, scan_id, self.artifacts / f"{scan_id}.{extension}",
+                         status, error, str(proc.returncode) if proc else None)
+            return
+        except Exception as exc:
+            error += "; Result projection failed: " + str(exc)
+        with self.sessions() as db:
+            scan = db.get(Scan, scan_id)
+            artifact = self.artifacts / f"{scan_id}.{extension}"
+            options = json.loads(scan.options)
+            options.update(stage=status, result={
+                "partial": True,
+                "artifact_available": artifact.is_file() and 0 < artifact.stat().st_size <= 16 * 1024 * 1024,
+                "projection_error": error[:500],
+            })
+            scan.options = json.dumps(options)
             scan.status, scan.error, scan.ended = status, error[:2000], now()
             scan.exit_code = str(proc.returncode) if proc else None
             record(db, scan.project_id, f"Scan {status}: {scan.target}")

@@ -97,7 +97,7 @@ const { once } = require('node:events');
     await navigate(page, 'Web applications');
     await page.getByLabel('Web application', { exact: true }).selectOption('http://app.htb');
     await page.getByRole('button', { name: 'GET http://app.htb/login', exact: true }).click();
-    assert.equal(await page.locator('.sidebar nav button').count(), 6);
+    assert.equal(await page.locator('.sidebar nav button').count(), 7);
     assert.equal(
       await page.getByRole('tab', { name: 'Web applications' }).getAttribute('aria-selected'),
       'true',
@@ -147,7 +147,7 @@ const { once } = require('node:events');
         .getByRole('tab', { name: 'Network Graph' })
         .evaluate((tab) => tab === document.activeElement),
     );
-    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('ArrowDown');
     await page.waitForFunction(
       () => document.querySelector('[role="tab"][aria-selected="true"]')?.textContent === 'Hosts',
     );
@@ -185,7 +185,7 @@ const { once } = require('node:events');
     assert.ok(smallSidebar.scroll <= smallSidebar.height + 2, JSON.stringify(smallSidebar));
     assert.deepEqual(errors, []);
     console.log(
-      'PASS: 6 sidebar links, grouped tabs, remembered section, deep links, keyboard navigation, Back, collapsed persistence and command palette',
+      'PASS: 7 sidebar links, grouped tabs, remembered section, deep links, keyboard navigation, Back, collapsed persistence and command palette',
     );
   } finally {
     await browser?.close();

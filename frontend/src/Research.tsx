@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { api, uploadFile, fetchEvidence, type Detail, type ObjectNode } from './api';
 import VirtualList from './VirtualList';
 import { useProjectState } from './workspace';
-import { SourceActions } from './SourceActions';
+import { SourceActions, openSource } from './SourceActions';
+import type { WorkspacePage } from './WorkspaceNavigation';
 
 type Rule = { value: string; mode: 'include' | 'exclude' };
 type Preview = {
@@ -42,7 +43,15 @@ type Observation = {
   data: Record<string, unknown>;
 };
 
-export function ScopePage({ pid, onChanged }: { pid: string; onChanged: () => Promise<unknown> }) {
+export function ScopePage({
+  pid,
+  onChanged,
+  onContinue,
+}: {
+  pid: string;
+  onChanged: () => Promise<unknown>;
+  onContinue?: () => void;
+}) {
   const [included, setIncluded] = useState('');
   const [excluded, setExcluded] = useState('');
   const [error, setError] = useState('');
@@ -113,7 +122,16 @@ export function ScopePage({ pid, onChanged }: { pid: string; onChanged: () => Pr
           {error}
         </p>
       )}
-      {status && <p role="status">{status}</p>}
+      {status && (
+        <div className="next-step">
+          <p role="status">{status}</p>
+          {onContinue && (
+            <button className="primary" onClick={onContinue}>
+              Review discovery plan
+            </button>
+          )}
+        </div>
+      )}
       <form className="panel research-form" onSubmit={(e) => void save(e)}>
         <label>
           Included targets
@@ -311,9 +329,11 @@ export function Observations({
 export function ImportsPage({
   pid,
   onChanged,
+  onNavigate,
 }: {
   pid: string;
   onChanged: () => Promise<unknown>;
+  onNavigate?: (page: WorkspacePage) => void;
 }) {
   const [file, setFile] = useState<File | null>(null);
   const [unknown, setUnknown] = useState(false);
@@ -384,7 +404,20 @@ export function ImportsPage({
           {error}
         </p>
       )}
-      {status && <p role="status">{status}</p>}
+      {status && (
+        <div className="next-step">
+          <p role="status">{status}</p>
+          {onNavigate && (
+            <div className="section-actions">
+              <button className="primary" onClick={() => onNavigate('Web applications')}>
+                Explore web results
+              </button>
+              <button onClick={() => onNavigate('Network Graph')}>Explore infrastructure</button>
+              <button onClick={() => onNavigate('Findings')}>Review imported findings</button>
+            </div>
+          )}
+        </div>
+      )}
       <section className="panel research-form">
         <label>
           Export file (up to 10 MiB)
@@ -562,12 +595,14 @@ export function WebMap({
   onChanged,
   onInspect,
   onFinding,
+  onRecon,
 }: {
   detail: Detail;
   onChanged: () => Promise<unknown>;
   onInspect: (id: string) => void;
   onKnowledge: (id: string, kind: 'Notes' | 'Findings') => void;
   onFinding?: (id: string) => void;
+  onRecon?: (origin: string) => void;
 }) {
   const pid = detail.project.id;
   const apps = detail.nodes.filter((n) => n.kind === 'application');
@@ -600,6 +635,7 @@ export function WebMap({
 
   useEffect(() => {
     let live = true;
+    setFindings([]);
     if (selected)
       api<typeof findings>(`/projects/${pid}/web-findings?node_id=${encodeURIComponent(selected)}`)
         .then((r) => {
@@ -712,79 +748,103 @@ export function WebMap({
         </select>
       </label>
       {!apps.length && <p>Import Burp traffic or add an application to begin.</p>}
-      {app && (
-        <section className="panel">
-          <h2>{app.label}</h2>
-          <p>
-            {endpoints.length} endpoints · sources: {String(app.attrs.source)}
-          </p>
-          <button onClick={() => onInspect(app.id)}>Inspect application in graph</button>
-          <div className="research-filters">
-            <input
-              aria-label="Filter endpoints"
-              placeholder="Filter exact URLs…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <select
-              aria-label="Endpoint method"
-              value={verb}
-              onChange={(e) => setVerb(e.target.value)}
-            >
-              <option value="all">All methods</option>
-              {[...new Set(endpoints.map((n) => String(n.attrs.method)))].sort().map((m) => (
-                <option key={m}>{m}</option>
-              ))}
-            </select>
-          </div>
-          <VirtualList
-            label="Application endpoints"
-            rowHeight={62}
-            items={endpoints.filter(
-              (n) =>
-                (verb === 'all' || n.attrs.method === verb) &&
-                n.label.toLowerCase().includes(query.toLowerCase()),
-            )}
-            itemKey={(n) => n.id}
-            renderItem={(n) => (
-              <button
-                className={'endpoint-row ' + (selected === n.id ? 'active' : '')}
-                title={n.label}
-                onClick={() => setSelected(n.id)}
-              >
-                <strong>{String(n.attrs.method)}</strong>
-                <span>{String(n.attrs.url)}</span>
+      <div className="web-workbench">
+        {app && (
+          <section className="panel">
+            <h2>{app.label}</h2>
+            <p>
+              {endpoints.length} endpoints · sources: {String(app.attrs.source)}
+            </p>
+            <button onClick={() => onInspect(app.id)}>Inspect application in graph</button>
+            {onRecon && (
+              <button className="primary" onClick={() => onRecon(origin + '/')}>
+                Review web request
               </button>
             )}
-          />
-        </section>
-      )}
-      {node && (
-        <section className="panel endpoint-detail">
-          <h2>{node.label}</h2>
-          <p>
-            Parameters:{' '}
-            {Array.isArray(node.attrs.parameters)
-              ? node.attrs.parameters.join(', ') || 'none exported'
-              : 'none exported'}
-          </p>
-          <div className="research-filters">
-            <button onClick={() => onInspect(node.id)}>Inspect in graph</button>
-          </div>
-          <SourceActions key={'records:' + node.id} pid={pid} source="node" id={node.id} />
-          <h3>Linked findings</h3>
-          {!findings.length && (
-            <p>No linked findings. This does not mean the endpoint has been tested.</p>
-          )}
-          {findings.map((f) => (
-            <p key={f.id}>
-              <button onClick={() => onFinding?.(f.id)}>{f.title}</button> · {f.content.severity} ·{' '}
-              {f.content.status}
+            {!endpoints.length && (
+              <p>
+                No endpoints observed yet. Import traffic or review a web request to collect a
+                response. Opening this application sent no traffic.
+              </p>
+            )}
+            <div className="research-filters">
+              <input
+                aria-label="Filter endpoints"
+                placeholder="Filter exact URLs…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <select
+                aria-label="Endpoint method"
+                value={verb}
+                onChange={(e) => setVerb(e.target.value)}
+              >
+                <option value="all">All methods</option>
+                {[...new Set(endpoints.map((n) => String(n.attrs.method)))].sort().map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <VirtualList
+              label="Application endpoints"
+              rowHeight={62}
+              items={endpoints.filter(
+                (n) =>
+                  (verb === 'all' || n.attrs.method === verb) &&
+                  n.label.toLowerCase().includes(query.toLowerCase()),
+              )}
+              itemKey={(n) => n.id}
+              renderItem={(n) => (
+                <button
+                  className={'endpoint-row ' + (selected === n.id ? 'active' : '')}
+                  title={n.label}
+                  onClick={() => setSelected(n.id)}
+                >
+                  <strong>{String(n.attrs.method)}</strong>
+                  <span>{String(n.attrs.url)}</span>
+                </button>
+              )}
+            />
+          </section>
+        )}
+        {node && node.attrs.origin === origin && (
+          <section className="panel endpoint-detail">
+            <h2>{node.label}</h2>
+            {node.attrs.status != null && (
+              <p>
+                HTTP status: {String(node.attrs.status)} ·{' '}
+                {String(node.attrs.title || 'No page title observed')}
+              </p>
+            )}
+            {typeof node.attrs.scan_id === 'string' && (
+              <button onClick={() => openSource('scan', String(node.attrs.scan_id))}>
+                Source scan and evidence
+              </button>
+            )}
+            <p>
+              Parameters:{' '}
+              {Array.isArray(node.attrs.parameters)
+                ? node.attrs.parameters.join(', ') || 'none exported'
+                : 'none exported'}
             </p>
-          ))}
-          <Observations key={node.id} pid={pid} nodeId={node.id} />
-        </section>
-      )}
+            <div className="research-filters">
+              <button onClick={() => onInspect(node.id)}>Inspect in graph</button>
+            </div>
+            <SourceActions key={'records:' + node.id} pid={pid} source="node" id={node.id} />
+            <h3>Linked findings</h3>
+            {!findings.length && (
+              <p>No linked findings. This does not mean the endpoint has been tested.</p>
+            )}
+            {findings.map((f) => (
+              <p key={f.id}>
+                <button onClick={() => onFinding?.(f.id)}>{f.title}</button> · {f.content.severity}{' '}
+                · {f.content.status}
+              </p>
+            ))}
+            <Observations key={node.id} pid={pid} nodeId={node.id} />
+          </section>
+        )}
+      </div>
     </div>
   );
 }

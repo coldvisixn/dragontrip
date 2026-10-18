@@ -4,6 +4,7 @@ export type Project = {
   id: string;
   name: string;
   description: string;
+  goal?: string;
   created: string;
   updated: string;
 };
@@ -38,11 +39,24 @@ export type ScanRequest = {
   confirmed: boolean;
   words: string[];
   service_node?: string;
+  request_id?: string;
+  preview_token?: string;
 };
 export type Scan = {
   tool?: string;
   profile?: string;
-  options?: Profile;
+  options?: Profile & {
+    stage?: string;
+    service_node?: string;
+    result?: {
+      partial: boolean;
+      artifact_available: boolean;
+      observations?: number;
+      objects?: number;
+      node_ids?: string[];
+      projection_error?: string;
+    };
+  };
   id: string;
   target: string;
   status: string;
@@ -61,6 +75,8 @@ export type Detail = {
   edges: Relation[];
   scans: Scan[];
   events: Event[];
+  background_active?: boolean;
+  scope_targets?: string[];
 };
 export type Tool = { name: string; installed: boolean; path: string | null; version?: string };
 type Connection = { port: number; token: string };

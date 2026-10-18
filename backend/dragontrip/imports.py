@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from .db import (
     Node,
+    Edge,
     Knowledge,
     Attachment,
     ScopeRule,
@@ -410,6 +411,47 @@ def register_imports(app, sessions, project, root):
         method: str = Field(default="GET", min_length=1, max_length=32)
         ip: str = Field(default="", max_length=100)
         application_only: bool = False
+
+    @app.post("/projects/{pid}/nodes/{node_id:path}/web-context")
+    def web_context(pid: str, node_id: str):
+        # The handoff creates only a local application identity. No HTTP call,
+        # DNS resolution, scope expansion or scan authorization is implied.
+        with lock, sessions() as db:
+            project(db, pid)
+            node = db.get(Node, node_id)
+            if not node or node.project_id != pid:
+                raise HTTPException(404, "Object not found in this project")
+            attrs = json.loads(node.attrs)
+            if node.kind in {"application", "endpoint", "url"}:
+                url = attrs.get("url") or attrs.get("origin") or node.label
+                ip = attrs.get("ip", "")
+            elif node.kind == "service":
+                name, port = str(attrs.get("name", "")), attrs.get("port")
+                if "http" not in name and port not in {80, 443, 8000, 8080, 8443}:
+                    raise HTTPException(422, "This service has no known HTTP origin")
+                scheme = "https" if "ssl" in name or "https" in name or port in {443, 8443} else "http"
+                ip = attrs.get("host", "")
+                url = f"{scheme}://{ip}:{port}/"
+            else:
+                raise HTTPException(422, "Select a web service, application or endpoint")
+            try:
+                row = web_record(url, "GET", ip=ip)
+            except (ValueError, UnicodeError) as exc:
+                raise HTTPException(422, f"Cannot open this web context: {exc}")
+            app_key = next(obj["key"] for obj in row["objects"] if obj["kind"] == "application")
+            application = db.get(Node, nid(pid, app_key))
+            if not application:
+                row["objects"] = [obj for obj in row["objects"] if obj["kind"] != "endpoint"]
+                upsert_objects(db, pid, [row], "manual")
+                record(db, pid, "Opened web research from an existing object (no request sent)")
+                db.commit()
+                application = db.get(Node, nid(pid, app_key))
+            if node.id != application.id:
+                edge_id = pid + ":research:" + digest([node.id, application.id])[:32]
+                if db.get(Edge, edge_id) is None:
+                    db.add(Edge(id=edge_id, project_id=pid, source=node.id, target=application.id, kind="RESEARCH_CONTEXT"))
+                    db.commit()
+            return {"application": serialize(application), "selected_node": node.id if node.kind == "endpoint" else None}
 
     @app.post("/projects/{pid}/web-objects", status_code=201)
     def manual_web(pid: str, body: ManualWeb):

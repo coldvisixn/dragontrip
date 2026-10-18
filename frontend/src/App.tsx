@@ -1,3 +1,4 @@
+import { BackgroundWork } from './BackgroundWork';
 import { ScanForm, ReconSettings, Suggestions, ScanHistory } from './Recon';
 import type { ScanRequest } from './api';
 import { invoke } from '@tauri-apps/api/core';
@@ -17,6 +18,8 @@ import {
 } from 'react';
 import {
   Activity,
+  Terminal,
+  Command,
   PanelLeftClose,
   PanelLeftOpen,
   ListChecks,
@@ -33,7 +36,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  Command,
   Folder,
   Globe,
   LayoutDashboard,
@@ -46,8 +48,6 @@ import {
   Server,
   Settings,
   ShieldCheck,
-  Square,
-  Terminal,
   Wrench,
   X,
 } from 'lucide-react';
@@ -271,10 +271,23 @@ export default function App() {
   const [toast, setToast] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const [selected, setSelected] = useProjectState<string | null>(
+  const performing = useRef(false);
+  const [selected, setSelectedValue] = useProjectState<string | null>(
     pid || 'global',
     'selected_node',
     null,
+  );
+  const [inspectorHidden, setInspectorHidden] = useProjectState(
+    pid || 'global',
+    'inspector_hidden',
+    false,
+  );
+  const setSelected = useCallback(
+    (value: string | null) => {
+      setSelectedValue(value);
+      setInspectorHidden(false);
+    },
+    [setSelectedValue, setInspectorHidden],
   );
   type Modal = 'project' | 'scan' | 'node' | 'command' | null;
   const [transientModal, setTransientModal] = useState<Modal>(null);
@@ -320,14 +333,16 @@ export default function App() {
   }, []);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [goal, setGoal] = useState('');
+  const [scanError, setScanError] = useState('');
+  const scanSubmitting = useRef(false);
   const [target, setTarget] = useState('');
   const [profileId, setProfileId] = useState('quick');
   const [serviceNode, setServiceNode] = useState<string | undefined>();
   const [query, setQuery] = useState('');
   const [graphQuery, setGraphQuery] = useProjectState(pid || 'global', 'graph_query', '');
   const [nodeKind, setNodeKind] = useProjectState(pid || 'global', 'nodeKind', 'all');
-  const [bottom, setBottom] = useState(false);
-  const [tab, setTab] = useProjectState(pid || 'global', 'toolTab', 'Terminal Output');
+  const [bottom, setBottom] = useProjectState(pid || 'global', 'job_panel_open', false);
   const [scanId, setScanId] = useProjectState<string | null>(
     pid || 'global',
     'selected_scan',
@@ -345,7 +360,7 @@ export default function App() {
   const object = inspected?.id === selected ? inspected : nodeMap.get(selected || '');
   const selectedEdge = detail?.edges.find((e) => e.id === selected);
   const current = projects.find((p) => p.id === pid);
-  const hasActiveScan = detail?.scans.some(active) ?? false;
+  const hasActiveScan = (detail?.background_active || detail?.scans.some(active)) ?? false;
   const notify = (message: string) => setToast(message);
   useEffect(() => {
     if (!toast) return;
@@ -357,10 +372,16 @@ export default function App() {
     setProjects(ps);
     return ps;
   }, []);
+  const refreshSequence = useRef(0);
   const refresh = useCallback(async (id: string) => {
     const expected = generation.current;
+    const sequence = ++refreshSequence.current;
     const d = await api<Detail>('/projects/' + id + '?compact=true');
-    if (expected === generation.current && activeProject.current === id)
+    if (
+      sequence === refreshSequence.current &&
+      expected === generation.current &&
+      activeProject.current === id
+    )
       setDetail((previous) => (JSON.stringify(previous) === JSON.stringify(d) ? previous : d));
     return d;
   }, []);
@@ -391,9 +412,14 @@ export default function App() {
     setInspected(null);
     setTransientModal(null);
     setKnowledgeSeed(undefined);
+    setError('');
+    setScanError('');
+    setContext(null);
     if (pid) {
       writeLocal('dragontrip.project', pid);
-      void refresh(pid).catch((e) => setError(e.message));
+      void refresh(pid).catch((e) => {
+        if (activeProject.current === pid) setError(e.message);
+      });
     }
   }, [pid, refresh]);
   useEffect(() => {
@@ -403,7 +429,9 @@ export default function App() {
         .then(() => {
           void refreshProjects();
         })
-        .catch((e) => setError(e.message));
+        .catch((e) => {
+          if (activeProject.current === pid) setError(e.message);
+        });
     }, 2000);
     return () => clearInterval(timer);
   }, [pid, refresh, refreshProjects, hasActiveScan]);
@@ -422,17 +450,20 @@ export default function App() {
     setScan(null);
     if (!viewedScan) return;
     let disposed = false;
-    const update = () =>
-      void api<Scan>('/scans/' + viewedScan)
+    let sequence = 0;
+    const update = () => {
+      const expected = ++sequence;
+      return api<Scan>('/scans/' + viewedScan)
         .then((s) => {
-          if (!disposed) {
+          if (!disposed && expected === sequence) {
             setScan(s);
             if (!active(s)) clearInterval(timer);
           }
         })
         .catch((e) => {
-          if (!disposed) setError(e.message);
+          if (!disposed && expected === sequence) setError(e.message);
         });
+    };
     update();
     const timer = setInterval(update, 1500);
     return () => {
@@ -559,18 +590,25 @@ export default function App() {
     };
   }, [pid, setPage, setSelected, setNodeKind, setScanId]);
   async function perform(action: () => Promise<void>) {
+    if (performing.current) return;
+    performing.current = true;
+    const projectId = activeProject.current;
     setBusy(true);
     setError('');
     try {
       await action();
     } catch (e) {
-      setError((e as Error).message);
+      if (activeProject.current === projectId) setError((e as Error).message);
     } finally {
+      performing.current = false;
       setBusy(false);
     }
   }
+  const projectOpenSequence = useRef(0);
   async function openProject(id: string, preferred?: Page) {
+    const sequence = ++projectOpenSequence.current;
     await loadWorkspace(id);
+    if (sequence !== projectOpenSequence.current) return;
     const history = getWorkspace<{ entries: Page[]; index: number }>(id, 'navigation', {
       entries: ['Network Graph'],
       index: 0,
@@ -614,7 +652,6 @@ export default function App() {
       setPage('Scans');
       setScanId(item.id);
       setBottom(true);
-      setTab('Terminal Output');
     } else if (item.kind === 'attachment') {
       setEvidenceFocus(item.id);
       setPage('Evidence');
@@ -623,10 +660,12 @@ export default function App() {
   function newProject() {
     setName('');
     setDescription('');
+    setGoal('');
     setModal('project');
   }
   function startScan() {
-    setTarget('');
+    setScanError('');
+    setTarget(detail?.scope_targets?.find((value) => /^\d+\.\d+\.\d+\.\d+$/.test(value)) || '');
     setProfileId('quick');
     setServiceNode(undefined);
     setModal('scan');
@@ -634,7 +673,7 @@ export default function App() {
   async function submitProject(e: FormEvent) {
     e.preventDefault();
     await perform(async () => {
-      const p = await api<Project>('/projects', 'POST', { name, description });
+      const p = await api<Project>('/projects', 'POST', { name, description, goal });
       await refreshProjects();
       await openProject(p.id, 'Project overview');
       setModal(null);
@@ -642,15 +681,43 @@ export default function App() {
     });
   }
   async function submitScan(request: ScanRequest) {
-    if (!pid) return;
-    await perform(async () => {
-      const s = await api<Scan>('/projects/' + pid + '/scans', 'POST', request);
-      setScanId(s.id);
-      setBottom(true);
-      setTab('Terminal Output');
-      await refresh(pid);
+    if (!pid || scanSubmitting.current) return;
+    const projectId = pid;
+    scanSubmitting.current = true;
+    setBusy(true);
+    setScanError('');
+    try {
+      const saved = await api<Scan>('/projects/' + projectId + '/scans', 'POST', request);
+      if (activeProject.current !== projectId) return;
+      setScanId(saved.id);
+      setScan(saved);
+      setBottom(false);
       setModal(null);
-      notify('Recon task queued');
+      notify('Recon queued. Follow progress in Background work; you can keep working.');
+      await refresh(projectId).catch(() =>
+        setError('Scan queued. Refresh failed; reopen the project to see progress.'),
+      );
+    } catch (e) {
+      if (activeProject.current === projectId) setScanError((e as Error).message);
+    } finally {
+      scanSubmitting.current = false;
+      setBusy(false);
+    }
+  }
+  async function openWebResearch(node: ObjectNode) {
+    if (!pid) return;
+    const projectId = pid;
+    await perform(async () => {
+      const context = await api<{ application: ObjectNode; selected_node: string | null }>(
+        `/projects/${projectId}/nodes/${encodeURIComponent(node.id)}/web-context`,
+        'POST',
+      );
+      if (activeProject.current !== projectId) return;
+      await refresh(projectId);
+      if (activeProject.current !== projectId) return;
+      putWorkspace(projectId, 'web_origin', String(context.application.attrs.origin));
+      putWorkspace(projectId, 'web_node', context.selected_node || '');
+      setPage('Web applications');
     });
   }
   async function removeNode(n: ObjectNode) {
@@ -717,7 +784,8 @@ export default function App() {
         >
           <div className="avatar">P</div>
           <span>
-            Personal workspace<small>Local · offline first</small>
+            {current?.name || 'Choose a project'}
+            <small>Projects · local workspace</small>
           </span>
           <ChevronDown size={14} />
         </button>
@@ -734,15 +802,23 @@ export default function App() {
           <span className="navigation-label">Quick search</span>
           <kbd>Ctrl K</kbd>
         </button>
-        <PrimaryNavigation
-          page={page}
-          hasProject={Boolean(pid)}
-          running={running}
-          remembered={rememberedSections}
-          onNavigate={(destination) => {
-            setPage(destination);
-          }}
-        />
+        <div className="sidebar-navigation">
+          <PrimaryNavigation
+            page={page}
+            hasProject={Boolean(pid)}
+            running={running}
+            remembered={rememberedSections}
+            onNavigate={(destination) => {
+              setPage(destination);
+            }}
+          />
+          <SectionTabs
+            page={page}
+            onNavigate={(destination) => {
+              setPage(destination);
+            }}
+          />
+        </div>
         <div className="sidebar-bottom">
           <SettingsNavigation page={page} remembered={rememberedSections} onNavigate={setPage} />
           <button
@@ -786,49 +862,22 @@ export default function App() {
             >
               <ArrowRight size={15} />
             </button>
-            <span>Workspace</span>
+            <span title={current?.name}>{current?.name || 'Workspace'}</span>
             <ChevronRight size={13} />
             <strong>{page}</strong>
-            {current && (
-              <>
-                <ChevronRight size={13} />
-                <span>{current.name}</span>
-              </>
-            )}
           </div>
           <div className="top-actions">
-            {scan && (
+            {current && (
               <button
-                onClick={() => {
-                  setBottom((v) => !v);
-                  setTab('Terminal Output');
-                }}
+                className="goal-context"
+                title={current.goal || 'Set an investigation goal'}
+                onClick={() => setPage('Project overview')}
               >
-                Tool output{running > 0 ? ` · ${running} running` : ''}
+                {current.goal ? 'Goal: ' + current.goal : 'Set investigation goal'}
               </button>
             )}
-            <span className="local-pill">
-              <span className="dot green" />
-              LOCAL ONLY
-            </span>
-            <button
-              className="icon-button"
-              title="Command palette (Ctrl+K)"
-              onClick={() => {
-                setQuery('');
-                setModal('command');
-              }}
-            >
-              <Command size={16} />
-            </button>
           </div>
         </header>
-        <SectionTabs
-          page={page}
-          onNavigate={(destination) => {
-            setPage(destination);
-          }}
-        />
         {error && (
           <div className="error-banner" role="alert">
             {error}
@@ -1071,7 +1120,7 @@ export default function App() {
                     <div className="graph-toolbar">
                       <div>
                         <Network size={18} />
-                        <strong>{detail.project.name}</strong>
+                        <strong>Network Graph</strong>
                         <span className="badge">
                           {detail.nodes.length} objects · {detail.edges.length} links
                         </span>
@@ -1092,9 +1141,18 @@ export default function App() {
                         </button>
                       </div>
                     </div>
-                    <p className="graph-scope-hint">
-                      Select a target to see observations, planned checks and next actions.
-                    </p>
+                    <div className="graph-scope-hint">
+                      {object ? (
+                        <>
+                          <span title={object.label}>Selected: {object.label}</span>
+                          <button onClick={() => setInspectorHidden(!inspectorHidden)}>
+                            {inspectorHidden ? 'Show inspector' : 'Hide inspector'}
+                          </button>
+                        </>
+                      ) : (
+                        'Select an object to inspect evidence and plan the next check.'
+                      )}
+                    </div>
                     <div className="graph-search">
                       <Search size={14} />
                       <input
@@ -1163,6 +1221,7 @@ export default function App() {
                           key={detail.project.id}
                           projectId={detail.project.id}
                           detailMode={appearance.graph_detail}
+                          performanceProfile={appearance.performance_profile}
                           theme={appearance.theme === 'system' ? undefined : appearance.theme}
                           selectedId={selected}
                           objects={detail.nodes.filter((n) =>
@@ -1299,7 +1358,6 @@ export default function App() {
                       onSelect={(id) => {
                         setScanId(id);
                         setBottom(true);
-                        setTab('Terminal Output');
                       }}
                     />
                   </div>
@@ -1361,7 +1419,6 @@ export default function App() {
                       }}
                       onScan={(id) => {
                         setScanId(id);
-                        setTab('Terminal Output');
                         setBottom(true);
                       }}
                       onChanged={() => refresh(detail.project.id)}
@@ -1393,6 +1450,7 @@ export default function App() {
                     <ProjectOverview
                       key={detail.project.id}
                       project={detail.project}
+                      onNavigate={setPage}
                       onTasks={() => setPage('Task board')}
                       onFindings={() => setPage('Findings')}
                       onImport={() => setPage('Import results')}
@@ -1446,10 +1504,12 @@ export default function App() {
                     key={detail.project.id}
                     pid={detail.project.id}
                     onChanged={() => refresh(detail.project.id)}
+                    onContinue={startScan}
                   />
                 )}
                 {detail && page === 'Import results' && (
                   <ImportsPage
+                    onNavigate={setPage}
                     key={detail.project.id}
                     pid={detail.project.id}
                     onChanged={() => refresh(detail.project.id)}
@@ -1460,6 +1520,13 @@ export default function App() {
                     key={detail.project.id}
                     detail={detail}
                     onChanged={() => refresh(detail.project.id)}
+                    onRecon={(origin) => {
+                      setTarget(origin);
+                      setProfileId('httpx');
+                      setServiceNode(undefined);
+                      setScanError('');
+                      setModal('scan');
+                    }}
                     onInspect={(id) => {
                       setSelected(id);
                       setNodeKind('all');
@@ -1505,10 +1572,10 @@ export default function App() {
                           'Single IPv4 or IPv4 web origin · profile-specific ports and rates',
                         ],
                         ['Timeout', '10–900s according to profile'],
-                        ['Output', '64 KiB terminal tail · 16 MiB XML cap'],
+                        ['Output', '64 KiB terminal tail · 16 MiB result file cap'],
                         [
                           'Evidence retention',
-                          'Successful XML/JSON is retained until removed outside the app',
+                          'Bounded XML/JSON results, including partial outcomes, are retained',
                         ],
                         [
                           'Investigation workspace',
@@ -1531,412 +1598,339 @@ export default function App() {
               </>
             )}
           </main>
-          {(page === 'Network Graph' || page === 'Hosts') && (object || selectedEdge) && (
-            <aside className="inspector">
-              <div className="inspector-title">
-                <span>INSPECTOR</span>
-                <button
-                  className="icon-button"
-                  aria-label="Close inspector"
-                  onClick={() => setSelected(null)}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-              {object && (
-                <>
-                  <div className="inspector-hero">
-                    <div className={'empty-icon ' + object.kind}>
-                      {object.kind === 'host' ? (
-                        <Server />
-                      ) : object.kind === 'service' || object.kind === 'url' ? (
-                        <Globe />
-                      ) : (
-                        <Pentagon />
-                      )}
-                    </div>
-                    <span className="eyebrow">{object.kind}</span>
-                    <h2>{object.label}</h2>
-                    <span className={'badge ' + (object.kind === 'custom' ? 'warning' : 'success')}>
-                      {object.kind === 'custom'
-                        ? 'Manual · ' + String(object.attrs.status || 'idea')
-                        : (object.attrs.source === 'manual'
-                            ? 'Manual · '
-                            : object.attrs.run_id
-                              ? 'Imported · '
-                              : 'Observed · ') + String(object.attrs.source || 'nmap')}
-                    </span>
-                  </div>
-                  {pid && (
-                    <SourceActions
-                      key={'records:' + object.id}
-                      pid={pid}
-                      source="node"
-                      id={object.id}
-                    />
-                  )}
-                  {object.kind === 'custom' && (
-                    <CustomObjectDetails
-                      pid={pid!}
-                      key={object.id}
-                      node={object}
-                      onSave={async (content) => {
-                        await api(
-                          '/projects/' + pid + '/nodes/' + encodeURIComponent(object.id),
-                          'PUT',
-                          content,
-                        );
-                        notify('Object saved');
-                        await refresh(pid!).catch(() =>
-                          setError(
-                            'Object saved. Refresh failed; reopen the project to reload it.',
-                          ),
-                        );
-                      }}
-                    />
-                  )}
-                  {object.kind !== 'custom' && (
-                    <details className="inspector-section">
-                      <summary>Object details</summary>
-                      {Object.entries(object.attrs)
-                        .filter(
-                          ([k]) =>
-                            ![
-                              'evidence_xml',
-                              'evidence_json',
-                              'scan_id',
-                              'observations',
-                              'evidence_truncated',
-                            ].includes(k),
-                        )
-                        .map(([k, v]) => (
-                          <div className="attribute" key={k}>
-                            <span>{k}</span>
-                            <strong>{String(v) || '—'}</strong>
-                          </div>
-                        ))}
-                    </details>
-                  )}
-                  {pid && (
-                    <Observations
-                      key={object.id}
-                      pid={pid}
-                      nodeId={object.id}
-                      focusId={
-                        observationFocus?.node_id === object.id
-                          ? observationFocus.observation_id
-                          : undefined
-                      }
-                      onClearFocus={() => setObservationFocus(undefined)}
-                    />
-                  )}
-                  <details>
-                    <summary>Graph position</summary>
-                    <PositionEditor
-                      key={object.id + ':' + object.x + ':' + object.y}
-                      node={object}
-                      onSave={async (x, y) => {
-                        await api(
-                          '/projects/' +
-                            pid +
-                            '/nodes/' +
-                            encodeURIComponent(object.id) +
-                            '/position',
-                          'PUT',
-                          { x, y },
-                        );
-                        await refresh(pid!);
-                        notify('Position updated');
-                      }}
-                    />
-                  </details>
-                  <div className="inspector-section">
-                    <h3>Related objects</h3>
-                    {detail?.edges
-                      .filter((e) => e.source === object.id || e.target === object.id)
-                      .map((e) => {
-                        const n = detail.nodes.find(
-                          (n) => n.id === (e.source === object.id ? e.target : e.source),
-                        );
-                        return (
-                          <button
-                            className="related"
-                            key={e.id}
-                            onClick={() => setSelected(n?.id || null)}
-                          >
-                            <Network size={14} />
-                            {n?.label}
-                            <ChevronRight size={13} />
-                          </button>
-                        );
-                      })}
-                  </div>
-                  {pid && (
-                    <Suggestions
-                      pid={pid}
-                      nodeId={object.id}
-                      revision={detail?.project.updated || ''}
-                      onChoose={(profile, destination, nodeId) => {
-                        setServiceNode(nodeId);
-                        setProfileId(profile);
-                        setTarget(destination);
-                        setModal('scan');
-                      }}
-                    />
-                  )}
-                  {object.attrs.evidence_json != null && (
-                    <details className="inspector-section">
-                      <summary>Source evidence · JSON</summary>
-                      {object.attrs.evidence_truncated === true && (
-                        <p className="muted">
-                          Preview truncated. Export the full scan evidence below.
-                        </p>
-                      )}
-                      <p className="muted">Scan {String(object.attrs.scan_id)}</p>
-                      <pre className="evidence">{String(object.attrs.evidence_json)}</pre>
-                      <button
-                        onClick={() =>
-                          void perform(async () => {
-                            const path = await saveArtifact(String(object.attrs.scan_id), 'json');
-                            notify('Evidence saved: ' + path);
-                          })
-                        }
-                      >
-                        Export source JSON
-                      </button>
-                    </details>
-                  )}
-                  {Array.isArray(object.attrs.observations) && (
-                    <div className="inspector-section">
-                      <h3>Recent observations</h3>
-                      {(
-                        object.attrs.observations as {
-                          scan_id: string;
-                          tool: string;
-                          observed_at: string;
-                        }[]
-                      ).map((observation) => (
-                        <p key={observation.scan_id}>
-                          {observation.tool} · {date(observation.observed_at)}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                  {object.attrs.evidence_xml != null && (
-                    <details className="inspector-section">
-                      <summary>Source evidence</summary>
-                      <p className="muted">Scan {String(object.attrs.scan_id)}</p>
-                      <pre className="evidence">{String(object.attrs.evidence_xml)}</pre>
-                      <button
-                        onClick={() =>
-                          void perform(async () => {
-                            const path = await saveArtifact(String(object.attrs.scan_id));
-                            notify('Evidence saved: ' + path);
-                          })
-                        }
-                      >
-                        <ArrowDownToLine size={14} />
-                        Export source XML
-                      </button>
-                    </details>
-                  )}
-                  {object.kind === 'custom' && (
-                    <div className="inspector-section">
-                      <button className="danger-button" onClick={() => void removeNode(object)}>
-                        Delete custom node
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-              {selectedEdge && (
-                <div className="inspector-section">
-                  <h2>{selectedEdge.kind}</h2>
-                  <span className={'badge ' + (selectedEdge.evidence ? 'success' : 'warning')}>
-                    {selectedEdge.evidence ? 'Observed' : 'Manual hypothesis'}
-                  </span>
-                  <p>Source: {detail?.nodes.find((n) => n.id === selectedEdge.source)?.label}</p>
-                  <p>Target: {detail?.nodes.find((n) => n.id === selectedEdge.target)?.label}</p>
-                  {!selectedEdge.evidence && (
-                    <RelationshipEditor
-                      key={selectedEdge.id}
-                      label={selectedEdge.kind}
-                      onSave={async (kind) => {
-                        await api(
-                          '/projects/' + pid + '/edges/' + encodeURIComponent(selectedEdge.id),
-                          'PUT',
-                          { kind },
-                        );
-                        await refresh(pid!);
-                        notify('Relationship updated');
-                      }}
-                    />
-                  )}
-                  {!selectedEdge.evidence && (
-                    <button
-                      className="danger-button"
-                      onClick={() => {
-                        if (window.confirm('Delete manual relationship?'))
-                          void perform(async () => {
-                            await api(
-                              '/projects/' + pid + '/edges/' + encodeURIComponent(selectedEdge.id),
-                              'DELETE',
-                            );
-                            setSelected(null);
-                            await refresh(pid!);
-                          });
-                      }}
-                    >
-                      Delete relationship
-                    </button>
-                  )}
+          {(page === 'Network Graph' || page === 'Hosts') &&
+            (object || selectedEdge) &&
+            !inspectorHidden && (
+              <aside className="inspector">
+                <div className="inspector-title">
+                  <span>INSPECTOR</span>
+                  <button
+                    className="icon-button"
+                    aria-label="Close inspector"
+                    onClick={() => setInspectorHidden(true)}
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
-              )}
-            </aside>
-          )}
-        </div>
-        {(bottom || running > 0) && (
-          <section className={'bottom-panel ' + (!bottom ? 'collapsed' : '')}>
-            <div className="bottom-tabs">
-              {['Terminal Output', 'Running Tasks', 'Logs', 'Events'].map((t) => (
-                <button
-                  key={t}
-                  className={tab === t ? 'active' : ''}
-                  onClick={() => {
-                    setTab(t);
-                    setBottom(true);
-                  }}
-                >
-                  {t === 'Terminal Output' && <Terminal size={13} />}
-                  {t}
-                  {t === 'Running Tasks' && running > 0 && <span className="count">{running}</span>}
-                </button>
-              ))}
-              <button
-                className="collapse"
-                onClick={() => setBottom(!bottom)}
-                aria-label={bottom ? 'Collapse task panel' : 'Expand task panel'}
-              >
-                <ChevronDown
-                  size={16}
-                  style={{ transform: bottom ? undefined : 'rotate(180deg)' }}
-                />
-              </button>
-            </div>
-            {bottom && (
-              <div className="bottom-content">
-                {tab === 'Terminal Output' ? (
+                {object && (
                   <>
-                    <div className="terminal-heading">
-                      <span>
-                        {scan ? (
-                          <>
-                            {scan.tool || 'nmap'} <span className="mono">{scan.target}</span>
-                            <span className="badge">{scan.status}</span> ·{' '}
-                            {Math.max(
-                              0,
-                              Math.round(
-                                (new Date(scan.ended || Date.now()).getTime() -
-                                  new Date(scan.started).getTime()) /
-                                  1000,
-                              ),
-                            )}
-                            s
-                          </>
+                    <div className="inspector-hero">
+                      <div className={'empty-icon ' + object.kind}>
+                        {object.kind === 'host' ? (
+                          <Server />
+                        ) : object.kind === 'service' || object.kind === 'url' ? (
+                          <Globe />
                         ) : (
-                          'No scan selected'
+                          <Pentagon />
                         )}
+                      </div>
+                      <span className="eyebrow">{object.kind}</span>
+                      <h2>{object.label}</h2>
+                      <span
+                        className={'badge ' + (object.kind === 'custom' ? 'warning' : 'success')}
+                      >
+                        {object.kind === 'custom'
+                          ? 'Manual · ' + String(object.attrs.status || 'idea')
+                          : (object.attrs.source === 'manual'
+                              ? 'Manual · '
+                              : object.attrs.run_id
+                                ? 'Imported · '
+                                : 'Observed · ') + String(object.attrs.source || 'nmap')}
                       </span>
-                      {scan?.status === 'completed' && (
+                    </div>
+                    {['service', 'application', 'endpoint', 'url'].includes(object.kind) && (
+                      <div className="inspector-section">
+                        <button disabled={busy} onClick={() => void openWebResearch(object)}>
+                          Open web research
+                        </button>
+                        <small>Continue locally with this object. No request is sent.</small>
+                      </div>
+                    )}
+                    {pid && (
+                      <SourceActions
+                        key={'records:' + object.id}
+                        pid={pid}
+                        source="node"
+                        id={object.id}
+                      />
+                    )}
+                    {object.kind === 'custom' && (
+                      <CustomObjectDetails
+                        pid={pid!}
+                        key={'custom:' + object.id}
+                        node={object}
+                        onSave={async (content) => {
+                          await api(
+                            '/projects/' + pid + '/nodes/' + encodeURIComponent(object.id),
+                            'PUT',
+                            content,
+                          );
+                          notify('Object saved');
+                          await refresh(pid!).catch(() =>
+                            setError(
+                              'Object saved. Refresh failed; reopen the project to reload it.',
+                            ),
+                          );
+                        }}
+                      />
+                    )}
+                    {object.kind !== 'custom' && (
+                      <details className="inspector-section">
+                        <summary>Object details</summary>
+                        {Object.entries(object.attrs)
+                          .filter(
+                            ([k]) =>
+                              ![
+                                'evidence_xml',
+                                'evidence_json',
+                                'scan_id',
+                                'observations',
+                                'evidence_truncated',
+                              ].includes(k),
+                          )
+                          .map(([k, v]) => (
+                            <div className="attribute" key={k}>
+                              <span>{k}</span>
+                              <strong>{String(v) || '—'}</strong>
+                            </div>
+                          ))}
+                      </details>
+                    )}
+                    {pid && (
+                      <Observations
+                        key={'observations:' + object.id}
+                        pid={pid}
+                        nodeId={object.id}
+                        focusId={
+                          observationFocus?.node_id === object.id
+                            ? observationFocus.observation_id
+                            : undefined
+                        }
+                        onClearFocus={() => setObservationFocus(undefined)}
+                      />
+                    )}
+                    <details>
+                      <summary>Graph position</summary>
+                      <PositionEditor
+                        key={object.id + ':' + object.x + ':' + object.y}
+                        node={object}
+                        onSave={async (x, y) => {
+                          await api(
+                            '/projects/' +
+                              pid +
+                              '/nodes/' +
+                              encodeURIComponent(object.id) +
+                              '/position',
+                            'PUT',
+                            { x, y },
+                          );
+                          await refresh(pid!);
+                          notify('Position updated');
+                        }}
+                      />
+                    </details>
+                    <div className="inspector-section">
+                      <h3>Related objects</h3>
+                      {detail?.edges
+                        .filter((e) => e.source === object.id || e.target === object.id)
+                        .map((e) => {
+                          const n = detail.nodes.find(
+                            (n) => n.id === (e.source === object.id ? e.target : e.source),
+                          );
+                          return (
+                            <button
+                              className="related"
+                              key={e.id}
+                              onClick={() => setSelected(n?.id || null)}
+                            >
+                              <Network size={14} />
+                              {n?.label}
+                              <ChevronRight size={13} />
+                            </button>
+                          );
+                        })}
+                    </div>
+                    {pid && (
+                      <Suggestions
+                        pid={pid}
+                        nodeId={object.id}
+                        revision={detail?.project.updated || ''}
+                        onChoose={(profile, destination, nodeId) => {
+                          setServiceNode(nodeId);
+                          setProfileId(profile);
+                          setTarget(destination);
+                          setModal('scan');
+                        }}
+                      />
+                    )}
+                    {object.attrs.evidence_json != null && (
+                      <details className="inspector-section">
+                        <summary>Source evidence · JSON</summary>
+                        {object.attrs.evidence_truncated === true && (
+                          <p className="muted">
+                            Preview truncated. Export the full scan evidence below.
+                          </p>
+                        )}
+                        <p className="muted">Scan {String(object.attrs.scan_id)}</p>
+                        <pre className="evidence">{String(object.attrs.evidence_json)}</pre>
                         <button
                           onClick={() =>
                             void perform(async () => {
-                              const path = await saveArtifact(
-                                scan.id,
-                                scan.tool && scan.tool !== 'nmap' ? 'json' : 'xml',
-                              );
+                              const path = await saveArtifact(String(object.attrs.scan_id), 'json');
                               notify('Evidence saved: ' + path);
                             })
                           }
                         >
-                          Export scan evidence
+                          Export source JSON
                         </button>
-                      )}
-                      {scan && active(scan) && (
-                        <button
-                          className="danger-button"
-                          onClick={() =>
-                            void perform(async () => {
-                              await api('/scans/' + scan.id + '/cancel', 'POST');
-                              if (pid) await refresh(pid);
-                              notify('Scan cancelled');
-                            })
-                          }
-                        >
-                          <Square size={11} />
-                          Stop scan
-                        </button>
-                      )}
-                    </div>
-                    {pid && scan && (
-                      <SourceActions key={scan.id} pid={pid} source="scan" id={scan.id} />
+                      </details>
                     )}
-                    <pre className="terminal">
-                      {scan
-                        ? (scan.command || []).join(' ') +
-                          '\n\n' +
-                          (scan.output || 'Waiting for tool output…') +
-                          (scan.error ? '\n' + scan.error : '')
-                        : 'Tool output will appear here when you start a scan. No shell session is running.'}
-                    </pre>
-                  </>
-                ) : tab === 'Running Tasks' ? (
-                  <div className="task-lines">
-                    {detail?.scans.filter(active).map((s) => (
-                      <div key={s.id}>
-                        <LoaderCircle size={13} className="spin" />
-                        {s.tool || 'nmap'} · {s.target}
-                        <span>{s.status}</span>
+                    {Array.isArray(object.attrs.observations) && (
+                      <div className="inspector-section">
+                        <h3>Recent observations</h3>
+                        {(
+                          object.attrs.observations as {
+                            scan_id: string;
+                            tool: string;
+                            observed_at: string;
+                          }[]
+                        ).map((observation) => (
+                          <p key={observation.scan_id}>
+                            {observation.tool} · {date(observation.observed_at)}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    {object.attrs.evidence_xml != null && (
+                      <details className="inspector-section">
+                        <summary>Source evidence</summary>
+                        <p className="muted">Scan {String(object.attrs.scan_id)}</p>
+                        <pre className="evidence">{String(object.attrs.evidence_xml)}</pre>
                         <button
                           onClick={() =>
                             void perform(async () => {
-                              await api('/scans/' + s.id + '/cancel', 'POST');
-                              await refresh(pid!);
+                              const path = await saveArtifact(String(object.attrs.scan_id));
+                              notify('Evidence saved: ' + path);
                             })
                           }
                         >
-                          Cancel
+                          <ArrowDownToLine size={14} />
+                          Export source XML
+                        </button>
+                      </details>
+                    )}
+                    {object.kind === 'custom' && (
+                      <div className="inspector-section">
+                        <button className="danger-button" onClick={() => void removeNode(object)}>
+                          Delete custom node
                         </button>
                       </div>
-                    ))}
-                    {!running && <span className="muted">No running tasks.</span>}
-                  </div>
-                ) : (
-                  <div className="event-lines">
-                    {(tab === 'Logs'
-                      ? detail?.scans
-                          .filter((s) => s.error)
-                          .map((s) => ({
-                            id: s.id,
-                            created: s.ended || s.started,
-                            message: s.error,
-                          }))
-                      : detail?.events
-                    )?.map((e) => (
-                      <div key={e.id}>
-                        <time>{date(e.created)}</time>
-                        <span>{e.message}</span>
-                      </div>
-                    ))}
-                    {((tab === 'Events' && !detail?.events.length) ||
-                      (tab === 'Logs' && !detail?.scans.some((s) => s.error))) && (
-                      <span className="muted">No {tab.toLowerCase()} to display.</span>
+                    )}
+                  </>
+                )}
+                {selectedEdge && (
+                  <div className="inspector-section">
+                    <h2>{selectedEdge.kind}</h2>
+                    <span className={'badge ' + (selectedEdge.evidence ? 'success' : 'warning')}>
+                      {selectedEdge.evidence ? 'Observed' : 'Manual hypothesis'}
+                    </span>
+                    <p>Source: {detail?.nodes.find((n) => n.id === selectedEdge.source)?.label}</p>
+                    <p>Target: {detail?.nodes.find((n) => n.id === selectedEdge.target)?.label}</p>
+                    {!selectedEdge.evidence && (
+                      <RelationshipEditor
+                        key={selectedEdge.id}
+                        label={selectedEdge.kind}
+                        onSave={async (kind) => {
+                          await api(
+                            '/projects/' + pid + '/edges/' + encodeURIComponent(selectedEdge.id),
+                            'PUT',
+                            { kind },
+                          );
+                          await refresh(pid!);
+                          notify('Relationship updated');
+                        }}
+                      />
+                    )}
+                    {!selectedEdge.evidence && (
+                      <button
+                        className="danger-button"
+                        onClick={() => {
+                          if (window.confirm('Delete manual relationship?'))
+                            void perform(async () => {
+                              await api(
+                                '/projects/' +
+                                  pid +
+                                  '/edges/' +
+                                  encodeURIComponent(selectedEdge.id),
+                                'DELETE',
+                              );
+                              setSelected(null);
+                              await refresh(pid!);
+                            });
+                        }}
+                      >
+                        Delete relationship
+                      </button>
                     )}
                   </div>
                 )}
-              </div>
+              </aside>
             )}
-          </section>
+        </div>
+        {pid && detail && detail.scans.length > 0 && (
+          <BackgroundWork
+            key={pid}
+            pid={pid}
+            scans={detail.scans}
+            scan={scan}
+            expanded={bottom}
+            onExpand={setBottom}
+            onSelect={setScanId}
+            onCancel={async (id) => {
+              const result = await api<{ scan: Scan }>('/scans/' + id + '/cancel', 'POST');
+              if (activeProject.current !== pid) return;
+              setScan(result.scan);
+              await refresh(pid);
+            }}
+            onRetry={(previous) => {
+              setTarget(previous.target);
+              setProfileId(previous.profile || 'quick');
+              setServiceNode(previous.options?.service_node);
+              setScanError('');
+              setModal('scan');
+            }}
+            onResult={async (result) => {
+              const fresh = await refresh(pid);
+              if (activeProject.current !== pid) return;
+              const resultNodes = new Map(fresh.nodes.map((node) => [node.id, node]));
+              setBottom(false);
+              if (result.tool !== 'nmap') {
+                const endpoint = result.options?.result?.node_ids
+                  ?.map((id) => resultNodes.get(id))
+                  .find((node) => node?.kind === 'endpoint');
+                if (endpoint) {
+                  putWorkspace(pid, 'web_origin', String(endpoint.attrs.origin));
+                  putWorkspace(pid, 'web_node', endpoint.id);
+                }
+                setPage('Web applications');
+              } else {
+                setPage('Network Graph');
+                setNodeKind('all');
+                const node =
+                  result.options?.result?.node_ids?.find(
+                    (id) => resultNodes.get(id)?.kind === 'service',
+                  ) || result.options?.result?.node_ids?.[0];
+                if (node) setSelected(node);
+              }
+            }}
+            onExport={async (result) => {
+              const path = await saveArtifact(
+                result.id,
+                result.tool && result.tool !== 'nmap' ? 'json' : 'xml',
+              );
+              notify('Evidence saved: ' + path);
+            }}
+          />
         )}
         <footer className="statusbar">
           <span>
@@ -2027,12 +2021,21 @@ export default function App() {
               />
             </label>
             <label>
+              Investigation goal
+              <textarea
+                maxLength={2000}
+                value={goal}
+                onChange={(e) => setGoal(e.target.value)}
+                placeholder="What question should this investigation answer?"
+              />
+            </label>
+            <label>
               Description
               <textarea
                 maxLength={4000}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Scope, objectives and context"
+                placeholder="Engagement context (scope is defined in Plan)"
               />
             </label>
             <div className="dialog-actions">
@@ -2050,11 +2053,13 @@ export default function App() {
       {modal === 'scan' && (
         <Dialog title="Start recon task" onClose={closeModal}>
           <ScanForm
+            pid={pid || undefined}
             serviceNode={serviceNode}
             servicePort={
               Number(detail?.nodes.find((n) => n.id === serviceNode)?.attrs.port) || undefined
             }
             initialTarget={target}
+            submissionError={scanError}
             initialProfile={profileId}
             busy={busy}
             onSubmit={(request) => void submitScan(request)}

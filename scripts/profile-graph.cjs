@@ -52,6 +52,11 @@ const { once } = require('node:events');
       viewport: '1366x768',
       samples: [],
     };
+    for (const performanceProfile of ['low', 'medium', 'high']) {
+    const preferences = await fetch(`http://127.0.0.1:${port}/settings/appearance`, {
+      method: 'PUT', headers, body: JSON.stringify({performance_profile: performanceProfile, reduced_motion: true}),
+    });
+    if (!preferences.ok) throw Error('Could not select performance profile');
     for (const count of [100, 300, 1000]) {
       const seed = `import sqlite3,json,sys
 db=sqlite3.connect(sys.argv[1]);pid=sys.argv[2];count=int(sys.argv[3])
@@ -131,6 +136,7 @@ db.commit()
       const backend = readFileSync(`/proc/${child.pid}/status`, 'utf8');
       const backendRss = Number(backend.match(/VmRSS:\s+(\d+)/)[1]) / 1024;
       const sample = {
+        performance_profile: performanceProfile,
         count,
         backend_rss_mib: Math.round(backendRss),
         graph_open_ms: Math.round(openMs),
@@ -148,9 +154,10 @@ db.commit()
       if (
         !frames.length ||
         !Number.isFinite(sample.graph_open_ms) ||
-        (count > 500 && snapshot.minimap)
+        ((count > 500 || performanceProfile === 'low') && snapshot.minimap)
       )
         throw Error('Graph performance scenario did not execute correctly');
+    }
     }
     if (errors.length) throw Error(errors.join('\n'));
     const destination = process.env.PROFILE_OUTPUT || '/tmp/dragontrip-graph-profile.json';

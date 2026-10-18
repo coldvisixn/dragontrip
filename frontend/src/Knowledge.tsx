@@ -1066,7 +1066,12 @@ export default function Knowledge({
               <SourceLinks
                 source={selected.content.source as Parameters<typeof SourceLinks>[0]['source']}
               />
-              <SourceActions key={selected.id} pid={pid} source="record" id={selected.id} />
+              <SourceActions
+                key={'source:' + selected.id}
+                pid={pid}
+                source="record"
+                id={selected.id}
+              />
               {kind === 'finding' && (
                 <span className={'badge severity-' + selected.content.severity}>
                   {selected.content.severity}
@@ -1122,7 +1127,11 @@ export default function Knowledge({
                 {!selected.content.node_ids.length && <p className="muted">No linked objects.</p>}
               </div>
               {kind === 'finding' && (
-                <Observations key={selected.id} pid={pid} findingId={selected.id} />
+                <Observations
+                  key={'observations:' + selected.id}
+                  pid={pid}
+                  findingId={selected.id}
+                />
               )}
               <LinkedEvidence pid={pid} ids={selected.content.attachment_ids || []} />
               <h3>Source scans</h3>

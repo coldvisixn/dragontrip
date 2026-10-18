@@ -1,4 +1,4 @@
-"""Check 0.9.0 delivery through the installed Tauri/WebKit application."""
+"""Check 0.10.0 delivery through the installed Tauri/WebKit application."""
 
 import argparse
 import importlib.util
@@ -88,7 +88,7 @@ def main():
                 driver.click("Create project")
                 checks.wait_until(
                     lambda: driver.js(
-                        "return document.body.textContent.includes('Start with the evidence you already have')"
+                        "return !!document.querySelector('.journey-next') && document.body.textContent.includes('Project overview')"
                     )
                 )
                 checks.capture_ui(checks.VALIDATION / "screenshots/native-start.png")

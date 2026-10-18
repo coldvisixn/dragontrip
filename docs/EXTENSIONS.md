@@ -32,7 +32,7 @@ Graph overview requests use `?compact=true`; the selected-object endpoint suppli
 
 ## Project archive contract
 
-`.dtproj` is a ZIP with `manifest.json`, version **5** (imports read **1–5**), format `dragontrip-project`. The manifest contains project metadata, objects, edges, historical scans, knowledge/retests, attachment metadata, events, viewport, credential inclusion flag, scope rules, import runs, source observations, research workspace/recovery cells, and a size/SHA-256 map for every additional entry. Import remaps all project-scoped references. Older consumers reject unsupported versions. Imported finding and relation suffixes remain stable so later imports deduplicate after transfer. Report composition remains local and is not transferred.
+`.dtproj` is a ZIP with `manifest.json`, version **6** (imports read **1–6**), format `dragontrip-project`. The manifest contains project metadata, objects, edges, historical scans, knowledge/retests, attachment metadata, events, viewport, credential inclusion flag, scope rules, import runs, source observations, research workspace/recovery cells, and a size/SHA-256 map for every additional entry. Import remaps all project-scoped references. Older consumers reject unsupported versions. Imported finding and relation suffixes remain stable so later imports deduplicate after transfer. Report composition remains local and is not transferred.
 
 Only `artifacts/<scan-id>.xml|json`, `attachments/<id>` and optional encrypted `vault.json` entries are allowed. No archive path is extracted directly. Import validates counts, byte budgets, identities, coordinates, references, image types and checksums, writes a fresh project, remaps identities and cleans staged files on transaction failure. Imported active scans become interrupted and never enter the execution queue. Observed node IDs retain their suffix under the new project ID so rescans deduplicate them.
 
@@ -57,3 +57,7 @@ Version 3 adds checklist/workflow/workflow_run knowledge records. Preserve neste
 ## Archive v5 and workspace (0.9.0)
 
 Research workspace cells use `/projects/{pid}/workspace` and `/projects/{pid}/workspace/{key}` with numeric revision, `value.data` and a permanent `closed` tombstone for each draft ID. v5 includes these cells and remaps embedded project references on import. Imports read v1–v5. Legacy 0.8 note/finding/path drafts migrate at startup without deleting old rows; report composition stays on the legacy draft API and is not transferred. [Current recovery contract](HTB-WORKSPACE.md).
+
+## Archive v6 and investigation goal (unreleased)
+
+Migration 0006 adds `Project.goal` with an empty default. v6 carries the goal and bounded source artifacts from terminal scans, including failed/cancelled/interrupted outcomes. Scan result metadata uses the existing options JSON and remaps referenced node IDs on import. Older applications reject v6; current imports accept v1–v6. See [contracts and recovery](experience/ARCHITECTURE.ru.md).

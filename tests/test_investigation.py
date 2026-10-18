@@ -157,7 +157,7 @@ def test_observation_record_task_links_reimport_and_archive(client):
     archive = client.post(base + "/archive", json={})
     assert archive.status_code == 200, archive.text
     with zipfile.ZipFile(io.BytesIO(archive.content)) as z:
-        assert json.loads(z.read("manifest.json"))["version"] == 5
+        assert json.loads(z.read("manifest.json"))["version"] == 6
     result = client.post("/imports", files={"file": ("lab.dtproj", archive.content)})
     assert result.status_code == 201, result.text
     imported = result.json()["id"]

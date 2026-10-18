@@ -8,6 +8,7 @@ export type Appearance = {
   density: 'comfortable' | 'compact';
   reduced_motion: boolean;
   graph_detail: 'auto' | 'full' | 'compact';
+  performance_profile: 'low' | 'medium' | 'high';
 };
 export const defaults: Appearance = {
   theme: 'dark',
@@ -15,6 +16,7 @@ export const defaults: Appearance = {
   density: 'comfortable',
   reduced_motion: false,
   graph_detail: 'auto',
+  performance_profile: 'medium',
 };
 export function useAppearance() {
   const [value, setValue] = useState<Appearance>(() => {
@@ -36,7 +38,9 @@ export function useAppearance() {
         value.theme === 'system' ? (media.matches ? 'light' : 'dark') : value.theme;
       root.dataset.accent = value.accent;
       root.dataset.density = value.density;
-      root.dataset.reducedMotion = String(value.reduced_motion);
+      root.dataset.reducedMotion = String(
+        value.reduced_motion || value.performance_profile === 'low',
+      );
     };
     apply();
     writeLocal('dragontrip.appearance', JSON.stringify(value));
@@ -109,6 +113,20 @@ export default function Preferences({
       <form onSubmit={(e) => void save(e, 'appearance')}>
         <div className="recon-grid">
           <label>
+            Performance profile
+            <select
+              aria-label="Performance profile"
+              value={draft.performance_profile}
+              onChange={(e) =>
+                change('performance_profile', e.target.value as Appearance['performance_profile'])
+              }
+            >
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+          <label>
             Theme
             <select
               aria-label="Theme"
@@ -157,6 +175,11 @@ export default function Preferences({
             </select>
           </label>
         </div>
+        <p className="muted">
+          Low reduces motion and graph decoration. Medium keeps the standard balance. High retains
+          detailed cards longer. Graph detail can override automatic card density; every profile
+          keeps large-graph limits and all objects available.
+        </p>
         <label className="checkbox">
           <input
             type="checkbox"

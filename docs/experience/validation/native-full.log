@@ -1,0 +1,17 @@
+Native session launched
+Dashboard ready
+Idle metrics: {'rss_mib': 749.8, 'pss_mib': 509.3, 'processes': 4, 'exited_during_cpu_sample': 0, 'cpu_percent_one_core': 30.1}
+Scan metrics: {'rss_mib': 875.1, 'pss_mib': 530.8, 'processes': 5, 'exited_during_cpu_sample': 0, 'cpu_percent_one_core': 10.5}
+Real Nmap and Inspector ready
+Native XML export, private permissions, collision protection and invalid-path rejection passed
+Native drag persisted
+PASS: native WhatWeb recommendation + URL graph + JSON evidence export + separate Full Scan approval
+PASS: native Markdown + screenshot upload/preview + Timeline + project search + theme + vault reveal/hide + encrypted project export/import
+Preparing native close / restart
+Native session launched
+PASS: native Tauri IPC + packaged Python + real Nmap + graph + Inspector + drag + manual link + restart
+PASS: native paginated tool filter and web-result restart persistence
+Graph 100 metrics: {'rss_mib': 876.3, 'pss_mib': 654.7, 'processes': 4, 'exited_during_cpu_sample': 0, 'cpu_percent_one_core': 1.0, 'dom_nodes': 99, 'drag_frame_median_ms': 22, 'drag_frame_p95_ms': 112}
+Graph 300 metrics: {'rss_mib': 978.4, 'pss_mib': 756.3, 'processes': 4, 'exited_during_cpu_sample': 0, 'cpu_percent_one_core': 0.0, 'dom_nodes': 299, 'drag_frame_median_ms': 25, 'drag_frame_p95_ms': 184}
+Preparing native close / restart
+PASS: closing native app during Nmap leaves no live application descendants

@@ -1,20 +1,19 @@
 # Workspace navigation
 
-Six sidebar destinations keep research in three project sections. The first three pages in each section have tabs; additional pages appear in **More…**. Ctrl+K also reaches every existing page.
+The sidebar separates global Dashboard/Projects/Settings from four project sections. The selected section exposes all its pages vertically; there is no horizontal tab bar or More menu. Ctrl+K also reaches every page.
 
-| Sidebar | Frequent tabs | More… |
-| --- | --- | --- |
-| Dashboard | Workspace overview | — |
-| Projects | Project selection and transfer | — |
-| Research | Network Graph, Hosts, Web applications | Project overview, Methodologies, Attack Paths |
-| Recon | Scans, Import results, Recon workflows | Targets & scope |
-| Notebook | Notes, Findings, Task board | Evidence, Credentials Vault, Timeline, Project search, Reports |
-| Settings | Settings, Tools | — |
+| Section | Pages |
+| --- | --- |
+| Plan | Project overview and goal, Targets & scope, Methodologies |
+| Research | Network Graph, Hosts, Web applications |
+| Recon | Scans, Import results, Recon workflows |
+| Notebook | Notes, Findings, Task board, Attack Paths, Evidence, Credentials Vault, Timeline, Project search, Reports |
+| Settings | Settings, Tools |
 
-Each project retains its own navigation history and section pages. Deep links from observations, Inspector, records and the command palette select the matching section/page. Back/Forward follows visited pages. The last page, selections, filters, graph view and supported editors recover after restart. [Draft recovery and conflicts](HTB-WORKSPACE.md).
+Each project retains its own navigation history and section pages. Source links select the matching section/page. Back/Forward follows visited pages. Selections, filters, graph view and supported editors recover after restart. [Draft recovery and conflicts](HTB-WORKSPACE.md).
 
-**Collapse sidebar** switches to icons with tooltips and accessible names; the preference persists. Project sections are disabled until a project is selected. The terminal stays hidden when empty, while running tools remain accessible. Optional metadata and less frequent actions live in contextual details blocks.
+Collapse sidebar switches to compact labels with tooltips and accessible names. Project sections are disabled until a project is selected. Inspector visibility is independent of selection. The header identifies project, current page and goal. Background work shows a compact status row; expand it for result, stop, evidence, linked records and a new attempt. Technical output is a separate details block.
 
-Keyboard controls: Left/Right selects adjacent visible tabs; Home/End selects the first/last visible tab. The active tab controls its labeled workspace panel. **More…** is a standard keyboard-operable select. Ctrl+K opens quick navigation, Alt+Left/Right goes Back/Forward, Ctrl+Shift+F opens project search. Dialogs retain focus and Escape closes them.
+Keyboard controls: Up/Down (also Left/Right) selects adjacent vertical tabs; Home/End selects the first/last. The active tab controls its labeled workspace panel. Ctrl+K opens quick navigation, Alt+Left/Right goes Back/Forward, Ctrl+Shift+F opens project search. Dialogs retain focus and Escape closes them.
 
-Browser and installed Tauri/WebKit acceptance cover six links, remembered sections, source-linked note routing, compact sidebar, keyboard navigation, Back and restart recovery. Compact light/dark 1000×650 checks are included in investigation acceptance. [Current evidence](BUILD-0.9.1.md) · [Browser navigation test](../scripts/navigation-smoke.cjs) · [Native navigation test](../scripts/native-navigation-smoke.py).
+[Experience changes and evidence](experience/README.ru.md) · [Browser test](../scripts/navigation-smoke.cjs) · [Native test](../scripts/native-navigation-smoke.py).

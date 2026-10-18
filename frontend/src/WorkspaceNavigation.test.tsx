@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { PrimaryNavigation, SectionTabs, sectionFor } from './WorkspaceNavigation';
 afterEach(cleanup);
-it('groups project pages into three links and remembers the last destination', () => {
+it('groups project pages into four links and remembers the last destination', () => {
   const navigate = vi.fn();
   render(
     <PrimaryNavigation
@@ -13,7 +13,7 @@ it('groups project pages into three links and remembers the last destination', (
       onNavigate={navigate}
     />,
   );
-  expect(screen.getAllByRole('button')).toHaveLength(5);
+  expect(screen.getAllByRole('button')).toHaveLength(6);
   expect(screen.getByRole('button', { name: 'Research' })).toHaveAttribute('aria-current', 'page');
   fireEvent.click(screen.getByRole('button', { name: 'Research' }));
   expect(navigate).toHaveBeenCalledWith('Web applications');

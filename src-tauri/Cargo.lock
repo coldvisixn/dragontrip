@@ -669,7 +669,7 @@ dependencies = [
 
 [[package]]
 name = "dragontrip"
-version = "0.9.1"
+version = "0.10.0"
 dependencies = [
  "getrandom 0.4.3",
  "glib",

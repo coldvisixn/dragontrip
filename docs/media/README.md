@@ -10,7 +10,7 @@ The presentation uses the existing angular Dragontrip mark from [the application
 
 ## Capture provenance and reproduction
 
-Captured from 0.9.0 application code at `ba70fcb` (application code unchanged from the published 0.9.0 tag), with React/Vite in Chromium and the real local Python backend. The only desktop substitute is the test-only connection bridge that supplies the loopback API connection. Records, imports, links, drafts and navigation use normal application code; API responses and displayed text are not mocked. This is a browser demonstration, not installed-package validation.
+Captured from the 0.10.0 release working tree on 2026-10-18, with React/Vite in Chromium and the real local Python backend. The only desktop substitute is the test-only connection bridge that supplies the loopback API connection. Records, imports, links, drafts and navigation use normal application code; API responses and displayed text are not mocked. This is a browser demonstration, not installed-package validation.
 
 [`fixtures/portal-nmap.xml`](fixtures/portal-nmap.xml) and [`fixtures/portal-burp.xml`](fixtures/portal-burp.xml) are manually authored demonstration inputs. They contain only `192.0.2.10` and `portal.example.test`, no credentials or real targets. No tools or network requests to targets are made. The capture script checks that scan history is empty and that the task links to its hypothesis. It creates a temporary `XDG_DATA_HOME` and removes it on exit, leaving user projects alone.
 
@@ -33,11 +33,13 @@ ffmpeg -y -i docs/media/investigation.webm -an \
 rm docs/media/investigation.webm
 ```
 
+The 0.10.0 capture used system FFmpeg through the local Playwright cache executable path because the browser-download CDN was unavailable. This affects recording only, not application behavior.
+
 For capture experiments, set `DRAGONTRIP_MEDIA_OUTPUT` to a separate directory. `CHROMIUM_PATH` selects a system Chromium (default `/usr/bin/chromium`). The brand renderer reads the SVG and renders it at its native dimensions; it does not change screenshots. These assets contain no generated or recreated application UI.
 
 ## GitHub repository settings
 
-The repository's About description and topics were checked against the public GitHub API after the 0.9.1 release; they match [`github-metadata.json`](github-metadata.json). The homepage field is empty; the README already links directly to the published installer and release. Social-preview upload status has not been verified. Keep the capture provenance above tied to 0.9.0; do not relabel the existing images as new 0.9.1 captures.
+Updated About text, homepage and topics are prepared in [`github-metadata.json`](github-metadata.json). Applying these repository settings has not yet been verified: this environment blocks GitHub CLI API access, and the connector has no repository-settings operation. Social-preview upload status is also unverified.
 
 The connected tools expose repository content writes, but no About/topic or social-preview update operation. If repository settings need changing, a maintainer can use the steps below. Committing metadata or an image does not apply GitHub settings.
 
@@ -52,7 +54,7 @@ import json
 import subprocess
 from pathlib import Path
 metadata = json.loads(Path('docs/media/github-metadata.json').read_text())
-args = ['gh', 'repo', 'edit', 'coldvisixn/dragontrip', '--description', metadata['description']]
+args = ['gh', 'repo', 'edit', 'coldvisixn/dragontrip', '--description', metadata['description'], '--homepage', metadata['homepage']]
 for topic in metadata['topics']:
     args.extend(['--add-topic', topic])
 subprocess.run(args, check=True)

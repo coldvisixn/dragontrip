@@ -1,0 +1,9 @@
+Checking custom object editor
+Checking select contrast
+Checking linked note
+Checking findings
+Checking attack paths
+Checking vault
+Checking Markdown, screenshots, timeline, search and preferences
+PASS: editable objects, knowledge/path/vault lifecycle, Markdown and screenshot evidence, Timeline/search, theme preferences, viewport restoration, encrypted project transfer, keyboard palette, reload and backend restart; light/dark selects; 1366/1920 layouts.
+Screenshots: /tmp/dragontrip-phase3-screenshots

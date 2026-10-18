@@ -136,7 +136,7 @@ class ObservationRecord(BaseModel):
 
 class Manifest(BaseModel):
     format: Literal["dragontrip-project"]
-    version: Literal[1, 2, 3, 4, 5]
+    version: Literal[1, 2, 3, 4, 5, 6]
     project: dict
     nodes: list[NodeRecord] = Field(max_length=10000)
     edges: list[EdgeRecord] = Field(max_length=50000)
@@ -233,7 +233,7 @@ def register_archives(app, sessions, project, root):
                     )
                 manifest = {
                     "format": "dragontrip-project",
-                    "version": 5,
+                    "version": 6,
                     "project": serialize(p),
                     "nodes": rows(Node),
                     "edges": rows(Edge),
@@ -280,7 +280,7 @@ def register_archives(app, sessions, project, root):
                 for scan in scans:
                     extension = "xml" if scan["tool"] == "nmap" else "json"
                     path = root / "artifacts" / (scan["id"] + "." + extension)
-                    if scan["status"] == "completed" and path.is_file():
+                    if scan["status"] not in {"queued", "running"} and path.is_file():
                         write("artifacts/" + path.name, path.read_bytes())
                 for attachment in manifest["attachments"]:
                     path = root / "attachments" / attachment["id"]
@@ -498,7 +498,7 @@ def register_archives(app, sessions, project, root):
                 allowed_files |= {
                     f"artifacts/{row.id}.{'xml' if row.tool == 'nmap' else 'json'}"
                     for row in manifest.scans
-                    if row.status == "completed"
+                    if row.status not in {"queued", "running"}
                 }
                 if manifest.credentials_included:
                     allowed_files.add("vault.json")
@@ -596,6 +596,7 @@ def register_archives(app, sessions, project, root):
                             id=pid,
                             name=(project_input.name + " (imported)")[:100],
                             description=project_input.description,
+                            goal=project_input.goal,
                         )
                         db.add(p)
                         db.flush()

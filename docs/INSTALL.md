@@ -4,14 +4,14 @@
 
 ## Choose the right download
 
-Open [Releases](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.1) and expand **Assets**. Download both:
+Open [Releases](https://github.com/coldvisixn/dragontrip/releases/tag/v0.10.0) and expand **Assets**. Download both:
 
-- `dragontrip_0.9.1_amd64.deb` — the desktop installer for Linux x86_64.
-- `dragontrip_0.9.1_amd64.deb.sha256` — its SHA-256 checksum.
+- `dragontrip_0.10.0_amd64.deb` — the desktop installer for Linux x86_64.
+- `dragontrip_0.10.0_amd64.deb.sha256` — its SHA-256 checksum.
 
 GitHub's automatically generated **Source code (zip/tar.gz)** downloads are source snapshots. They do not contain a ready-to-run application. Actions artifacts are intended for development builds; Releases is the user download page.
 
-Version 0.9.1 is a prerelease (early MVP) for Linux x86_64, primarily current Kali Linux. The release workflow checks the installer on Ubuntu and installs that exact package on Kali for native acceptance before publication. Upgrade checks preserve data and encrypted credentials from published 0.8.0 and 0.9.0. [Exact checks and platform limits](BUILD-0.9.1.md). Windows, macOS, ARM, older distributions and a specific VM performance guarantee are not provided.
+Version 0.10.0 is a prerelease (early MVP) for Linux x86_64, primarily current Kali Linux. The release workflow checks the installer on Ubuntu and installs that exact package on Kali for native acceptance before publication. Upgrade checks preserve data and encrypted credentials from published 0.8.0 and 0.9.0. [Exact checks and platform limits](BUILD-0.10.0.md). Windows, macOS, ARM, older distributions and a specific VM performance guarantee are not provided.
 
 Check your architecture with `dpkg --print-architecture`; this package requires `amd64`.
 
@@ -20,9 +20,9 @@ Check your architecture with `dpkg --print-architecture`; this package requires 
 Run these commands from the folder containing the downloaded files:
 
 ```bash
-sha256sum --check dragontrip_0.9.1_amd64.deb.sha256
+sha256sum --check dragontrip_0.10.0_amd64.deb.sha256
 sudo apt update
-sudo apt install ./dragontrip_0.9.1_amd64.deb
+sudo apt install ./dragontrip_0.10.0_amd64.deb
 ```
 
 The checksum should report `OK`. A checksum detects file changes; it is not a separate cryptographic signature. If verification fails, download both files again from the same release.
@@ -54,7 +54,7 @@ Create a project and follow [your first investigation](USAGE.md). The applicatio
 3. Download the new release's `.deb` and matching checksum, verify them, then install with `sudo apt install ./<new-package>.deb`.
 4. Start Dragontrip. Database migrations run automatically.
 
-Do not open an upgraded database with an older binary. To roll back, restore a matching pre-upgrade backup with the application closed. Current archives use format v5 for workspace recovery and retest history; imports read v1–v5. Older applications reject v5.
+Do not open an upgraded database with an older binary. To roll back, restore a matching pre-upgrade backup with the application closed. Current archives use format v6 for the project goal, workspace recovery and retest history; imports read v1–v6. Older applications reject v6. Database migration 0006 adds the project goal.
 
 ## Uninstall
 

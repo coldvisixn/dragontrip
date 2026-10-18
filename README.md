@@ -8,9 +8,9 @@
 
 Connect recon results, observations, hypotheses, findings and next checks in one project — and return with your reasoning intact.
 
-**[Download for Linux · v0.9.1](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.1)** · [Quick start](#get-started) · [See it in action](docs/SHOWCASE.md) · [Русский](README.ru.md)
+**[Download for Linux · v0.10.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.10.0)** · [Quick start](#get-started) · [See it in action](docs/SHOWCASE.md) · [Русский](README.ru.md)
 
-[![Release](docs/media/badges/release.svg)](https://github.com/coldvisixn/dragontrip/releases/tag/v0.9.1)
+[![Release](docs/media/badges/release.svg)](https://github.com/coldvisixn/dragontrip/releases/tag/v0.10.0)
 [![Linux build](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml)
 [![Linux x86_64](docs/media/badges/platform.svg)](docs/INSTALL.md)
 [![MIT license](docs/media/badges/license.svg)](LICENSE)
@@ -32,7 +32,7 @@ Built for practicing pentesters, independent security researchers and people lea
 
 ## From recon to the next check
 
-1. **Define the boundaries.** Record included and excluded targets. Import existing results with a preview, or approve live recon through supported tool profiles.
+1. **Set a goal and boundaries.** Use Plan to describe the investigation goal. Record included and excluded targets. Import existing results with a preview, or approve live recon through supported tool profiles.
 2. **Explore what you observed.** Follow hosts, services and applications in the graph; inspect method-specific endpoints and source observations.
 3. **Form a hypothesis.** Create a linked record, collect evidence and decide what needs manual verification. An imported observation alone does not confirm a vulnerability.
 4. **Check and record.** Track follow-up tasks, manual methodology decisions and finding retests. Saved recon sequences can advance automatically after a full preview and approval, with pause, cancel and explicit retry.
@@ -68,20 +68,20 @@ Screenshots and the recording use the real application with an isolated, explici
 
 ## Get started
 
-**Published release: 0.9.1.** This security and maintenance update includes API and dependency fixes. The published installer passed native Ubuntu and installed-Kali checks, plus data and encrypted-vault upgrades from 0.8.0 and 0.9.0. [Release notes](docs/releases/v0.9.1.md) · [Verified package and checksum](docs/BUILD-0.9.1.md) · [Security audit](docs/SECURITY-AUDIT-2026-10-17.md).
+**0.10.0 connects the complete investigation.** Set a project goal, approve a recon plan, follow services into web research and keep evidence, tasks and retests linked. The new workspace preserves context and partial results across interruptions. [Release notes](docs/releases/v0.10.0.md) · [Build verification](docs/BUILD-0.10.0.md) · [Audit and before/after evidence](docs/experience/README.ru.md).
 
-Download **[`dragontrip_0.9.1_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.9.1/dragontrip_0.9.1_amd64.deb)** and its **[SHA-256 file](https://github.com/coldvisixn/dragontrip/releases/download/v0.9.1/dragontrip_0.9.1_amd64.deb.sha256)** into the same folder. GitHub's “Source code” archives are for developers.
+Download **[`dragontrip_0.10.0_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.10.0/dragontrip_0.10.0_amd64.deb)** and its **[SHA-256 file](https://github.com/coldvisixn/dragontrip/releases/download/v0.10.0/dragontrip_0.10.0_amd64.deb.sha256)** into the same folder. GitHub's “Source code” archives are for developers.
 
 If upgrading, close Dragontrip and [back up the complete data directory](docs/DATA.md#back-up-the-installation) before installing.
 
 ```bash
-sha256sum --check dragontrip_0.9.1_amd64.deb.sha256
+sha256sum --check dragontrip_0.10.0_amd64.deb.sha256
 sudo apt update
-sudo apt install ./dragontrip_0.9.1_amd64.deb
+sudo apt install ./dragontrip_0.10.0_amd64.deb
 dragontrip
 ```
 
-Create a project, choose **Import results**, preview a supported export and open **Research**. For a guided example without your own data, choose **Create fictional demo** on Dashboard or Projects. [First-project guide →](docs/USAGE.md)
+Create a project and set its goal in **Plan**. Choose **Import results**, preview a supported export and open **Research**. For a guided example without your own data, choose **Create fictional demo** on Dashboard or Projects. [First-project guide →](docs/USAGE.md)
 
 For live recon on Kali, install the tools you want to use:
 
@@ -91,15 +91,15 @@ sudo apt install nmap whatweb httpx-toolkit ffuf
 
 The `.deb` bundles the frontend and Python backend; Node.js, Rust, pip and Docker are not needed to run it. Recon tools are separate system executables. The httpx adapter needs **ProjectDiscovery httpx** (`httpx-toolkit` on Kali), not the Python library.
 
-**Current download:** 0.9.1 is a prerelease (early MVP), with an English interface and a Linux x86_64 installer. The release installer is checked on Ubuntu and installed on Kali before publication; see [build verification](docs/BUILD-0.9.1.md). A real 4 GB VirtualBox acceptance remains separate. [Installation, updates and troubleshooting →](docs/INSTALL.md) · [Инструкция для Kali →](docs/INSTALL-KALI.md)
+**Current download:** 0.10.0 is a prerelease (early MVP), with an English interface and a Linux x86_64 installer. The release installer is checked on Ubuntu and installed on Kali before publication; see [build verification](docs/BUILD-0.10.0.md). A real 4 GB VirtualBox acceptance remains separate. [Installation, updates and troubleshooting →](docs/INSTALL.md) · [Инструкция для Kali →](docs/INSTALL-KALI.md)
 
 ## Capabilities and boundaries
 
-The workspace also includes manual review methodologies, an infrastructure graph, evidence attachments and source history, a task board, an encrypted credential vault, portable projects and configurable reports. [Full capabilities and current limits →](docs/CAPABILITIES.md) · [What changed in 0.9.1 →](docs/releases/v0.9.1.md)
+The workspace also includes manual review methodologies, an infrastructure graph, evidence attachments and source history, a task board, an encrypted credential vault, portable projects and configurable reports. [Full capabilities and current limits →](docs/CAPABILITIES.md) · [What changed in 0.10.0 →](docs/releases/v0.10.0.md)
 
 - Live recon uses **Nmap, WhatWeb, ProjectDiscovery httpx and ffuf**, with individual IPv4 targets or IPv4 web origins depending on the adapter. Offline domain/CIDR/IPv6 support does not enable live scanning of those forms.
 - Imports support specific Nmap XML, Burp XML and HTTP Nuclei JSONL exports. There is no built-in Nuclei runner, arbitrary shell runner or automatic exploitation.
-- Ordinary project data is **not encrypted**. The vault encrypts credentials separately. Research drafts and retained recovery text travel in `.dtproj` v5; review them before sharing. Report composition stays local. [Storage, backups and recovery →](docs/DATA.md)
+- Ordinary project data is **not encrypted**. The vault encrypts credentials separately. Research drafts and retained recovery text travel in `.dtproj` v6; review them before sharing. Report composition stays local. [Storage, backups and recovery →](docs/DATA.md)
 - Reports export Markdown, HTML or ZIP with explicitly selected evidence (100 files / 32 MiB); native PDF/DOCX export is not available. Windows, macOS and ARM installers are not provided.
 
 Use Dragontrip only for testing you are authorized to perform. Recon sends traffic to the targets you approve; methodologies and investigation paths record manual work. [Security policy →](SECURITY.md)

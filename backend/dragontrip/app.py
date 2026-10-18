@@ -3,6 +3,7 @@ import json
 import os
 import signal
 import threading
+import hashlib
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
@@ -24,6 +25,7 @@ from .db import (
     Edge,
     Scan,
     Activity,
+    Knowledge,
     Configuration,
     serialize,
     uid,
@@ -51,6 +53,7 @@ from .security import LocalAPIGuard
 class ProjectInput(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     description: str = Field(default="", max_length=4000)
+    goal: str = Field(default="", max_length=2000)
 
     @field_validator("name")
     @classmethod
@@ -60,14 +63,24 @@ class ProjectInput(BaseModel):
         return value.strip()
 
 
-class ScanInput(BaseModel):
+class ScanPlanInput(BaseModel):
     target: str = Field(max_length=1000)
-    authorized: Literal[True]
     scope_required: bool = False
     profile: str = "quick"
-    confirmed: bool = False
     service_node: str | None = Field(default=None, max_length=300)
     words: list[str] = Field(default_factory=list, max_length=500)
+
+
+class GoalInput(BaseModel):
+    goal: str = Field(max_length=2000)
+    expected_goal: str = Field(max_length=2000)
+
+
+class ScanInput(ScanPlanInput):
+    authorized: Literal[True]
+    confirmed: bool = False
+    preview_token: str | None = Field(default=None, max_length=64)
+    request_id: str | None = Field(default=None, min_length=8, max_length=100, pattern=r"^[a-zA-Z0-9_-]+$")
 
 
 class ProfileInput(BaseModel):
@@ -224,6 +237,7 @@ def create_app(token: str, root: Path | None = None, dev=False):
     app.state.sessions, app.state.manager = sessions, manager
     app.state.research_lock = threading.RLock()
     app.state.workflow_launch_lock = asyncio.Lock()
+    app.state.scan_launch_lock = asyncio.Lock()
 
     app.add_middleware(LocalAPIGuard, token=token, origins=origins)
 
@@ -337,8 +351,22 @@ def create_app(token: str, root: Path | None = None, dev=False):
         with sessions() as db:
             p = project(db, pid)
             p.name, p.description = body.name, body.description
+            if "goal" in body.model_fields_set:
+                p.goal = body.goal
             record(db, pid, "Project details updated")
             db.commit()
+            return serialize(p)
+
+    @app.put("/projects/{pid}/goal")
+    def edit_goal(pid: str, body: GoalInput):
+        with app.state.research_lock, sessions() as db:
+            p = project(db, pid)
+            if p.goal != body.expected_goal and p.goal != body.goal:
+                raise HTTPException(409, "The goal changed in another window. Your text is retained. Refresh project context before saving again.")
+            if p.goal != body.goal:
+                p.goal = body.goal
+                record(db, pid, "Investigation goal updated")
+                db.commit()
             return serialize(p)
 
     @app.get("/projects/{pid}")
@@ -391,6 +419,11 @@ def create_app(token: str, root: Path | None = None, dev=False):
             ]
             return {
                 "project": serialize(p),
+                "scope_targets": list(db.scalars(select(ScopeRule.value).where(ScopeRule.project_id == pid, ScopeRule.mode == "include").order_by(ScopeRule.value))),
+                "background_active": any(s["status"] in {"queued", "running"} for s in scans) or bool(db.scalar(select(Knowledge.id).where(
+                    Knowledge.project_id == pid, Knowledge.kind == "workflow_run",
+                    func.json_extract(Knowledge.content, "$.execution") == "running",
+                ).limit(1))),
                 "nodes": rows(Node),
                 "edges": rows(Edge),
                 "scans": sorted(scans, key=lambda s: s["queued_at"], reverse=True),
@@ -554,10 +587,8 @@ def create_app(token: str, root: Path | None = None, dev=False):
             db.commit()
             return serialize(edge)
 
-    @app.post("/projects/{pid}/scans", status_code=201)
-    async def scan(pid: str, body: ScanInput):
-        if len(manager.tasks) >= 32:
-            raise HTTPException(409, "Queue is full (32 tasks)")
+    @app.post("/projects/{pid}/scan-plan")
+    def scan_plan(pid: str, body: ScanPlanInput):
         profile = next((p for p in profiles() if p["id"] == body.profile), None)
         if profile is None:
             raise HTTPException(422, "Unknown scan profile")
@@ -589,16 +620,6 @@ def create_app(token: str, root: Path | None = None, dev=False):
                         422, "Select an observed TCP service in this project"
                     )
                 profile = {**profile, "ports": str(attrs["port"])}
-        if recon.requires_confirmation(profile) and not body.confirmed:
-            raise HTTPException(422, "Confirm the higher-traffic scan explicitly")
-        tool = (await discover_tools(profile["tool"]))[0]
-        if not tool["installed"]:
-            raise HTTPException(
-                409,
-                f"{tool['name']} is unavailable. Check Tools for installation details.",
-            )
-        if len(manager.tasks) >= 32:
-            raise HTTPException(409, "Queue is full (32 tasks)")
         if profile["tool"] == "ffuf":
             import re
 
@@ -611,6 +632,51 @@ def create_app(token: str, root: Path | None = None, dev=False):
                 raise HTTPException(
                     422, "Supply 1–500 relative wordlist entries (no traversal or URLs)"
                 )
+        material = [profile, destination, body.words, body.service_node, body.scope_required,
+                    sorted((rule.mode, rule.value) for rule in rules), configuration("tool_paths", {})]
+        token = hashlib.sha256(json.dumps(material, sort_keys=True).encode()).hexdigest()
+        return {"preview_token": token, "parameters": profile, "target": destination,
+                "requires_confirmation": recon.requires_confirmation(profile),
+                "scope": "included" if rules else "explicit permission required"}
+
+    @app.post("/projects/{pid}/scans", status_code=201)
+    async def scan(pid: str, body: ScanInput):
+        # A lost response or concurrent click must not authorize a second execution.
+        # Persist the receipt with the scan, and serialize discovery + commit + enqueue.
+        async with app.state.scan_launch_lock:
+            fingerprint = hashlib.sha256(body.model_dump_json(exclude={"request_id"}).encode()).hexdigest()
+            if body.request_id:
+                with sessions() as db:
+                    project(db, pid)
+                    existing = db.scalar(select(Scan).where(
+                        Scan.project_id == pid,
+                        func.json_extract(Scan.options, "$.request_id") == body.request_id,
+                    ))
+                    if existing:
+                        if json.loads(existing.options).get("request_fingerprint") != fingerprint:
+                            raise HTTPException(409, "This request was already used with different parameters. Review a new scan plan.")
+                        return serialize(existing)
+            return await launch_scan(pid, body, fingerprint)
+
+    async def launch_scan(pid: str, body: ScanInput, fingerprint: str):
+        if len(manager.tasks) >= 32:
+            raise HTTPException(409, "Queue is full (32 tasks)")
+        plan = scan_plan(pid, body)
+        profile, destination = plan["parameters"], plan["target"]
+        if body.preview_token and body.preview_token != plan["preview_token"]:
+            raise HTTPException(409, "Scan plan changed. Refresh the plan and authorize it again.")
+        if recon.requires_confirmation(profile) and not body.confirmed:
+            raise HTTPException(422, "Confirm the higher-traffic scan explicitly")
+        tool = (await discover_tools(profile["tool"]))[0]
+        if not tool["installed"]:
+            raise HTTPException(
+                409,
+                f"{tool['name']} is unavailable. Check Tools for installation details.",
+            )
+        if len(manager.tasks) >= 32:
+            raise HTTPException(409, "Queue is full (32 tasks)")
+        if scan_plan(pid, body)["preview_token"] != plan["preview_token"]:
+            raise HTTPException(409, "Scan plan changed during tool checks. Refresh and authorize again.")
         with sessions() as db:
             project(db, pid)
             current_scope = list(db.query(ScopeRule).filter_by(project_id=pid))
@@ -628,6 +694,9 @@ def create_app(token: str, root: Path | None = None, dev=False):
                     {
                         **profile,
                         "scope_required": body.scope_required or bool(current_scope),
+                        "request_id": body.request_id,
+                        "request_fingerprint": fingerprint,
+                        "service_node": body.service_node,
                     }
                 ),
             )
@@ -709,14 +778,18 @@ def create_app(token: str, root: Path | None = None, dev=False):
 
     @app.post("/scans/{sid}/cancel")
     async def cancel(sid: str):
+        with sessions() as db:
+            if not db.get(Scan, sid):
+                raise HTTPException(404, "Scan not found")
         await manager.cancel(sid)
-        return {"cancelled": True}
+        with sessions() as db:
+            return {"cancelled": db.get(Scan, sid).status == "cancelled", "scan": serialize(db.get(Scan, sid))}
 
     @app.get("/scans/{sid}/artifact")
     def artifact(sid: str):
         with sessions() as db:
             scan = db.get(Scan, sid)
-            if not scan or scan.status != "completed":
+            if not scan or scan.status in {"queued", "running"}:
                 raise HTTPException(404)
             extension = "xml" if scan.tool == "nmap" else "json"
             path = manager.artifacts / f"{scan.id}.{extension}"

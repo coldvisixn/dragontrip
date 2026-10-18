@@ -149,7 +149,7 @@ def test_retests_are_append_only_and_portable_while_drafts_are_private(client):
     assert archive.status_code == 200
     with zipfile.ZipFile(io.BytesIO(archive.content)) as bundle:
         manifest = json.loads(bundle.read("manifest.json"))
-        assert manifest["version"] == 5
+        assert manifest["version"] == 6
         assert "PRIVATE_DRAFT_SENTINEL" not in json.dumps(manifest)
     old_manifest = {**manifest, "version": 3}
     old_archive = io.BytesIO()

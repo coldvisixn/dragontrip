@@ -2,11 +2,13 @@
 
 import argparse
 import importlib.util
+import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import tempfile
+import time
 
 spec = importlib.util.spec_from_file_location(
     "dragontrip_native_checks", Path(__file__).with_name("native-smoke.py")
@@ -82,11 +84,11 @@ def main():
                     )
                 )
                 driver.click("New project")
-                driver.fill(".dialog input", "Native planning delivery")
+                driver.fill(".dialog input", "Native planning delivery — long project name for research context and follow-up checks")
                 driver.click("Create project")
                 checks.wait_until(
                     lambda: driver.js(
-                        "return !!document.querySelector('.start-project')"
+                        "return !!document.querySelector('.project-plan')"
                     )
                 )
                 driver.navigate("Network Graph", ".graph-toolbar")
@@ -105,7 +107,7 @@ def main():
                     )
                 )
                 assert driver.js(
-                    "return document.querySelectorAll('.sidebar nav button').length===6"
+                    "return document.querySelectorAll('.sidebar nav button').length===7"
                 )
                 assert driver.js(
                     "return document.querySelector('[role=tab][aria-selected=true]').textContent==='Web applications'"
@@ -174,6 +176,32 @@ def main():
                 checks.capture_ui(
                     checks.VALIDATION / "screenshots/native-navigation-expanded.png"
                 )
+                measurements = []
+                for theme in ("dark", "light"):
+                    for width, height, profile in ((1000, 650, "low"), (1366, 768, "medium"), (1920, 1080, "high")):
+                        driver.navigate("Settings", ".product-settings")
+                        driver.js("const s=document.querySelector('[aria-label=\"Theme\"]');s.value=arguments[0];s.dispatchEvent(new Event('change',{bubbles:true}));", theme)
+                        driver.js("const s=document.querySelector('[aria-label=\"Performance profile\"]');s.value=arguments[0];s.dispatchEvent(new Event('change',{bubbles:true}));", profile)
+                        driver.click("Save appearance")
+                        checks.wait_until(lambda: driver.js("return document.documentElement.dataset.theme===arguments[0]", theme))
+                        driver.navigate("Web applications", ".web-map")
+                        driver.js("const row=document.querySelector('.endpoint-row');row.scrollIntoView({block:'center'});row.click();")
+                        checks.wait_until(lambda: driver.js("return !!document.querySelector('.endpoint-detail')"))
+                        windows = subprocess.check_output(["xdotool", "search", "--onlyvisible", "--class", "Dragontrip"], text=True).splitlines()
+                        subprocess.run(["xdotool", "windowsize", "--sync", windows[0], str(width), str(height)], check=True)
+                        time.sleep(.3)
+                        metrics = driver.js("return {width:innerWidth,height:innerHeight,overflow:document.documentElement.scrollWidth>innerWidth,theme:document.documentElement.dataset.theme,reducedMotion:document.documentElement.dataset.reducedMotion}")
+                        assert not metrics["overflow"], metrics
+                        if profile == "low":
+                            assert metrics["reducedMotion"] == "true"
+                        measurements.append({**metrics, "requested": [width, height], "profile": profile})
+                        checks.capture_ui(checks.VALIDATION / f"screenshots/native-web-{theme}-{width}.png", theme=theme)
+                (checks.VALIDATION / "layout.json").write_text(json.dumps(measurements, indent=2) + "\n")
+                driver.navigate("Settings", ".product-settings")
+                driver.js("const s=document.querySelector('[aria-label=\"Theme\"]');s.value='dark';s.dispatchEvent(new Event('change',{bubbles:true}));")
+                driver.click("Save appearance")
+                checks.wait_until(lambda: driver.js("return document.documentElement.dataset.theme==='dark'"))
+                driver.navigate("Web applications", ".web-map")
                 driver.click("Collapse sidebar")
                 assert driver.js(
                     "return document.querySelector('.sidebar').clientWidth<100"
@@ -201,7 +229,7 @@ def main():
                     "return document.querySelector('[role=tab][aria-selected=true]').textContent==='Tools'"
                 )
                 print(
-                    "PASS: installed grouped navigation, six links, tabs, last section, linked note route, compact sidebar and restart persistence",
+                    "PASS: installed grouped navigation, seven links, tabs, last section, linked note route, compact sidebar and restart persistence",
                     flush=True,
                 )
             finally:

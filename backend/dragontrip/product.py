@@ -17,6 +17,7 @@ class Preferences(BaseModel):
     density: Literal["comfortable", "compact"] = "comfortable"
     reduced_motion: bool = False
     graph_detail: Literal["auto", "full", "compact"] = "auto"
+    performance_profile: Literal["low", "medium", "high"] = "medium"
 
 
 class ViewInput(BaseModel):

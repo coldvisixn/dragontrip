@@ -84,7 +84,7 @@ def main():
                 driver.click("New project")
                 driver.fill(".dialog input", "Native planning delivery")
                 driver.click("Create project")
-                checks.wait_until(lambda: driver.js("return !!document.querySelector('.start-project')"))
+                checks.wait_until(lambda: driver.js("return !!document.querySelector('.project-plan')"))
                 driver.navigate("Network Graph", ".graph-toolbar")
                 checks.wait_until(
                     lambda: driver.js(

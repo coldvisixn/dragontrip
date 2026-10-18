@@ -43,6 +43,50 @@ it('requires a separate explicit approval for a full scan', async () => {
     }),
   );
 });
+
+it('waits for the backend plan, reuses a lost-response receipt and resets approval on changes', async () => {
+  vi.mocked(api).mockImplementation(async (path, _method, body: any) => {
+    if (path === '/profiles') return profiles;
+    return {
+      preview_token: body.target,
+      parameters: profiles[1],
+      requires_confirmation: true,
+      scope: 'included',
+    };
+  });
+  const submit = vi.fn();
+  render(
+    <ScanForm
+      pid="lab"
+      initialTarget="127.0.0.1"
+      initialProfile="full"
+      busy={false}
+      onSubmit={submit}
+      onClose={() => {}}
+    />,
+  );
+  await screen.findByText(/nmap · 1-65535/);
+  expect(
+    screen.getAllByRole('checkbox').every((input) => (input as HTMLInputElement).disabled),
+  ).toBe(true);
+  await screen.findByText(/Parameters checked against the saved project/);
+  screen.getAllByRole('checkbox').forEach((input) => fireEvent.click(input));
+  fireEvent.click(screen.getByRole('button', { name: 'Start scan' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Start scan' }));
+  expect(submit.mock.calls[0][0].request_id).toBe(submit.mock.calls[1][0].request_id);
+  fireEvent.change(screen.getByLabelText('Target IPv4 address'), {
+    target: { value: '127.0.0.2' },
+  });
+  for (const input of screen.getAllByRole('checkbox')) {
+    expect(input).not.toBeChecked();
+    expect(input).toBeDisabled();
+  }
+  await screen.findByText(/Parameters checked against the saved project/);
+  screen.getAllByRole('checkbox').forEach((input) => fireEvent.click(input));
+  fireEvent.click(screen.getByRole('button', { name: 'Start scan' }));
+  expect(submit.mock.calls[2][0].request_id).not.toBe(submit.mock.calls[0][0].request_id);
+  expect(submit.mock.calls[2][0].preview_token).toBe('127.0.0.2');
+});
 it('submits an explicitly approved wordlist for one web origin', async () => {
   const submit = vi.fn();
   render(

@@ -59,11 +59,14 @@ def main():
             evidence = request(base + '/attachments', 'POST', data, content_type='multipart/form-data; boundary=' + boundary)
             request('/vault/setup', 'POST', {'password': vault_password})
             credential = request(base + '/credentials', 'POST', {'title': 'Upgrade credential', 'username': 'fixture-user', 'secret': credential_secret, 'node_ids': [node['id']]})
+            baseline_archive = request(base + '/archive', 'POST', {}, raw=True)
         finally:
             proc.terminate()
             proc.wait(timeout=15)
         proc, request = launch(args.current)
         try:
+            assert request(base)['project']['goal'] == ''
+            request(base + '/goal', 'PUT', {'goal': 'Continue the existing investigation', 'expected_goal': ''})
             assert request('/vault')['unlocked'] is False
             request('/vault/unlock', 'POST', {'password': vault_password})
             restored_credential = request(base + '/credentials/' + credential['id'])
@@ -77,12 +80,18 @@ def main():
             assert cells[key]['value']['data']['content']['body'] == draft['content']['body']
             assert cells['knowledge:finding']['value']['data']['draft_id'] == key[6:]
             assert request(base + '/drafts/finding:' + finding['id']) == legacy
+            boundary = 'dragontrip-old-archive'
+            old_file = f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="previous.dtproj"\r\nContent-Type: application/zip\r\n\r\n'.encode() + baseline_archive + f'\r\n--{boundary}--\r\n'.encode()
+            old_copy = request('/imports', 'POST', old_file, content_type='multipart/form-data; boundary=' + boundary)
+            assert old_copy['goal'] == ''
+            old_findings = request('/projects/' + old_copy['id'] + '/knowledge?kind=finding')
+            assert old_findings[0]['content']['retests'] == finding['content']['retests']
             exported = request(base + '/export', 'POST', {})
             archive = Path(exported['path']).read_bytes()
             Path(exported['path']).unlink()
             manifest = json.loads(zipfile.ZipFile(io.BytesIO(archive)).read('manifest.json'))
-            assert manifest['version'] == 5 and key in manifest['workspace']
-            print(f'PASS: published {args.baseline_version} → current frozen backend: records, retests, evidence, objects, encrypted vault, draft migration and v5 archive')
+            assert manifest['version'] == 6 and key in manifest['workspace']
+            print(f'PASS: {args.baseline_version} → current frozen backend: records, retests, evidence, objects, encrypted vault, draft migration and v6 archive')
         finally:
             proc.terminate()
             proc.wait(timeout=15)
