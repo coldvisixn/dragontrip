@@ -1,0 +1,113 @@
+{
+  "measurements": [
+    {
+      "theme": "dark",
+      "width": 1000,
+      "height": 650,
+      "destination": "Network Graph",
+      "horizontalOverflow": false,
+      "mainWidth": 515,
+      "mainHeight": 573
+    },
+    {
+      "theme": "dark",
+      "width": 1000,
+      "height": 650,
+      "destination": "Web applications",
+      "horizontalOverflow": false,
+      "mainWidth": 815,
+      "mainHeight": 573
+    },
+    {
+      "theme": "dark",
+      "width": 1366,
+      "height": 768,
+      "destination": "Network Graph",
+      "horizontalOverflow": false,
+      "mainWidth": 808,
+      "mainHeight": 691
+    },
+    {
+      "theme": "dark",
+      "width": 1366,
+      "height": 768,
+      "destination": "Web applications",
+      "horizontalOverflow": false,
+      "mainWidth": 1148,
+      "mainHeight": 691
+    },
+    {
+      "theme": "dark",
+      "width": 1920,
+      "height": 1080,
+      "destination": "Network Graph",
+      "horizontalOverflow": false,
+      "mainWidth": 1362,
+      "mainHeight": 1003
+    },
+    {
+      "theme": "dark",
+      "width": 1920,
+      "height": 1080,
+      "destination": "Web applications",
+      "horizontalOverflow": false,
+      "mainWidth": 1702,
+      "mainHeight": 1003
+    },
+    {
+      "theme": "light",
+      "width": 1000,
+      "height": 650,
+      "destination": "Network Graph",
+      "horizontalOverflow": false,
+      "mainWidth": 515,
+      "mainHeight": 573
+    },
+    {
+      "theme": "light",
+      "width": 1000,
+      "height": 650,
+      "destination": "Web applications",
+      "horizontalOverflow": false,
+      "mainWidth": 815,
+      "mainHeight": 573
+    },
+    {
+      "theme": "light",
+      "width": 1366,
+      "height": 768,
+      "destination": "Network Graph",
+      "horizontalOverflow": false,
+      "mainWidth": 808,
+      "mainHeight": 691
+    },
+    {
+      "theme": "light",
+      "width": 1366,
+      "height": 768,
+      "destination": "Web applications",
+      "horizontalOverflow": false,
+      "mainWidth": 1148,
+      "mainHeight": 691
+    },
+    {
+      "theme": "light",
+      "width": 1920,
+      "height": 1080,
+      "destination": "Network Graph",
+      "horizontalOverflow": false,
+      "mainWidth": 1362,
+      "mainHeight": 1003
+    },
+    {
+      "theme": "light",
+      "width": 1920,
+      "height": 1080,
+      "destination": "Web applications",
+      "horizontalOverflow": false,
+      "mainWidth": 1702,
+      "mainHeight": 1003
+    }
+  ],
+  "errors": []
+}

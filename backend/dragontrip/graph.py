@@ -33,7 +33,7 @@ class Placement:
         raise ValueError("No free graph placement cells")
 
 
-def ingest(db, scan, hosts):
+def ingest(db, scan, hosts, partial=False):
     """Stable entity IDs preserve coordinates and custom objects across scans."""
     placement = Placement(db, scan.project_id)
     scanned = next(
@@ -49,7 +49,8 @@ def ingest(db, scan, hosts):
     for old in db.query(Node).filter_by(project_id=scan.project_id, kind="service"):
         previous = json.loads(old.attrs)
         if (
-            previous.get("host") == scan.target
+            not partial
+            and previous.get("host") == scan.target
             and previous.get("protocol") == "tcp"
             and included(int(previous.get("port", 0)))
         ):
@@ -59,7 +60,7 @@ def ingest(db, scan, hosts):
         hid = f"{scan.project_id}:host:{host['ip']}"
         node = db.get(Node, hid)
         attrs = {k: v for k, v in host.items() if k != "services"}
-        attrs.update(scan_id=scan.id, source="nmap", observed_at=scan.started)
+        attrs.update(scan_id=scan.id, source="nmap", observed_at=scan.started, partial=partial)
         if node is None:
             node = Node(
                 id=hid,
@@ -91,6 +92,7 @@ def ingest(db, scan, hosts):
                     "source": "nmap",
                     "host": host["ip"],
                     "observed_at": scan.started,
+                    "partial": partial,
                 }
             )
             db.flush()

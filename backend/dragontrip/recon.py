@@ -305,14 +305,21 @@ def arguments(path, profile, destination, artifact, words=None):
     ]
 
 
-def parse(path, tool, destination):
+def parse(path, tool, destination, partial=False):
     if path.stat().st_size > 16 * 1024 * 1024:
         raise ValueError("Recon result exceeds 16 MiB")
     text = path.read_text()
     if tool == "whatweb":
         rows = json.loads(text)
     elif tool == "httpx":
-        rows = [json.loads(line) for line in text.splitlines() if line.strip()]
+        rows = []
+        lines = [line for line in text.splitlines() if line.strip()]
+        for index, line in enumerate(lines):
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                if not partial or index != len(lines) - 1:
+                    raise
     else:
         rows = json.loads(text).get("results", [])
     if not isinstance(rows, list) or len(rows) > 10000:

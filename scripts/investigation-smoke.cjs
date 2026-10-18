@@ -44,7 +44,7 @@ const { navigate } = require('./navigation.cjs');
     await page.getByRole('button', { name: 'New project', exact: true }).click();
     await page.getByLabel('Project name').fill('HTB investigation');
     await page.getByRole('button', { name: 'Create project', exact: true }).click();
-    await page.getByRole('tab', { name: 'Network Graph', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Project overview', exact: true }).waitFor();
     const pid = await page.evaluate(() => localStorage.getItem('dragontrip.project'));
     console.log('Import → endpoint → observation');
     await navigate(page, 'Import results');

@@ -1,0 +1,8 @@
+Import → endpoint → observation
+Hypothesis → task → unsaved draft → page changes
+Restart backend and browser context restoration
+Conflict → manual merge with retained recovery
+Save succeeds while screen refresh fails
+Deleted saved record → recover as a separate note
+Minimum window, themes, compact density and keyboard navigation
+PASS: real import, linked note/task, retained unsuccessful result, navigation, SQLite restart recovery, conflict, refresh failure, deleted-record copy, compact themes and keyboard.

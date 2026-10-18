@@ -1,0 +1,15 @@
+{
+  "os": "Debian 13",
+  "kernel": "Linux 6.18.55",
+  "cpu": "3 vCPU AMD EPYC 9V74, KVM",
+  "memory_mib": 9968,
+  "swap_mib": 0,
+  "chromium": "Chromium 154.0.8037.57 built on Debian GNU/Linux 13 (trixie)",
+  "node": "v24.19.0",
+  "python": "Python 3.12.14",
+  "native": "Docker Debian 13 / WebKitGTK 2.54.0 / GTK 3 / Xvfb / Tauri release + frozen Python sidecar",
+  "baseline": "1a5e60d",
+  "release_installation_tested": false,
+  "native_binary_sha256": "5c7b53cd73f73402c7332a98343aa4af0321720413506eec8d883fca97799678",
+  "frozen_backend_sha256": "67a7d60fc5fc799c61c0b5687802840f118281aff1f84b3aa9aa053e244a019c"
+}

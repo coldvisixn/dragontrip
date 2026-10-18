@@ -33,6 +33,7 @@ class Project(Base):
     id = Column(String, primary_key=True, default=uid)
     name = Column(String, nullable=False)
     description = Column(Text, default="")
+    goal = Column(Text, nullable=False, default="", server_default="")
     created = Column(String, default=now)
     updated = Column(String, default=now)
 

@@ -84,8 +84,11 @@ const { navigate } = require('../../scripts/navigation.cjs');
     await page.goto('http://localhost:1420');
     await page.getByRole('button', { name: 'New project', exact: true }).click();
     await page.getByLabel('Project name').fill('[DEMO] Portal review');
+    await page
+      .getByLabel('Investigation goal', { exact: true })
+      .fill('Review access boundaries from imported evidence and plan a manual follow-up.');
     await page.getByRole('button', { name: 'Create project', exact: true }).click();
-    await page.getByRole('tab', { name: 'Network Graph', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Project overview', exact: true }).waitFor();
     const pid = await page.evaluate(() => localStorage.getItem('dragontrip.project'));
     for (const file of ['portal-nmap.xml', 'portal-burp.xml']) {
       await navigate(page, 'Import results');

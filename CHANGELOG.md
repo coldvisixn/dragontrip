@@ -2,6 +2,15 @@
 
 Notable user-facing changes are listed here. Download installers from [Releases](https://github.com/coldvisixn/dragontrip/releases), not the automatic source-code archives.
 
+## [0.10.0] — Investigation workspace
+
+- Add a project goal and Plan section; consolidate project pages in the sidebar and retain selection when hiding Inspector.
+- Connect scope, discovery, saved results, service-to-web research and imported evidence through contextual actions; keep network plans explicitly approved.
+- Show background work as status/results with technical output on demand. Prevent stale project responses and duplicate editors.
+- Persist scan launch receipts; save partial results and bounded evidence on failure/cancellation; expose actual backend completion.
+- Add Low/Medium/High rendering profiles; Medium retains existing graph thresholds and reduced motion remains available.
+- Add migration 0006 and archive v6 (reads v1–v6); older applications reject v6. See [audit, architecture, demo and validation](docs/experience/README.ru.md).
+
 ## [0.9.1] — Security and release maintenance
 
 - Enforce actual API request-body limits, redact passwords/credentials from validation errors and reject malformed loopback/authentication headers safely.

@@ -396,7 +396,7 @@ def test_settings_search_timeline_and_compact_graph(client, app):
         "graph_detail": "compact",
     }
     assert client.put("/settings/appearance", json=appearance).status_code == 200
-    assert client.get("/settings").json()["appearance"] == appearance
+    assert client.get("/settings").json()["appearance"] == {**appearance, "performance_profile": "medium"}
     assert (
         client.put(
             "/settings/appearance", json={**appearance, "theme": "unknown"}

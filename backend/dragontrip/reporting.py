@@ -16,6 +16,7 @@ from sqlalchemy.orm import defer
 from .db import Node, Scan, Knowledge, Attachment, now
 from .downloads import export_file
 from .deliverables import selected_evidence, write_deliverable
+from .journey import journey
 
 
 class ReportOptions(BaseModel):
@@ -65,7 +66,7 @@ def register_reporting(app, sessions, project, root):
     @app.get("/projects/{pid}/overview")
     def overview(pid: str):
         with sessions() as db:
-            project(db, pid)
+            current_project = project(db, pid)
 
             def counts(model, column):
                 return dict(
@@ -108,10 +109,12 @@ def register_reporting(app, sessions, project, root):
                     .group_by(severity)
                 ).all()
             )
+            objects, records = counts(Node, Node.kind), counts(Knowledge, Knowledge.kind)
             return {
-                "objects": counts(Node, Node.kind),
+                "journey": journey(db, current_project, objects, task_counts, records),
+                "objects": objects,
                 "scans": counts(Scan, Scan.status),
-                "records": counts(Knowledge, Knowledge.kind),
+                "records": records,
                 "tasks": task_counts,
                 "overdue": overdue,
                 "active_risks": risks,

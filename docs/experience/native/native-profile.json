@@ -1,0 +1,38 @@
+{
+  "environment": "Debian GNU/Linux 13 (trixie) / Xvfb / WebKitGTK / automation; not VirtualBox",
+  "startup_seconds": 2.506,
+  "idle": {
+    "rss_mib": 749.8,
+    "pss_mib": 509.3,
+    "processes": 4,
+    "exited_during_cpu_sample": 0,
+    "cpu_percent_one_core": 30.1
+  },
+  "scanning": {
+    "rss_mib": 875.1,
+    "pss_mib": 530.8,
+    "processes": 5,
+    "exited_during_cpu_sample": 0,
+    "cpu_percent_one_core": 10.5
+  },
+  "graph_100": {
+    "rss_mib": 876.3,
+    "pss_mib": 654.7,
+    "processes": 4,
+    "exited_during_cpu_sample": 0,
+    "cpu_percent_one_core": 1.0,
+    "dom_nodes": 99,
+    "drag_frame_median_ms": 22,
+    "drag_frame_p95_ms": 112
+  },
+  "graph_300": {
+    "rss_mib": 978.4,
+    "pss_mib": 756.3,
+    "processes": 4,
+    "exited_during_cpu_sample": 0,
+    "cpu_percent_one_core": 0.0,
+    "dom_nodes": 299,
+    "drag_frame_median_ms": 25,
+    "drag_frame_p95_ms": 184
+  }
+}

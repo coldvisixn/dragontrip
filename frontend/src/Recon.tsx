@@ -1,8 +1,9 @@
 import { useProjectState } from './workspace';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, type Profile, type Scan, type ScanRequest } from './api';
 
 export function ScanForm({
+  pid,
   initialTarget,
   initialProfile,
   serviceNode,
@@ -10,7 +11,10 @@ export function ScanForm({
   busy,
   onSubmit,
   onClose,
+  submissionError,
 }: {
+  pid?: string;
+  submissionError?: string;
   initialTarget: string;
   initialProfile: string;
   serviceNode?: string;
@@ -19,6 +23,7 @@ export function ScanForm({
   onSubmit: (request: ScanRequest) => void;
   onClose: () => void;
 }) {
+  const receipt = useRef({ signature: '', id: '' });
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profileId, setProfile] = useState(initialProfile);
   const [target, setTarget] = useState(initialTarget);
@@ -26,12 +31,52 @@ export function ScanForm({
   const [confirmed, setConfirmed] = useState(false);
   const [words, setWords] = useState('admin\nrobots.txt\nlogin');
   const [error, setError] = useState('');
+  const [plan, setPlan] = useState<{
+    preview_token: string;
+    parameters: Profile;
+    requires_confirmation: boolean;
+    scope: string;
+  } | null>(null);
+  const [planRevision, setPlanRevision] = useState(0);
+  const selectedTool = profiles.find((p) => p.id === profileId)?.tool;
+  useEffect(() => {
+    if (!pid || !selectedTool) return;
+    let live = true;
+    setPlan(null);
+    setAuthorized(false);
+    setConfirmed(false);
+    setError('');
+    const timer = setTimeout(() => {
+      api<NonNullable<typeof plan>>(`/projects/${pid}/scan-plan`, 'POST', {
+        target,
+        profile: profileId,
+        ...(profileId === 'service' && serviceNode ? { service_node: serviceNode } : {}),
+        words:
+          selectedTool === 'ffuf'
+            ? words
+                .split('\n')
+                .map((v) => v.trim())
+                .filter(Boolean)
+            : [],
+      })
+        .then((value) => {
+          if (live) setPlan(value);
+        })
+        .catch((e) => {
+          if (live) setError(e.message);
+        });
+    }, 180);
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
+  }, [pid, target, profileId, serviceNode, selectedTool, words, planRevision]);
   useEffect(() => {
     api<Profile[]>('/profiles')
       .then((v) => setProfiles(Array.isArray(v) ? v : []))
       .catch((e) => setError(e.message));
   }, []);
-  const profile = profiles.find((p) => p.id === profileId);
+  const profile = plan?.parameters || profiles.find((p) => p.id === profileId);
   const web = profile && profile.tool !== 'nmap';
   const scopePorts =
     profileId === 'service' && serviceNode && servicePort
@@ -46,15 +91,30 @@ export function ScanForm({
         return sum + (last || first) - first + 1;
       }, 0) || 0;
   const intrusive =
-    profile?.tool === 'ffuf' ||
-    !!profile?.scripts?.length ||
-    count > 1000 ||
-    (profile?.rate || 0) > (profile?.tool === 'nmap' ? 100 : 10);
+    plan?.requires_confirmation ??
+    (profile?.tool === 'ffuf' ||
+      !!profile?.scripts?.length ||
+      count > 1000 ||
+      (profile?.rate || 0) > (profile?.tool === 'nmap' ? 100 : 10));
   return (
     <form
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
+        if (busy || (pid && !plan)) return;
+        const signature = JSON.stringify([
+          plan?.preview_token,
+          target,
+          profileId,
+          authorized,
+          confirmed,
+          words,
+          serviceNode,
+        ]);
+        if (receipt.current.signature !== signature)
+          receipt.current = { signature, id: crypto.randomUUID() };
         onSubmit({
+          ...(plan ? { preview_token: plan.preview_token } : {}),
+          request_id: receipt.current.id,
           ...(profileId === 'service' && serviceNode ? { service_node: serviceNode } : {}),
           target,
           profile: profileId,
@@ -73,7 +133,16 @@ export function ScanForm({
       <p className="muted">
         Choose a profile. Tasks enter the queue; only explicitly authorized actions run.
       </p>
-      {error && <p role="alert">{error}</p>}
+      {(error || submissionError) && (
+        <p className="form-error" role="alert">
+          {error || submissionError}
+        </p>
+      )}
+      {pid && (error || submissionError) && (
+        <button type="button" onClick={() => setPlanRevision((v) => v + 1)}>
+          Refresh plan
+        </button>
+      )}
       <label>
         Scan profile
         <select
@@ -96,7 +165,11 @@ export function ScanForm({
         <input
           required
           value={target}
-          onChange={(e) => setTarget(e.target.value)}
+          onChange={(e) => {
+            setTarget(e.target.value);
+            setAuthorized(false);
+            setConfirmed(false);
+          }}
           placeholder={web ? 'http://10.10.10.10:8080/' : '10.10.10.10'}
           className="mono"
         />
@@ -106,6 +179,15 @@ export function ScanForm({
           {profile.tool} ·{' '}
           {scopePorts || (web ? 'One web origin · redirects disabled' : 'Top 100 TCP ports')} · rate
           ≤ {profile.rate}/s · timeout {profile.timeout}s
+        </p>
+      )}
+      {pid && (
+        <p className="hint">
+          {plan
+            ? `Scope: ${plan.scope}. Parameters checked against the saved project.`
+            : error
+              ? 'Resolve the plan error before launch.'
+              : 'Checking the saved scope and parameters…'}
         </p>
       )}
       {profile?.tool === 'ffuf' && (
@@ -124,6 +206,7 @@ export function ScanForm({
         <input
           type="checkbox"
           required
+          disabled={busy || (!!pid && !plan)}
           checked={authorized}
           onChange={(e) => setAuthorized(e.target.checked)}
         />
@@ -137,6 +220,7 @@ export function ScanForm({
           <input
             type="checkbox"
             required
+            disabled={busy || (!!pid && !plan)}
             checked={confirmed}
             onChange={(e) => setConfirmed(e.target.checked)}
           />
@@ -155,7 +239,14 @@ export function ScanForm({
         </button>
         <button
           className="primary"
-          disabled={busy || !profile || !authorized || !target || (intrusive && !confirmed)}
+          disabled={
+            busy ||
+            !profile ||
+            !authorized ||
+            !target ||
+            (intrusive && !confirmed) ||
+            (!!pid && !plan)
+          }
         >
           Start scan
         </button>

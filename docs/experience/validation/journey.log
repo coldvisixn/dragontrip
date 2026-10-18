@@ -1,0 +1,1 @@
+PASS: goal → scope → approved Nmap → service → local handoff → approved httpx → import → evidence → hypothesis → task → finding → retest → restart → archive import

@@ -1,4 +1,4 @@
-/* Production UI + real/frozen API acceptance for the 0.9.0 delivery workflow.
+/* Production UI + real/frozen API acceptance for the 0.10.0 delivery workflow.
    Chromium bridges only native connection delivery; native acceptance uses real IPC. */
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
@@ -92,12 +92,19 @@ const { navigate } = require('./navigation.cjs');
     await navigate(page, 'Projects');
     await page.getByRole('button', { name: 'New project', exact: true }).click();
     await page.getByLabel('Project name', { exact: true }).fill('Delivery acceptance');
+    await page
+      .getByLabel('Investigation goal', { exact: true })
+      .fill('Preserve the evidence through a manual retest and report.');
     await page.getByRole('button', { name: 'Create project', exact: true }).click();
-    await page.getByRole('heading', { name: 'Start with the evidence you already have' }).waitFor();
+    await page.getByRole('heading', { name: 'Project overview', exact: true }).waitFor();
     const pid = await page.evaluate(() => localStorage.getItem('dragontrip.project'));
     assert.notEqual(pid, demoPid);
+    assert.equal(
+      (await request(`/projects/${pid}`)).project.goal,
+      'Preserve the evidence through a manual retest and report.',
+    );
     await page.screenshot({ path: join(output, 'screenshots/start-project.png') });
-    await page.getByRole('button', { name: 'Define target scope', exact: true }).click();
+    await page.getByRole('button', { name: 'Targets & scope', exact: true }).click();
     await page.getByLabel('Included targets').fill('app.htb\nadmin.htb\n10.10.10.0/24');
     await page.getByRole('button', { name: 'Save scope', exact: true }).click();
     await page.getByText('Scope saved. Exclusions take precedence.').waitFor();
@@ -236,7 +243,7 @@ const { navigate } = require('./navigation.cjs');
         2,
       ) + '\n',
     );
-    console.log('PASS: 0.9.0 delivery workflow; evidence:', output);
+    console.log('PASS: 0.10.0 delivery workflow; evidence:', output);
   } catch (error) {
     if (page) await page.screenshot({ path: join(output, 'failure.png') }).catch(() => {});
     throw error;

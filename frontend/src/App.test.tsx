@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 import { resetWorkspaceMemory } from './workspace';
 import { api, saveArtifact } from './api';
@@ -113,7 +113,8 @@ describe('workspace', () => {
       }),
     );
     expect(localStorage.getItem('dragontrip.project')).toBe('lab');
-    fireEvent.click(screen.getByRole('button', { name: 'Tool output' }));
+    fireEvent.click(screen.getByRole('button', { name: /Background work/ }));
+    fireEvent.click(screen.getByText('Technical output and exact command'));
     expect(await screen.findByText(/Actual output/)).toBeVisible();
   });
   it('exports source evidence through the native save action', async () => {
@@ -136,7 +137,11 @@ describe('workspace', () => {
     fireEvent.change(screen.getByLabelText('Project name'), { target: { value: 'My Lab' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create project' }));
     await waitFor(() =>
-      expect(api).toHaveBeenCalledWith('/projects', 'POST', { name: 'My Lab', description: '' }),
+      expect(api).toHaveBeenCalledWith('/projects', 'POST', {
+        name: 'My Lab',
+        description: '',
+        goal: '',
+      }),
     );
     await screen.findByRole('heading', { name: 'Start with the evidence you already have' });
   });
@@ -187,3 +192,74 @@ it('reopens the current project from Projects at its last research page', async 
     expect(screen.getByRole('tab', { name: 'Hosts' })).toHaveAttribute('aria-selected', 'true'),
   );
 });
+
+it('does not duplicate the selected custom object editor on repeated refreshes', async () => {
+  const custom = {
+    ...detail.nodes[0],
+    kind: 'custom',
+    label: 'Manual lead',
+    attrs: { category: 'hypothesis', description: 'Context', status: 'idea' },
+  };
+  const previous = vi.mocked(api).getMockImplementation()!;
+  vi.mocked(api).mockImplementation(async (path, method, body) => {
+    if (path === '/projects/lab?compact=true') return { ...detail, nodes: [custom] };
+    if (path === '/projects/lab/nodes/service') return custom;
+    return previous(path, method, body);
+  });
+  render(<App />);
+  await screen.findByText('Workspace overview');
+  fireEvent.click(screen.getByRole('button', { name: /HTB Lab Authorized lab/ }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Manual lead' }));
+  for (let index = 0; index < 3; index++) {
+    fireEvent.click(screen.getByRole('button', { name: 'Move service' }));
+    await waitFor(() =>
+      expect(screen.getAllByRole('button', { name: 'Edit object' })).toHaveLength(1),
+    );
+  }
+  fireEvent.click(screen.getByRole('button', { name: 'Close inspector' }));
+  expect(screen.queryByText('INSPECTOR')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Show inspector' }));
+  expect(screen.getAllByRole('button', { name: 'Edit object' })).toHaveLength(1);
+});
+
+it.each(['response', 'error'])(
+  'ignores a late project %s after switching projects',
+  async (outcome) => {
+    const other = { ...project, id: 'other', name: 'Other project' };
+    let resolve!: (value: unknown) => void;
+    let reject!: (error: Error) => void;
+    const pending = new Promise((yes, no) => {
+      resolve = yes;
+      reject = no;
+    });
+    const previous = vi.mocked(api).getMockImplementation()!;
+    vi.mocked(api).mockImplementation(async (path, method, body) => {
+      if (path === '/projects') return [project, other];
+      if (path === '/projects/lab?compact=true') return pending;
+      if (path === '/projects/other?compact=true')
+        return {
+          ...detail,
+          project: other,
+          nodes: [{ ...detail.nodes[0], id: 'other-node', label: 'Other service' }],
+          scans: [],
+        };
+      return previous(path, method, body);
+    });
+    render(<App />);
+    await screen.findByText('Workspace overview');
+    fireEvent.click(screen.getByRole('button', { name: /HTB Lab Authorized lab/ }));
+    await waitFor(() => expect(api).toHaveBeenCalledWith('/projects/lab?compact=true'));
+    fireEvent.click(screen.getByRole('button', { name: 'Projects' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Other project Authorized lab/ }));
+    await screen.findByRole('button', { name: 'Other service' });
+    await act(async () => {
+      if (outcome === 'response') resolve(detail);
+      else reject(new Error('Late error from previous project'));
+      await Promise.resolve();
+    });
+    expect(screen.getByRole('button', { name: 'Other service' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: '8080/tcp · http' })).toBeNull();
+    expect(screen.queryByText('Late error from previous project')).toBeNull();
+    expect(localStorage.getItem('dragontrip.project')).toBe('other');
+  },
+);

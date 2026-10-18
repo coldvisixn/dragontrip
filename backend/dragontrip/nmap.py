@@ -57,13 +57,26 @@ def arguments(binary, target, artifact):
     ]
 
 
-def parse(path: Path, target: str):
+def parse(path: Path, target: str, partial=False):
     if path.stat().st_size > 16 * 1024 * 1024:
         raise ValueError("Nmap XML exceeds 16 MiB limit")
-    root = ElementTree.parse(path).getroot()
-    if root.tag != "nmaprun" or root.find("runstats/finished") is None:
+    if partial:
+        # iterparse yields only closed elements; never invent closing tags or
+        # interpret missing ports as a completed negative observation.
+        from xml.etree.ElementTree import Element, ParseError
+
+        root = Element("nmaprun")
+        try:
+            for _, element in ElementTree.iterparse(path, events=("end",)):
+                if element.tag in {"host", "scaninfo"}:
+                    root.append(element)
+        except ParseError:
+            pass
+    else:
+        root = ElementTree.parse(path).getroot()
+    if root.tag != "nmaprun" or (not partial and root.find("runstats/finished") is None):
         raise ValueError("Incomplete Nmap XML")
-    if root.find("runstats/finished").get("exit", "success") != "success":
+    if not partial and root.find("runstats/finished").get("exit", "success") != "success":
         raise ValueError("Nmap reported an unsuccessful run")
     info = root.find("scaninfo")
     scanned_ports = info.get("services", "") if info is not None else ""

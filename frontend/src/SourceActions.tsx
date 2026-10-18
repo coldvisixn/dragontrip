@@ -32,6 +32,9 @@ export function SourceActions({
     active.current = path;
     let live = true;
     setLoaded(false);
+    setRows([]);
+    setBusy(false);
+    setError('');
     api<LinkedRecord[]>(path)
       .then((rows) => {
         if (live) {
@@ -101,11 +104,14 @@ export function SourceActions({
             onClick={() => {
               void api<LinkedRecord[]>(path)
                 .then((r) => {
+                  if (active.current !== path) return;
                   setRows(r);
                   setLoaded(true);
                   setError('');
                 })
-                .catch((e) => setError(e.message));
+                .catch((e) => {
+                  if (active.current === path) setError(e.message);
+                });
             }}
           >
             Retry

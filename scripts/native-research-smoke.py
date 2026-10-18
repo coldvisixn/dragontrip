@@ -86,7 +86,7 @@ def main():
                 driver.click("Create project")
                 checks.wait_until(
                     lambda: driver.js(
-                        "return !!document.querySelector('.start-project')"
+                        "return !!document.querySelector('.project-plan')"
                     )
                 )
                 driver.navigate("Network Graph", ".graph-toolbar")

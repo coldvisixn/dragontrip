@@ -1,0 +1,17 @@
+{
+  "result": "PASS",
+  "scenarios": [
+    "scope",
+    "read-only preview",
+    "Burp items/issues",
+    "vhosts",
+    "method filters",
+    "raw evidence",
+    "linked manual note",
+    "idempotence",
+    "collapsed overview",
+    "reload persistence"
+  ],
+  "objects": 9,
+  "screenshots": "/tmp/dragontrip-research-screenshots"
+}

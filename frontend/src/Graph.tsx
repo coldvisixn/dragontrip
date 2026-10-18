@@ -121,6 +121,7 @@ function FocusSelection({ selectedId, count }: { selectedId: string | null; coun
 export default function Graph({
   projectId,
   detailMode = 'auto',
+  performanceProfile = 'medium',
   theme,
   objects,
   relations,
@@ -133,6 +134,7 @@ export default function Graph({
 }: {
   projectId: string;
   detailMode?: 'auto' | 'full' | 'compact';
+  performanceProfile?: 'low' | 'medium' | 'high';
   theme?: 'dark' | 'light';
   selectedId: string | null;
   objects: ObjectNode[];
@@ -169,7 +171,10 @@ export default function Graph({
       clearTimeout(saveTimer.current);
     };
   }, [projectId]);
-  const compact = detailMode === 'compact' || (detailMode === 'auto' && objects.length > 300);
+  const compactThreshold =
+    performanceProfile === 'low' ? 100 : performanceProfile === 'high' ? 500 : 300;
+  const compact =
+    detailMode === 'compact' || (detailMode === 'auto' && objects.length > compactThreshold);
   const source = useMemo(
     () =>
       objects.map((n) => {
@@ -256,7 +261,7 @@ export default function Graph({
         id: e.id,
         source: e.source,
         target: e.target,
-        type: relations.length > 500 ? 'straight' : 'default',
+        type: performanceProfile === 'low' || relations.length > 500 ? 'straight' : 'default',
         label: relations.length > 500 ? undefined : e.kind,
         style: {
           stroke: e.evidence ? '#69788e' : '#9b8afb',
@@ -266,7 +271,7 @@ export default function Graph({
         labelStyle: { fill: '#939bac', fontSize: 10 },
         labelBgStyle: { fill: 'var(--surface)' },
       })),
-    [relations],
+    [relations, performanceProfile],
   );
   if (view === undefined) return <div className="loading">Restoring graph…</div>;
   return (
@@ -343,9 +348,9 @@ export default function Graph({
         maxZoom={2}
       >
         <FocusSelection selectedId={selectedId} count={objects.length} />
-        <Background gap={22} size={1} color="#282f3d" />
+        {performanceProfile !== 'low' && <Background gap={22} size={1} color="#282f3d" />}
         <Controls showInteractive={false} />
-        {objects.length <= 500 && (
+        {performanceProfile !== 'low' && objects.length <= 500 && (
           <MiniMap
             pannable
             zoomable

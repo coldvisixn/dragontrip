@@ -211,7 +211,7 @@ jobs:
       - name: Native methodology and workflow acceptance
         run: xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-methodology-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
       - name: Native grouped navigation acceptance
-        run: xvfb-run -a dbus-run-session -- .venv/bin/python scripts/native-navigation-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" dbus-run-session -- .venv/bin/python scripts/native-navigation-smoke.py "$RUNNER_TEMP/dragontrip-native/usr/bin/dragontrip"
       - name: Native MVP delivery acceptance
         env:
           DRAGONTRIP_VALIDATION_DIR: ${{ runner.temp }}/delivery-native

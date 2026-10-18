@@ -3054,3 +3054,343 @@ summary {
   flex-wrap: wrap;
   gap: 12px;
 }
+
+/* One project navigator, one screen header, one optional object panel. */
+.sidebar .section-tabs-wrap {
+  display: block;
+  padding: 8px 0 12px 18px;
+  border: 0;
+  background: transparent;
+}
+.sidebar .section-tabs-label {
+  display: none;
+}
+.sidebar .section-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: visible;
+  border-left: 1px solid var(--border);
+}
+.sidebar .section-tabs [role='tab'] {
+  width: 100%;
+  min-height: 30px;
+  padding: 7px 10px;
+  justify-content: flex-start;
+  white-space: normal;
+  text-align: left;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0 5px 5px 0;
+}
+.sidebar .section-tabs [aria-selected='true'] {
+  background: var(--hover);
+  border-left-color: var(--accent);
+  color: var(--text);
+}
+.sidebar.collapsed .section-tabs-wrap {
+  padding: 6px 0;
+}
+.sidebar.collapsed .section-tabs {
+  border-left: 0;
+}
+.sidebar.collapsed .section-tabs button {
+  justify-content: center;
+  padding: 6px 0;
+}
+.sidebar.collapsed .section-tabs button span {
+  display: none;
+}
+.sidebar.collapsed .section-tabs button::before {
+  content: attr(data-short);
+  font-size: 10px;
+}
+.sidebar .workspace-switch {
+  min-width: 0;
+}
+.sidebar .workspace-switch > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.topbar {
+  gap: 16px;
+}
+.breadcrumb {
+  min-width: 0;
+  flex: 1;
+}
+.breadcrumb > span {
+  min-width: 0;
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.breadcrumb > strong {
+  white-space: nowrap;
+}
+.top-actions {
+  min-width: 0;
+  max-width: 42%;
+}
+.goal-context {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+}
+.graph-toolbar {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.graph-toolbar > div {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.graph-toolbar > div:first-child {
+  flex: 1;
+}
+.graph-toolbar strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 32vw;
+}
+.graph-scope-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 34px;
+  margin: 0;
+}
+.graph-scope-hint > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.graph-scope-hint > button {
+  flex-shrink: 0;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+.inspector {
+  width: 340px;
+  max-width: 40%;
+}
+.inspector-title {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 2;
+}
+.inspector .section-actions {
+  flex-wrap: wrap;
+}
+.inspector > .source-actions {
+  padding: 12px 18px;
+}
+.source-actions select {
+  min-width: 0;
+  max-width: 100%;
+}
+.inspector small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+}
+.inspector h2,
+.inspector p,
+.source-actions button,
+.work-result strong {
+  overflow-wrap: anywhere;
+}
+.background-work {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  min-width: 0;
+}
+.work-summary {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  border: 0;
+  border-radius: 0;
+  padding: 10px 18px;
+  gap: 14px;
+  min-width: 0;
+}
+.work-summary > span:first-of-type {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  color: var(--muted);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.work-summary > span:last-child {
+  color: var(--accent);
+}
+.work-result {
+  max-height: 32vh;
+  min-height: 180px;
+  overflow: auto;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+}
+.work-result > label {
+  max-width: 700px;
+}
+.work-result .section-actions,
+.journey-next .section-actions,
+.next-step .section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.work-result .source-actions {
+  margin: 12px 0;
+}
+.work-technical {
+  margin-top: 14px;
+}
+.work-technical pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 220px;
+  overflow: auto;
+}
+.project-plan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  margin-bottom: 20px;
+}
+.project-plan textarea {
+  min-height: 85px;
+}
+.journey-next {
+  min-width: 0;
+}
+.journey-next p {
+  overflow-wrap: anywhere;
+}
+.next-step {
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  padding: 12px 16px;
+  margin: 14px 0;
+}
+.page-heading {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.page-heading > div {
+  min-width: 0;
+}
+.page-heading p,
+.page-heading h1 {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1100px) {
+  .topbar {
+    padding: 10px 14px;
+  }
+  .top-actions {
+    max-width: 32%;
+  }
+  .inspector {
+    width: 300px;
+    max-width: 42%;
+  }
+  .project-plan {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .work-summary {
+    font-size: 11px;
+    padding: 9px 12px;
+    gap: 8px;
+  }
+}
+.sidebar {
+  overflow: hidden;
+}
+.sidebar-navigation {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.sidebar > .sidebar-navigation {
+  flex-shrink: 1;
+}
+.sidebar .sidebar-bottom {
+  margin-top: 0;
+  padding: 6px 0;
+}
+.sidebar .sidebar-toggle {
+  margin-top: 2px;
+}
+.sidebar .project-nav-label {
+  margin-top: 16px;
+}
+.inspector-hero {
+  text-align: left;
+  padding: 16px 18px;
+}
+.inspector-hero .empty-icon {
+  display: none;
+}
+.inspector-hero .eyebrow {
+  justify-content: flex-start;
+}
+.inspector-hero h2 {
+  margin: 8px 0 12px;
+}
+.web-workbench {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.4fr);
+  gap: 16px;
+  align-items: start;
+}
+.web-workbench > .panel {
+  min-width: 0;
+  margin: 0;
+}
+.web-workbench h2 {
+  overflow-wrap: anywhere;
+}
+.web-workbench .research-filters {
+  flex-wrap: wrap;
+}
+.web-workbench .research-filters input {
+  min-width: 0;
+  width: 100%;
+}
+.web-workbench .source-actions .section-actions {
+  flex-wrap: wrap;
+}
+.web-workbench .endpoint-detail {
+  max-height: calc(100vh - 260px);
+  overflow: auto;
+}
+@media (max-width: 1100px) {
+  .web-workbench {
+    grid-template-columns: minmax(220px, 0.85fr) minmax(0, 1fr);
+    gap: 10px;
+  }
+  .web-workbench > .panel {
+    padding: 12px;
+  }
+  .web-workbench .endpoint-detail {
+    max-height: calc(100vh - 230px);
+  }
+}

@@ -36,15 +36,15 @@ Back up before upgrades. Migrations run at launch; older binaries may not unders
 
 Credentials are excluded by default. Including them requires an unlocked vault, explicit opt-in and an independent archive password. The credential payload is encrypted; the rest of the archive is not. Import re-encrypts included credentials under the unlocked destination vault.
 
-Current exports use **format v5**; imports read **v1–v5**. Archives include scope, import runs, original sources, methodology/workflow records, finding retests and research workspace recovery, with project references remapped. Older applications reject v5; use a matching full-directory backup for rollback. Imported-source attachments are retained by history and cannot be deleted through ordinary attachment cleanup. [Import limits and provenance](IMPORTS.md) · [Methodology/workflow portability](METHODOLOGIES.md).
+Current exports use **format v6**; imports read **v1–v6**. Archives include scope, import runs, original sources, methodology/workflow records, finding retests and research workspace recovery, with project references remapped. Older applications reject v6; use a matching full-directory backup for rollback. Imported-source attachments are retained by history and cannot be deleted through ordinary attachment cleanup. [Import limits and provenance](IMPORTS.md) · [Methodology/workflow portability](METHODOLOGIES.md).
 
-Current limits include a 128 MiB expanded archive, a 32 MiB manifest, 10,000 objects, 50,000 edges, 5,000 scans/knowledge records, 500 attachments and 10 MiB per attachment. [Archive extension contract](EXTENSIONS.md#project-archive-contract) documents validation. Format evolution is recorded in the [changelog](../CHANGELOG.md); 0.9.1 adds no format or database migration.
+Current limits include a 128 MiB expanded archive, a 32 MiB manifest, 10,000 objects, 50,000 edges, 5,000 scans/knowledge records, 500 attachments and 10 MiB per attachment. [Archive extension contract](EXTENSIONS.md#project-archive-contract) documents validation. Format evolution is recorded in the [changelog](../CHANGELOG.md); released 0.9.1 adds no format or database migration; the unreleased investigation update adds migration 0006 and archive v6.
 
 ## Recoverable drafts (0.9.0)
 
 Research drafts, navigation and selections sync into the existing SQLite configuration table, with an immediate unencrypted WebView recovery copy. Wait for successful sync before backing up. Conflicts retain replaced text; discard retains a closed recovery copy and tombstone against delayed autosaves. 0.8.0 drafts migrate without deleting their originals. [Recovery behavior and limits](HTB-WORKSPACE.md).
 
-Archive format v5 retains workspace drafts, source links and finding retests; imports support v1–v5. Older apps reject v5. Report composition remains local; research recovery text travels in project transfers and should be reviewed before sharing. Findings with retests retain append-only history and can be dismissed instead of deleted. No new physical database migration is needed.
+Archive format v6 retains workspace drafts, source links and finding retests; imports support v1–v6. Older apps reject v6. Report composition remains local; research recovery text travels in project transfers and should be reviewed before sharing. Findings with retests retain append-only history and can be dismissed instead of deleted. Migration 0006 adds an optional project goal; existing descriptions are preserved. New archives also retain bounded artifacts from failed/cancelled/interrupted scans.
 
 ## Reports and evidence retention
 
