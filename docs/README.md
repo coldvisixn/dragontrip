@@ -37,7 +37,8 @@ A local desktop workspace for penetration testing and security research. [Englis
 
 - [Security audit and remaining maintenance warning](SECURITY-AUDIT-2026-10-17.md)
 - [Completed PR review and dependency decisions](PR-REVIEW-0.9.1.md)
-- [Published package identity and download verification](release-validation/v0.9.1/published-package.json)
+- [0.10.0 published package identity](release-validation/v0.10.0/published-package.json)
+- [Previous 0.9.1 package identity](release-validation/v0.9.1/published-package.json)
 - [0.9.0 verification](BUILD-0.9.0.md)
 - [0.8.0 verification](BUILD-0.8.0.md) · [0.7.0 verification](BUILD-0.7.0.md) · [0.6.0 verification](BUILD-0.6.0.md)
 - [0.5.0 local Debian build and native checks](BUILD-0.5.0.md) · [resource profile](0.5.0-native-profile.json)

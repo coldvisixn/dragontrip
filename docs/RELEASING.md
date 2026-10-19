@@ -14,8 +14,8 @@ User-facing installers belong in [GitHub Releases](https://github.com/coldvisixn
 From the intended release commit, for example:
 
 ```bash
-git tag -a v0.9.1 -m "Dragontrip 0.9.1"
-git push origin v0.9.1
+git tag -a v0.10.0 -m "Dragontrip 0.10.0"
+git push origin v0.10.0
 ```
 
 [The release workflow](../.github/workflows/release.yml) checks the tag against version metadata, builds the Linux `amd64` package on Ubuntu 24.04, runs backend/UI/frozen-backend checks, published-version upgrade checks and native Tauri/WebKit acceptance, and verifies package metadata/checksums. A separate Kali Rolling job installs and exercises that exact package before publication. Only the publish job receives `contents: write`.
@@ -32,10 +32,6 @@ Kali Rolling container acceptance is a required release gate. Physical / Virtual
 
 ## Repository presentation
 
-Suggested **About** description:
-
-> From recon to report: a local pentest workspace connecting Nmap, Burp and Nuclei results, infrastructure, findings and evidence. Open-source MVP for Linux.
-
-Suggested topics: `kali-linux`, `linux`, `security-tools`, `reconnaissance`, `pentesting`, `tauri`, `react`, `fastapi`, `sqlite`, `investigation`.
+Use the current description, homepage and topics from [`media/github-metadata.json`](media/github-metadata.json). [Presentation instructions](media/README.md#github-repository-settings) explain how to apply them and distinguish prepared files from actual repository settings.
 
 Keep the homepage/download link pointed at Releases. GitHub's repository About/topics are repository settings; committing this guide does not automatically apply those settings.

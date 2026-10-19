@@ -1,0 +1,63 @@
+{
+  "version": "0.10.0",
+  "architecture": "amd64",
+  "tag": "v0.10.0",
+  "source_commit": "f8a04ea1622433be38c9bfd7038765932d59304b",
+  "annotated_tag_object": "e11c4901e1c8096dc1e29b561cbab42bf64d668a",
+  "release_url": "https://github.com/coldvisixn/dragontrip/releases/tag/v0.10.0",
+  "published_at": "2026-10-18T20:19:22Z",
+  "prerelease": true,
+  "assets": [
+    {
+      "name": "dragontrip_0.10.0_amd64.deb",
+      "url": "https://github.com/coldvisixn/dragontrip/releases/download/v0.10.0/dragontrip_0.10.0_amd64.deb",
+      "size_bytes": 63072438,
+      "sha256": "b5fa2c052fd52e698d8ae6dd54f386b930adad6ff74803c6c48ee695367220db"
+    },
+    {
+      "name": "dragontrip_0.10.0_amd64.deb.sha256",
+      "url": "https://github.com/coldvisixn/dragontrip/releases/download/v0.10.0/dragontrip_0.10.0_amd64.deb.sha256",
+      "size_bytes": 94,
+      "sha256": "de22abe5ddcb9b2830fb6c534ec5e3e9b1031004dcd72d2ea2dd05f2659bfda0"
+    }
+  ],
+  "release_workflow": {
+    "id": 39161980509,
+    "url": "https://github.com/coldvisixn/dragontrip/actions/runs/39161980509",
+    "conclusion": "success",
+    "build_job": 117777001985,
+    "kali_installed_job": 117778731300,
+    "publish_job": 117779328657
+  },
+  "reviewed_source_checks": {
+    "pull_request": 24,
+    "head": "9f1047c2ff596b6dcfd2fa89ab68212b8da33b82",
+    "linux_kali_run": 39160996541,
+    "security_run": 39160996489,
+    "tree_matches_release_commit": true
+  },
+  "public_download_verification": {
+    "date_utc": "2026-10-18",
+    "checksum_file": "passed",
+    "github_asset_digests": "passed (public expanded-assets HTML)",
+    "debian_metadata": {
+      "version": "0.10.0",
+      "architecture": "amd64"
+    },
+    "baseline": "published 0.9.1",
+    "upgrade": "passed",
+    "preserved": [
+      "records",
+      "retests",
+      "original evidence",
+      "objects",
+      "encrypted vault decryption",
+      "legacy draft recovery",
+      "project goal",
+      "v5 archive import",
+      "v6 archive export"
+    ]
+  },
+  "scope": "Linux x86_64; Ubuntu and Kali Rolling container acceptance. No physical/VirtualBox, Windows, macOS or ARM validation claimed.",
+  "repository_settings": "README, gallery and release notes updated. New About/homepage metadata is prepared but not applied; connector has no settings write operation and GitHub CLI API access is unavailable."
+}
