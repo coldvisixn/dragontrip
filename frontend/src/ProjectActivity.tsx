@@ -1,3 +1,4 @@
+import { t as tr, useLocale, localeTag } from './i18n';
 import { useEffect, useState } from 'react';
 import { Clock3, Search as SearchIcon } from 'lucide-react';
 import { api } from './api';
@@ -20,6 +21,7 @@ export function SearchResults({
   onOpen: (item: SearchResult) => void;
   compact?: boolean;
 }) {
+  useLocale();
   const [items, setItems] = useState<SearchResult[]>([]);
   const [total, setTotal] = useState(0);
   const [offset, setOffset] = useState(0);
@@ -63,22 +65,24 @@ export function SearchResults({
       {!compact && (
         <div className="section-actions">
           <select
-            aria-label="Search category"
+            aria-label={tr('Search category')}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
             {['all', 'objects', 'knowledge', 'scans', 'evidence', 'events'].map((v) => (
-              <option key={v}>{v}</option>
+              <option key={v} value={v}>
+                {tr(v)}
+              </option>
             ))}
           </select>
           <span className="muted" aria-live="polite">
-            {loading ? 'Searching…' : total + ' results'}
+            {loading ? tr('Searching…') : total + tr(' results')}
           </span>
         </div>
       )}
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
       {items.map((item) => (
@@ -91,13 +95,13 @@ export function SearchResults({
           <span>
             <strong>{item.title}</strong>
             <small>
-              {item.kind} · {item.subtype}
+              {tr(item.kind)} · {tr(item.subtype)}
             </small>
           </span>
         </button>
       ))}
       {!loading && !items.length && query.trim() && (
-        <p className="knowledge-empty">No matching project knowledge.</p>
+        <p className="knowledge-empty">{tr('No matching project knowledge.')}</p>
       )}
       {!compact && total > 30 && (
         <div className="pagination">
@@ -105,16 +109,18 @@ export function SearchResults({
             disabled={offset === 0 || loading}
             onClick={() => setOffset((v) => Math.max(0, v - 30))}
           >
-            Previous
+            {tr('Previous')}
           </button>
           <span>
-            {offset + 1}–{Math.min(total, offset + 30)} of {total}
+            {offset + 1}–{Math.min(total, offset + 30)}
+            {tr(' of ')}
+            {total}
           </span>
           <button
             disabled={offset + 30 >= total || loading}
             onClick={() => setOffset((v) => v + 30)}
           >
-            Next
+            {tr('Next')}
           </button>
         </div>
       )}
@@ -129,24 +135,29 @@ export function ProjectSearch({
   pid: string;
   onOpen: (item: SearchResult) => void;
 }) {
+  useLocale();
   const [query, setQuery] = useProjectState(pid, 'search_query', '');
   return (
     <div className="page">
       <div className="page-heading">
         <div>
-          <h1>Project search</h1>
-          <p>Search objects, Markdown notes, findings, paths, evidence names, scans and events.</p>
+          <h1>{tr('Project search')}</h1>
+          <p>
+            {tr(
+              'Search objects, Markdown notes, findings, paths, evidence names, scans and events.',
+            )}
+          </p>
         </div>
       </div>
       <label className="search-field panel">
         <SearchIcon size={18} />
         <input
           autoFocus
-          aria-label="Search project knowledge"
+          aria-label={tr('Search project knowledge')}
           value={query}
           maxLength={100}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search this project's knowledge…"
+          placeholder={tr("Search this project's knowledge…")}
         />
       </label>
       <section className="panel">
@@ -157,6 +168,7 @@ export function ProjectSearch({
 }
 
 export function Timeline({ pid }: { pid: string }) {
+  useLocale();
   const [query, setQuery] = useProjectState(pid, 'search_query', '');
   const [offset, setOffset] = useState(0);
   const [items, setItems] = useState<{ id: string; message: string; created: string }[]>([]);
@@ -195,40 +207,42 @@ export function Timeline({ pid }: { pid: string }) {
     <div className="page">
       <div className="page-heading">
         <div>
-          <h1>Timeline</h1>
-          <p>Project history in chronological context, with newest events first.</p>
+          <h1>{tr('Timeline')}</h1>
+          <p>{tr('Project history in chronological context, with newest events first.')}</p>
         </div>
         <button disabled={loading} onClick={() => setRevision((v) => v + 1)}>
-          Refresh timeline
+          {tr('Refresh timeline')}
         </button>
       </div>
       <section className="panel">
         <input
-          aria-label="Filter timeline"
-          placeholder="Filter activity…"
+          aria-label={tr('Filter timeline')}
+          placeholder={tr('Filter activity…')}
           value={query}
           maxLength={100}
           onChange={(e) => setQuery(e.target.value)}
         />
         {error && (
           <p role="alert" className="form-error">
-            {error}
+            {tr(error)}
           </p>
         )}
-        <ol className="timeline" aria-label="Project timeline">
+        <ol className="timeline" aria-label={tr('Project timeline')}>
           {items.map((item) => (
             <li key={item.id}>
               <Clock3 size={16} />
               <div>
                 <p>{item.message}</p>
-                <time dateTime={item.created}>{new Date(item.created).toLocaleString()}</time>
+                <time dateTime={item.created}>
+                  {new Date(item.created).toLocaleString(localeTag())}
+                </time>
               </div>
             </li>
           ))}
         </ol>
         {!items.length && (
           <p className="knowledge-empty">
-            {loading ? 'Loading history…' : 'No matching activity.'}
+            {loading ? tr('Loading history…') : tr('No matching activity.')}
           </p>
         )}
         <div className="pagination">
@@ -236,16 +250,18 @@ export function Timeline({ pid }: { pid: string }) {
             disabled={!offset || loading}
             onClick={() => setOffset((v) => Math.max(0, v - 50))}
           >
-            Previous
+            {tr('Previous')}
           </button>
           <span aria-live="polite">
-            {total ? offset + 1 : 0}–{Math.min(total, offset + 50)} of {total}
+            {total ? offset + 1 : 0}–{Math.min(total, offset + 50)}
+            {tr(' of ')}
+            {total}
           </span>
           <button
             disabled={offset + 50 >= total || loading}
             onClick={() => setOffset((v) => v + 50)}
           >
-            Next
+            {tr('Next')}
           </button>
         </div>
       </section>

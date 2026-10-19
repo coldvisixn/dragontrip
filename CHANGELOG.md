@@ -2,6 +2,14 @@
 
 Notable user-facing changes are listed here. Download installers from [Releases](https://github.com/coldvisixn/dragontrip/releases), not the automatic source-code archives.
 
+## [0.11.0] — Russian interface and motion preferences
+
+- Add English/Russian switching in Settings with an automatically saved language for all projects; localize navigation, forms, statuses, accessibility labels and dates.
+- Keep authored project text, credentials, tool output, API values and navigation identifiers intact when switching language.
+- Add short tab and appearance transitions without remounting editors. Preview Reduce motion immediately and save it with appearance settings; also respect the Low rendering profile and system reduced-motion preference.
+- Verify language persistence, Russian command search, translated option values, draft retention and motion behavior with UI tests and packaged-backend browser acceptance.
+- Retain database schema 0006 and archive v6 (imports v1–v6); no new migration or archive change.
+
 ## [0.10.0] — Investigation workspace
 
 - Add a project goal and Plan section; consolidate project pages in the sidebar and retain selection when hiding Inspector.

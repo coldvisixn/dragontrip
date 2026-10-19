@@ -8,7 +8,7 @@ A local desktop workspace for penetration testing and security research. [Englis
 - [Your first investigation](USAGE.md)
 - [Gallery and recorded walkthrough](SHOWCASE.md)
 - [Capabilities, limits and platform status](CAPABILITIES.md)
-- [What's new in 0.10.0](releases/v0.10.0.md)
+- [What's new in 0.11.0](releases/v0.11.0.md)
 - [Investigation workspace audit, architecture and validation](experience/README.ru.md)
 
 ## Work in a project
@@ -33,7 +33,7 @@ A local desktop workspace for penetration testing and security research. [Englis
 
 ## Verification and implementation history
 
-[0.10.0 build evidence](BUILD-0.10.0.md) describes package checks and their limits. [0.9.1 acceptance](BUILD-0.9.1.md) remains the previous release baseline. Current installation instructions are in the guides above; older documents below describe specific development snapshots.
+[0.11.0 validation](BUILD-0.11.0.md) describes package checks and their limits. [0.9.1 acceptance](BUILD-0.9.1.md) remains the previous release baseline. Current installation instructions are in the guides above; older documents below describe specific development snapshots.
 
 - [Security audit and remaining maintenance warning](SECURITY-AUDIT-2026-10-17.md)
 - [Completed PR review and dependency decisions](PR-REVIEW-0.9.1.md)

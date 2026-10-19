@@ -1,3 +1,4 @@
+import { t as tr, useLocale } from './i18n';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
@@ -40,6 +41,7 @@ const categoryIcons: Record<string, typeof Server> = {
   reference: Link,
 };
 const ObjectCard = memo(function ObjectCard({ data, selected }: NodeProps<Node<GraphData>>) {
+  useLocale();
   const Icon =
     data.kind === 'host'
       ? Server
@@ -60,14 +62,14 @@ const ObjectCard = memo(function ObjectCard({ data, selected }: NodeProps<Node<G
       <Handle type="target" position={Position.Left} />
       <div className="object-kind">
         <Icon size={14} />
-        {data.category}
+        {tr(data.category)}
       </div>
       <strong>{data.label}</strong>
       {!compact && <small>{data.subtitle}</small>}
       {!compact && (
         <div className="object-footer">
-          <span>{data.status}</span>
-          <span>{data.provenance}</span>
+          <span>{tr(data.status)}</span>
+          <span>{tr(data.provenance)}</span>
         </div>
       )}
       {!compact && data.tags.length > 0 && (
@@ -145,6 +147,7 @@ export default function Graph({
   onEdge: (id: string) => void;
   onContext: (id: string, x: number, y: number) => void;
 }) {
+  useLocale();
   const cache = useRef(new Map<string, { fingerprint: string; node: Node<GraphData> }>());
   const [view, setView] = useState<Viewport | null | undefined>();
   const [viewError, setViewError] = useState('');
@@ -273,15 +276,23 @@ export default function Graph({
       })),
     [relations, performanceProfile],
   );
-  if (view === undefined) return <div className="loading">Restoring graph…</div>;
+  if (view === undefined) return <div className="loading">{tr('Restoring graph…')}</div>;
   return (
     <>
       {viewError && (
         <div role="alert" className="graph-notice">
-          Graph view could not be saved: {viewError}
+          {tr('Graph view could not be saved: ')}
+          {viewError}
         </div>
       )}
       <ReactFlow
+        ariaLabelConfig={{
+          'controls.ariaLabel': tr('Graph controls'),
+          'controls.zoomIn.ariaLabel': tr('Zoom in'),
+          'controls.zoomOut.ariaLabel': tr('Zoom out'),
+          'controls.fitView.ariaLabel': tr('Fit graph to view'),
+          'minimap.ariaLabel': tr('Graph minimap'),
+        }}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}

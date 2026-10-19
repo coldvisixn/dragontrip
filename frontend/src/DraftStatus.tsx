@@ -1,3 +1,4 @@
+import { t as tr, useLocale } from './i18n';
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
@@ -39,38 +40,41 @@ export function DraftStatus({
   value: unknown;
   onRestore?: (value: unknown) => void;
 }) {
+  useLocale();
   const [message, setMessage] = useState('');
   const download = (data: unknown) =>
     void downloadText(data)
       .then(setMessage)
       .catch((e) =>
-        setMessage('Download failed: ' + String(e) + '. Your text is retained in the editor.'),
+        setMessage(
+          tr('Download failed: ') + String(e) + tr('. Your text is retained in the editor.'),
+        ),
       );
   return (
     <div className="draft-status" role="status">
-      <span>{workspaceStatus(pid, draftKey)}</span>
-      {message && <span>{message}</span>}
+      <span>{tr(workspaceStatus(pid, draftKey))}</span>
+      {message && <span>{tr(message)}</span>}
       <button type="button" onClick={() => void retryWorkspace(pid, draftKey)}>
-        Retry sync
+        {tr('Retry sync')}
       </button>
       <button type="button" onClick={() => download(value)}>
-        Download draft
+        {tr('Download draft')}
       </button>
       <details>
-        <summary>Recover earlier text</summary>
+        <summary>{tr('Recover earlier text')}</summary>
         {workspaceDrafts(pid).map((row) => (
           <div key={row.key}>
             <span>
-              {(row.data as { title?: string }).title || 'Untitled'} ·{' '}
-              {row.closed ? 'saved / closed' : 'draft'}
+              {(row.data as { title?: string }).title || tr('Untitled')} ·{' '}
+              {row.closed ? tr('saved / closed') : tr('draft')}
             </span>
             {onRestore && (
               <button type="button" onClick={() => onRestore(row.data)}>
-                Use text in current editor
+                {tr('Use text in current editor')}
               </button>
             )}
             <button type="button" onClick={() => download(row.data)}>
-              Download retained text
+              {tr('Download retained text')}
             </button>
           </div>
         ))}

@@ -110,7 +110,10 @@ const { once } = require('node:events');
     );
     await page.getByLabel('Web application', { exact: true }).selectOption('http://app.htb');
     await page.getByRole('button', { name: 'GET http://app.htb/login', exact: true }).click();
-    await page.locator('.endpoint-detail .source-actions').getByRole('button', { name: 'Create linked record', exact: true }).click();
+    await page
+      .locator('.endpoint-detail .source-actions')
+      .getByRole('button', { name: 'Create linked record', exact: true })
+      .click();
     await page.getByRole('button', { name: 'Edit note', exact: true }).click();
     await page.locator('.knowledge-editor').waitFor();
     assert.equal(
@@ -165,7 +168,10 @@ const { once } = require('node:events');
     await page.getByLabel('Web application', { exact: true }).selectOption('http://app.htb');
     await page.getByRole('button', { name: 'GET http://app.htb/login', exact: true }).click();
     await page.getByRole('button', { name: 'Collapse sidebar' }).click();
-    assert.ok(await page.locator('.sidebar').evaluate((s) => s.clientWidth < 100));
+    await page.waitForFunction(() => {
+      const sidebar = document.querySelector('.sidebar');
+      return sidebar.clientWidth < 100 && sidebar.getAnimations().length === 0;
+    });
     await page.screenshot({ path: join(screenshots, 'navigation-collapsed.png') });
     await page.reload();
     await page.getByRole('button', { name: 'Expand sidebar' }).waitFor();
@@ -179,6 +185,10 @@ const { once } = require('node:events');
     );
     await page.setViewportSize({ width: 1000, height: 650 });
     await page.getByRole('button', { name: 'Expand sidebar' }).click();
+    await page.waitForFunction(() => {
+      const sidebar = document.querySelector('.sidebar');
+      return sidebar.clientWidth > 100 && sidebar.getAnimations().length === 0;
+    });
     const smallSidebar = await page
       .locator('.sidebar')
       .evaluate((s) => ({ height: s.clientHeight, scroll: s.scrollHeight }));

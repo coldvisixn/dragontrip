@@ -203,8 +203,10 @@ def main():
                 checks.wait_until(lambda: driver.js("return document.documentElement.dataset.theme==='dark'"))
                 driver.navigate("Web applications", ".web-map")
                 driver.click("Collapse sidebar")
-                assert driver.js(
-                    "return document.querySelector('.sidebar').clientWidth<100"
+                checks.wait_until(
+                    lambda: driver.js(
+                        "return document.querySelector('.sidebar').clientWidth<100"
+                    )
                 )
                 checks.capture_ui(
                     checks.VALIDATION / "screenshots/native-navigation-collapsed.png"

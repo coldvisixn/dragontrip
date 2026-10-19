@@ -81,10 +81,11 @@ jobs:
         run: cargo test --release --locked --manifest-path src-tauri/Cargo.toml --test gtk_security
       - name: Verify data and encrypted vault upgrades from published releases
         run: |
-          for baseline in 0.8.0 0.9.0; do
+          for baseline in 0.8.0 0.9.0 0.10.0; do
             case "$baseline" in
               0.8.0) digest=303c219e6bf913b53a0243cc6bab26285beca3fba71e9115b29604cb637cae40 ;;
               0.9.0) digest=0d980e3bb83350b638924f14b2a3f6242582e6b35a4fdf23053d9b88cef2810e ;;
+              0.10.0) digest=b5fa2c052fd52e698d8ae6dd54f386b930adad6ff74803c6c48ee695367220db ;;
             esac
             directory="$RUNNER_TEMP/dragontrip-upgrade/$baseline"
             mkdir -p "$directory"
@@ -107,6 +108,10 @@ jobs:
           CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
             DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
             node scripts/investigation-smoke.cjs
+          CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
+            DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
+            DRAGONTRIP_VALIDATION_DIR="${{ runner.temp }}/release-validation/localization" \
+            node scripts/localization-smoke.cjs
       - name: Verify package metadata and checksum
         env:
           PACKAGE_VERSION: ${{ steps.version.outputs.version }}

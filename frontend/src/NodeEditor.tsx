@@ -1,3 +1,4 @@
+import { t as tr, useLocale } from './i18n';
 import { useState, type FormEvent } from 'react';
 import type { ObjectNode } from './api';
 import { useProjectState, putWorkspace } from './workspace';
@@ -20,13 +21,14 @@ export function PositionEditor({
   node: ObjectNode;
   onSave: (x: number, y: number) => Promise<void>;
 }) {
+  useLocale();
   const [x, setX] = useState(String(Math.round(node.x)));
   const [y, setY] = useState(String(Math.round(node.y)));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return (
     <details className="inspector-section">
-      <summary>Position on map</summary>
+      <summary>{tr('Position on map')}</summary>
       <form
         className="node-editor"
         onSubmit={async (e) => {
@@ -44,7 +46,7 @@ export function PositionEditor({
       >
         <div className="form-pair">
           <label>
-            X coordinate
+            {tr('X coordinate')}
             <input
               type="number"
               required
@@ -55,7 +57,7 @@ export function PositionEditor({
             />
           </label>
           <label>
-            Y coordinate
+            {tr('Y coordinate')}
             <input
               type="number"
               required
@@ -68,10 +70,10 @@ export function PositionEditor({
         </div>
         {error && (
           <p role="alert" className="form-error">
-            {error}
+            {tr(error)}
           </p>
         )}
-        <button disabled={busy}>Save position</button>
+        <button disabled={busy}>{tr('Save position')}</button>
       </form>
     </details>
   );
@@ -88,6 +90,7 @@ export function NodeEditor({
   onSave: (content: NodeContent) => Promise<void>;
   onCancel: () => void;
 }) {
+  useLocale();
   const draftKey = 'draft:object:' + (node?.id || 'new');
   const defaults = {
     kind: 'object',
@@ -135,73 +138,77 @@ export function NodeEditor({
     <form className="node-editor" onSubmit={submit}>
       <DraftStatus pid={pid} draftKey={draftKey} value={draft} />
       <label>
-        Object label
+        {tr('Object label')}
         <input
           autoFocus
           required
           maxLength={120}
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="What does this object represent?"
+          placeholder={tr('What does this object represent?')}
         />
       </label>
       <div className="form-pair">
         <label>
-          Category
+          {tr('Category')}
           <select
-            aria-label="Category"
+            aria-label={tr('Category')}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
             {categories.map((c) => (
-              <option key={c}>{c}</option>
+              <option key={c} value={c}>
+                {tr(c)}
+              </option>
             ))}
           </select>
         </label>
         <label>
-          Investigation status
+          {tr('Investigation status')}
           <select
-            aria-label="Investigation status"
+            aria-label={tr('Investigation status')}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
             {statuses.map((s) => (
-              <option key={s}>{s}</option>
+              <option key={s} value={s}>
+                {tr(s)}
+              </option>
             ))}
           </select>
         </label>
       </div>
       <label>
-        Description
+        {tr('Description')}
         <textarea
-          aria-label="Description"
+          aria-label={tr('Description')}
           maxLength={8000}
           rows={6}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Purpose, context, observations and next steps…"
+          placeholder={tr('Purpose, context, observations and next steps…')}
         />
       </label>
       <label>
-        Tags
+        {tr('Tags')}
         <input
           value={tags}
           onChange={(e) => setTags(e.target.value)}
-          placeholder="web, follow-up (comma separated)"
+          placeholder={tr('web, follow-up (comma separated)')}
         />
-        <small>Up to 10 tags, 30 characters each.</small>
+        <small>{tr('Up to 10 tags, 30 characters each.')}</small>
       </label>
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
       <div className="dialog-actions">
         <button type="button" onClick={onCancel} disabled={busy}>
-          Cancel
+          {tr('Cancel')}
         </button>
         <button className="primary" disabled={busy || !label.trim()}>
-          {busy ? 'Saving…' : node ? 'Save object' : 'Add object'}
+          {busy ? tr('Saving…') : node ? tr('Save object') : tr('Add object')}
         </button>
       </div>
     </form>
@@ -217,6 +224,7 @@ export function CustomObjectDetails({
   pid: string;
   onSave: (content: NodeContent) => Promise<void>;
 }) {
+  useLocale();
   const [editing, setEditing] = useProjectState(pid, 'object_editing:' + node.id, false);
   return (
     <div className="inspector-section">
@@ -233,14 +241,14 @@ export function CustomObjectDetails({
       ) : (
         <>
           <div className="section-actions">
-            <h3>{String(node.attrs.category || 'hypothesis')}</h3>
-            <button onClick={() => setEditing(true)}>Edit object</button>
+            <h3>{tr(String(node.attrs.category || 'hypothesis'))}</h3>
+            <button onClick={() => setEditing(true)}>{tr('Edit object')}</button>
           </div>
-          <span className="badge">{String(node.attrs.status || 'idea')}</span>
+          <span className="badge">{tr(String(node.attrs.status || 'idea'))}</span>
           <p className="object-description">
             {String(
               node.attrs.description ||
-                'Add a description to explain this object and your next steps.',
+                tr('Add a description to explain this object and your next steps.'),
             )}
           </p>
           <div className="tag-list">
@@ -264,6 +272,7 @@ export function RelationshipEditor({
   label: string;
   onSave: (label: string) => Promise<void>;
 }) {
+  useLocale();
   const [value, setValue] = useState(label);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -284,22 +293,22 @@ export function RelationshipEditor({
       }}
     >
       <label>
-        Relationship label
+        {tr('Relationship label')}
         <input
           required
           maxLength={80}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="depends on, investigate, related to…"
+          placeholder={tr('depends on, investigate, related to…')}
         />
       </label>
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
       <button disabled={busy || !value.trim()} className="primary">
-        Save relationship
+        {tr('Save relationship')}
       </button>
     </form>
   );

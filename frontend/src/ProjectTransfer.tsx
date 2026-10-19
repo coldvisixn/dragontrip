@@ -1,3 +1,4 @@
+import { t as tr, useLocale } from './i18n';
 import { useState } from 'react';
 import { Download, Upload } from 'lucide-react';
 import { api, uploadFile, type Project } from './api';
@@ -9,6 +10,7 @@ export default function ProjectTransfer({
   project?: Project;
   onImported: (project: Project) => Promise<void>;
 }) {
+  useLocale();
   const [include, setInclude] = useState(false);
   const [password, setPassword] = useState('');
   const [importPassword, setImportPassword] = useState('');
@@ -18,15 +20,15 @@ export default function ProjectTransfer({
   const [message, setMessage] = useState('');
   return (
     <section className="panel project-transfer">
-      <h2>Project portability</h2>
+      <h2>{tr('Project portability')}</h2>
       <p className="muted">
-        A .dtproj archive contains the graph, notes, findings, paths, tasks, Timeline, scan history
-        and original evidence, including recoverable research drafts. Import creates a separate
-        project.
+        {tr(
+          'A .dtproj archive contains the graph, notes, findings, paths, tasks, Timeline, scan history and original evidence, including recoverable research drafts. Import creates a separate project.',
+        )}
       </p>
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
       {message && (
@@ -49,7 +51,7 @@ export default function ProjectTransfer({
                 { include_credentials: include, ...(include ? { password } : {}) },
               );
               setPassword('');
-              setMessage('Saved: ' + value.path + ' · SHA-256 ' + value.sha256);
+              setMessage(tr('Saved: ') + value.path + tr(' · SHA-256 ') + value.sha256);
             } catch (e) {
               setError((e as Error).message);
             } finally {
@@ -57,11 +59,14 @@ export default function ProjectTransfer({
             }
           }}
         >
-          <h3>Export {project?.name || 'selected project'}</h3>
+          <h3>
+            {tr('Export ')}
+            {project?.name || tr('selected project')}
+          </h3>
           <p className="muted">
             {project
-              ? 'Finish or cancel active scans first. Credentials are excluded by default.'
-              : 'Open a project to export it.'}
+              ? tr('Finish or cancel active scans first. Credentials are excluded by default.')
+              : tr('Open a project to export it.')}
           </p>
           <label className="checkbox">
             <input
@@ -70,11 +75,11 @@ export default function ProjectTransfer({
               onChange={(e) => setInclude(e.target.checked)}
               disabled={!project}
             />
-            Include encrypted credentials
+            {tr('Include encrypted credentials')}
           </label>
           {include && (
             <label>
-              Archive encryption password
+              {tr('Archive encryption password')}
               <input
                 type="password"
                 required
@@ -85,13 +90,15 @@ export default function ProjectTransfer({
                 autoComplete="new-password"
               />
               <small>
-                Unlock the local vault first. Choose an archive password of at least 12 characters.
+                {tr(
+                  'Unlock the local vault first. Choose an archive password of at least 12 characters.',
+                )}
               </small>
             </label>
           )}
           <button disabled={!project || busy}>
             <Download size={15} />
-            Export project
+            {tr('Export project')}
           </button>
         </form>
         <form
@@ -117,9 +124,9 @@ export default function ProjectTransfer({
             }
           }}
         >
-          <h3>Import as a new project</h3>
+          <h3>{tr('Import as a new project')}</h3>
           <label>
-            Project archive
+            {tr('Project archive')}
             <input
               type="file"
               required
@@ -127,7 +134,7 @@ export default function ProjectTransfer({
               onChange={(e) => {
                 const selected = e.target.files?.[0];
                 if (selected && selected.size > 128 * 1048576) {
-                  setError('Maximum archive size: 128 MiB');
+                  setError(tr('Maximum archive size: 128 MiB'));
                   e.target.value = '';
                   setFile(undefined);
                 } else setFile(selected);
@@ -135,7 +142,7 @@ export default function ProjectTransfer({
             />
           </label>
           <label>
-            Archive password (if credentials were included)
+            {tr('Archive password (if credentials were included)')}
             <input
               type="password"
               maxLength={1024}
@@ -145,12 +152,13 @@ export default function ProjectTransfer({
             />
           </label>
           <p className="muted">
-            Importing credentials requires an unlocked local vault. Historical scans never resume
-            automatically.
+            {tr(
+              'Importing credentials requires an unlocked local vault. Historical scans never resume automatically.',
+            )}
           </p>
           <button disabled={!file || busy}>
             <Upload size={15} />
-            Import project
+            {tr('Import project')}
           </button>
         </form>
       </div>
