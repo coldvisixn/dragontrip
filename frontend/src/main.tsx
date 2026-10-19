@@ -6,6 +6,8 @@ import '@fontsource/inter/600.css';
 import '@fontsource/jetbrains-mono/400.css';
 import './style.css';
 import App from './App';
+import { getLocale } from './i18n';
+document.documentElement.lang = getLocale();
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />

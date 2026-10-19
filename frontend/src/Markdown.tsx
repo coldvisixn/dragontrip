@@ -1,9 +1,11 @@
+import { t as tr, useLocale } from './i18n';
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { invoke } from '@tauri-apps/api/core';
 
 export default function Markdown({ source }: { source: string }) {
+  useLocale();
   const [error, setError] = useState('');
   return (
     <div className="markdown-body">
@@ -20,7 +22,7 @@ export default function Markdown({ source }: { source: string }) {
                 onClick={(event) => {
                   event.preventDefault();
                   void invoke('open_external', { url: href }).catch(() =>
-                    setError('The link could not be opened in your system browser.'),
+                    setError(tr('The link could not be opened in your system browser.')),
                   );
                 }}
               >
@@ -31,7 +33,7 @@ export default function Markdown({ source }: { source: string }) {
             ),
           img: ({ alt }) => (
             <span className="muted">
-              [Image: {alt || 'Use an evidence attachment to preview images'}]
+              {tr('[Image: {0}]', [alt || tr('Use an evidence attachment to preview images')])}
             </span>
           ),
           input: ({ checked }) => (
@@ -39,7 +41,7 @@ export default function Markdown({ source }: { source: string }) {
               type="checkbox"
               checked={Boolean(checked)}
               disabled
-              aria-label={checked ? 'Completed checklist item' : 'Incomplete checklist item'}
+              aria-label={tr(checked ? 'Completed checklist item' : 'Incomplete checklist item')}
             />
           ),
         }}
@@ -48,7 +50,7 @@ export default function Markdown({ source }: { source: string }) {
       </ReactMarkdown>
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
     </div>
@@ -56,13 +58,15 @@ export default function Markdown({ source }: { source: string }) {
 }
 
 export function MarkdownPreview({ source }: { source: string }) {
+  useLocale();
   const [open, setOpen] = useState(false);
   return (
     <div className="markdown-preview">
       <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-        {open ? 'Hide' : 'Show'} Markdown preview
+        {open ? tr('Hide') : tr('Show')}
+        {tr(' Markdown preview')}
       </button>
-      {open && <Markdown source={source || '*Nothing to preview yet.*'} />}
+      {open && <Markdown source={source || tr('*Nothing to preview yet.*')} />}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { t as tr, useLocale, localeTag } from './i18n';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import {
   ArrowDown,
@@ -62,13 +63,14 @@ export function ObjectLinks({
   ids: string[];
   onChange: (ids: string[]) => void;
 }) {
+  useLocale();
   const [query, setQuery] = useState('');
   return (
     <fieldset className="reference-picker">
-      <legend>Linked objects</legend>
+      <legend>{tr('Linked objects')}</legend>
       <input
-        aria-label="Search linked objects"
-        placeholder="Search objects to link…"
+        aria-label={tr('Search linked objects')}
+        placeholder={tr('Search objects to link…')}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
@@ -88,7 +90,7 @@ export function ObjectLinks({
               />
               <span>
                 {node.label}
-                <small>{node.kind}</small>
+                <small>{tr(node.kind)}</small>
               </span>
             </label>
           ))}
@@ -102,12 +104,13 @@ export function ObjectLinks({
                 onChange={() => onChange(ids.filter((n) => n !== id))}
               />
               <span>
-                Deleted object<small>{id}</small>
+                {tr('Deleted object')}
+                <small>{id}</small>
               </span>
             </label>
           ))}
         {!detail.nodes.length && (
-          <p className="muted">No objects yet. You can save without a link.</p>
+          <p className="muted">{tr('No objects yet. You can save without a link.')}</p>
         )}
       </div>
     </fieldset>
@@ -131,6 +134,7 @@ export function Editor({
   onSave: (saved: KnowledgeRecord) => void;
   onCancel: () => void;
 }) {
+  useLocale();
   const pid = detail.project.id;
   const draftKey = 'draft:' + draftId;
   const [draft, setDraft] = useProjectState(pid, draftKey, {
@@ -221,7 +225,7 @@ export function Editor({
         else if (e instanceof ApiError && e.status === 404) setConflict(null);
         else
           setError(
-            'Record was not confirmed saved. Your draft is retained. Retry saving: ' +
+            tr('Record was not confirmed saved. Your draft is retained. Retry saving: ') +
               (e as Error).message,
           );
       }
@@ -284,22 +288,27 @@ export function Editor({
             setDraft({ ...draft, title: draft.recovery!.title, content: draft.recovery!.content })
           }
         >
-          Restore my text before resolution
+          {tr('Restore my text before resolution')}
         </button>
       )}
       {conflict !== undefined && (
         <section className="draft-conflict" role="alert">
-          <h3>{conflict ? 'This record changed' : 'The saved record was deleted'}</h3>
+          <h3>{conflict ? tr('This record changed') : tr('The saved record was deleted')}</h3>
           <div className="conflict-versions">
             <div>
-              <h4>My draft · {new Date(draft.changed).toLocaleString()}</h4>
+              <h4>
+                {tr('My draft · ')}
+                {new Date(draft.changed).toLocaleString(localeTag())}
+              </h4>
               <strong>{title}</strong>
               <pre>{content.body}</pre>
             </div>
             <div>
               <h4>
-                Saved version ·{' '}
-                {conflict ? new Date(conflict.updated).toLocaleString() : 'unavailable'}
+                {tr('Saved version ·')}{' '}
+                {conflict
+                  ? new Date(conflict.updated).toLocaleString(localeTag())
+                  : tr('unavailable')}
               </h4>
               <strong>{conflict?.title}</strong>
               <pre>{conflict?.content.body}</pre>
@@ -310,19 +319,20 @@ export function Editor({
             disabled={busy || !title.trim()}
             onClick={() => void save(undefined, true)}
           >
-            Save my version as a separate record
+            {tr('Save my version as a separate record')}
           </button>
           {conflict && (
             <>
               <button type="button" disabled={busy} onClick={() => resolveSaved(false)}>
-                Use saved version (keep my text for recovery)
+                {tr('Use saved version (keep my text for recovery)')}
               </button>
               <button type="button" disabled={busy} onClick={() => resolveSaved(true)}>
-                Merge manually in editor
+                {tr('Merge manually in editor')}
               </button>
               <p>
-                For a manual merge, edit the text below and save. Your previous text remains
-                recoverable.
+                {tr(
+                  'For a manual merge, edit the text below and save. Your previous text remains recoverable.',
+                )}
               </p>
             </>
           )}
@@ -340,58 +350,58 @@ export function Editor({
               )
             }
           >
-            Use finding template
+            {tr('Use finding template')}
           </button>
         )}
         {!record && (
           <label>
-            {kind === 'task' ? 'Task template' : 'Research template'}
+            {kind === 'task' ? tr('Task template') : tr('Research template')}
             <select
-              aria-label={kind === 'task' ? 'Task template' : 'Research template'}
+              aria-label={kind === 'task' ? tr('Task template') : tr('Research template')}
               defaultValue=""
               onChange={(e) => {
                 if (e.target.value) change('body', e.target.value);
               }}
             >
-              <option value="">Choose a starting point…</option>
+              <option value="">{tr('Choose a starting point…')}</option>
               {kind === 'task' && (
                 <>
                   <option value="Review discovered services, confirm their purpose and record the result.">
-                    Review exposed services
+                    {tr('Review exposed services')}
                   </option>
                   <option value="Reproduce the observation, attach evidence and assess its meaning.">
-                    Validate a finding
+                    {tr('Validate a finding')}
                   </option>
                   <option value="Record the original behavior, verify the fix and preserve the result.">
-                    Verify remediation
+                    {tr('Verify remediation')}
                   </option>
                 </>
               )}
               <option value={'Observed:\n\nHypothesis:\n\nNext check:\n\nResult:\n'}>
-                Hypothesis and check
+                {tr('Hypothesis and check')}
               </option>
               <option
                 value={
                   'Target / service:\n\nIdentity and version:\n\nAuthentication:\n\nInteresting paths:\n\nNext check:\n'
                 }
               >
-                Service enumeration
+                {tr('Service enumeration')}
               </option>
               <option
                 value={
                   'Check performed:\n\nExpected result:\n\nActual result:\n\nWhy it failed / evidence:\n\nRetry only if:\n'
                 }
               >
-                Unsuccessful check
+                {tr('Unsuccessful check')}
               </option>
             </select>
           </label>
         )}
         <h2>
-          {record ? 'Edit' : 'New'} {singular[kind]}
+          {record ? tr('Edit') : tr('New')} {tr(singular[kind])}
         </h2>
         <label>
-          Title
+          {tr('Title')}
           <input
             autoFocus
             required
@@ -402,9 +412,9 @@ export function Editor({
         </label>
         <div className="form-pair">
           <label>
-            Status
+            {tr('Status')}
             <select
-              aria-label="Status"
+              aria-label={tr('Status')}
               value={content.status}
               onChange={(e) => change('status', e.target.value)}
             >
@@ -412,52 +422,56 @@ export function Editor({
                 ? ['todo', 'in_progress', 'blocked', 'done', 'cancelled']
                 : ['draft', 'open', 'confirmed', 'resolved', 'dismissed']
               ).map((s) => (
-                <option key={s}>{s}</option>
+                <option key={s} value={s}>
+                  {tr(s)}
+                </option>
               ))}
             </select>
           </label>
           {kind === 'finding' && (
             <label>
-              Severity
+              {tr('Severity')}
               <select
-                aria-label="Severity"
+                aria-label={tr('Severity')}
                 value={content.severity}
                 onChange={(e) => change('severity', e.target.value)}
               >
                 {['info', 'low', 'medium', 'high', 'critical'].map((s) => (
-                  <option key={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {tr(s)}
+                  </option>
                 ))}
               </select>
             </label>
           )}
         </div>
         <label>
-          {kind === 'finding' ? 'Description and evidence' : 'Content'}
+          {kind === 'finding' ? tr('Description and evidence') : tr('Content')}
           <textarea
-            aria-label={kind === 'finding' ? 'Description and evidence' : 'Content'}
+            aria-label={kind === 'finding' ? tr('Description and evidence') : tr('Content')}
             rows={7}
             maxLength={12000}
             value={content.body}
             onChange={(e) => change('body', e.target.value)}
             placeholder={
               kind === 'path'
-                ? 'Goal, assumptions and reasoning…'
-                : 'Context, observations and supporting details…'
+                ? tr('Goal, assumptions and reasoning…')
+                : tr('Context, observations and supporting details…')
             }
           />
         </label>
         <MarkdownPreview source={content.body} />
         {kind === 'finding' && (
           <details>
-            <summary>Remediation (optional)</summary>
+            <summary>{tr('Remediation (optional)')}</summary>
             <label>
-              Remediation
+              {tr('Remediation')}
               <textarea
-                aria-label="Remediation"
+                aria-label={tr('Remediation')}
                 maxLength={6000}
                 value={content.remediation}
                 onChange={(e) => change('remediation', e.target.value)}
-                placeholder="Recommended fix and how to verify it…"
+                placeholder={tr('Recommended fix and how to verify it…')}
               />
             </label>
           </details>
@@ -465,7 +479,7 @@ export function Editor({
         {kind === 'path' && (
           <section className="path-editor">
             <div className="section-actions">
-              <h3>Ordered steps</h3>
+              <h3>{tr('Ordered steps')}</h3>
               <button
                 type="button"
                 disabled={!detail.nodes.length || content.steps.length >= 50}
@@ -477,22 +491,25 @@ export function Editor({
                 }
               >
                 <Plus size={14} />
-                Add step
+                {tr('Add step')}
               </button>
             </div>
-            <p className="muted">Manual investigation plan. Steps never execute tools.</p>
+            <p className="muted">{tr('Manual investigation plan. Steps never execute tools.')}</p>
             {content.steps.map((s, i) => (
               <fieldset key={i}>
-                <legend>Step {i + 1}</legend>
+                <legend>
+                  {tr('Step ')}
+                  {i + 1}
+                </legend>
                 <label>
-                  Object
+                  {tr('Object')}
                   <select
-                    aria-label="Object"
+                    aria-label={tr('Object')}
                     value={s.node_id}
                     onChange={(e) => step(i, { node_id: e.target.value })}
                   >
                     {!detail.nodes.some((n) => n.id === s.node_id) && (
-                      <option value={s.node_id}>Deleted object</option>
+                      <option value={s.node_id}>{tr('Deleted object')}</option>
                     )}
                     {detail.nodes.map((n) => (
                       <option key={n.id} value={n.id}>
@@ -502,7 +519,7 @@ export function Editor({
                   </select>
                 </label>
                 <label>
-                  Action or rationale
+                  {tr('Action or rationale')}
                   <input
                     required
                     maxLength={500}
@@ -511,21 +528,23 @@ export function Editor({
                   />
                 </label>
                 <label>
-                  Step status
+                  {tr('Step status')}
                   <select
-                    aria-label="Step status"
+                    aria-label={tr('Step status')}
                     value={s.status}
                     onChange={(e) => step(i, { status: e.target.value })}
                   >
                     {['planned', 'validated', 'blocked'].map((v) => (
-                      <option key={v}>{v}</option>
+                      <option key={v} value={v}>
+                        {tr(v)}
+                      </option>
                     ))}
                   </select>
                 </label>
                 <div className="step-actions">
                   <button
                     type="button"
-                    aria-label={`Move step ${i + 1} up`}
+                    aria-label={tr('Move step {0} up', [i + 1])}
                     disabled={i === 0}
                     onClick={() => move(i, -1)}
                   >
@@ -533,7 +552,7 @@ export function Editor({
                   </button>
                   <button
                     type="button"
-                    aria-label={`Move step ${i + 1} down`}
+                    aria-label={tr('Move step {0} down', [i + 1])}
                     disabled={i === content.steps.length - 1}
                     onClick={() => move(i, 1)}
                   >
@@ -541,7 +560,7 @@ export function Editor({
                   </button>
                   <button
                     type="button"
-                    aria-label={`Remove step ${i + 1}`}
+                    aria-label={tr('Remove step {0}', [i + 1])}
                     onClick={() =>
                       change(
                         'steps',
@@ -558,16 +577,18 @@ export function Editor({
         )}
         {kind === 'task' && (
           <details>
-            <summary>Task options</summary>
+            <summary>{tr('Task options')}</summary>
             <label>
-              Priority
+              {tr('Priority')}
               <select
-                aria-label="Priority"
+                aria-label={tr('Priority')}
                 value={String(content.priority || 'medium')}
                 onChange={(e) => change('priority', e.target.value)}
               >
                 {['low', 'medium', 'high', 'urgent'].map((v) => (
-                  <option key={v}>{v}</option>
+                  <option key={v} value={v}>
+                    {tr(v)}
+                  </option>
                 ))}
               </select>
             </label>
@@ -575,9 +596,9 @@ export function Editor({
         )}
         {kind === 'task' && (
           <details>
-            <summary>Owner and due date</summary>
+            <summary>{tr('Owner and due date')}</summary>
             <label>
-              Owner
+              {tr('Owner')}
               <input
                 maxLength={100}
                 value={String(content.assignee || '')}
@@ -585,7 +606,7 @@ export function Editor({
               />
             </label>
             <label>
-              Due date
+              {tr('Due date')}
               <input
                 type="date"
                 value={String(content.due_date || '')}
@@ -595,7 +616,7 @@ export function Editor({
           </details>
         )}
         <details>
-          <summary>Objects, sources and evidence</summary>
+          <summary>{tr('Objects, sources and evidence')}</summary>
           <AttachmentLinks
             onBusyChange={setUploading}
             pid={detail.project.id}
@@ -608,7 +629,7 @@ export function Editor({
             onChange={(ids) => change('node_ids', ids)}
           />
           <fieldset className="reference-picker">
-            <legend>Source scans</legend>
+            <legend>{tr('Source scans')}</legend>
             <div className="reference-options">
               {[...new Set([...content.scan_ids, ...detail.scans.map((s) => s.id)])].map((id) => {
                 const scan = detail.scans.find((s) => s.id === id);
@@ -628,22 +649,24 @@ export function Editor({
                     />
                     <span>
                       {scan
-                        ? `${scan.tool || 'nmap'} · ${scan.target} · ${scan.status}`
-                        : 'Historical scan ' + id}
-                      <small>{scan ? new Date(scan.started).toLocaleString() : id}</small>
+                        ? `${scan.tool || 'nmap'} · ${scan.target} · ${tr(scan.status)}`
+                        : tr('Historical scan ') + id}
+                      <small>
+                        {scan ? new Date(scan.started).toLocaleString(localeTag()) : id}
+                      </small>
                     </span>
                   </label>
                 );
               })}
               {!detail.scans.length && !content.scan_ids.length && (
-                <p className="muted">No scans yet.</p>
+                <p className="muted">{tr('No scans yet.')}</p>
               )}
             </div>
           </fieldset>
           <label>
-            Link historical scan by ID
+            {tr('Link historical scan by ID')}
             <input
-              placeholder="Scan ID from history"
+              placeholder={tr('Scan ID from history')}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
@@ -654,17 +677,17 @@ export function Editor({
                 }
               }}
             />
-            <small>Press Enter to add. The server verifies project ownership.</small>
+            <small>{tr('Press Enter to add. The server verifies project ownership.')}</small>
           </label>
         </details>
         {error && (
           <p className="form-error" role="alert">
-            {error}
+            {tr(error)}
           </p>
         )}
         <div className="dialog-actions">
           <button type="button" disabled={busy} onClick={onCancel}>
-            Close · keep draft
+            {tr('Close · keep draft')}
           </button>
           <button
             type="button"
@@ -674,7 +697,7 @@ export function Editor({
               onCancel();
             }}
           >
-            Discard draft (retain recovery copy)
+            {tr('Discard draft (retain recovery copy)')}
           </button>
           <button
             className="primary"
@@ -686,7 +709,7 @@ export function Editor({
               (kind === 'path' && !content.steps.length)
             }
           >
-            {busy ? 'Saving…' : 'Save ' + singular[kind]}
+            {busy ? tr('Saving…') : tr('Save ') + tr(singular[kind])}
           </button>
         </div>
       </fieldset>
@@ -703,26 +726,29 @@ function RetestForm({
   record: KnowledgeRecord;
   onSaved: (saved: KnowledgeRecord) => void;
 }) {
+  useLocale();
   const [note, setNote] = useState('');
   const [result, setResult] = useState('inconclusive');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   return (
     <section>
-      <h3>Retest history</h3>
+      <h3>{tr('Retest history')}</h3>
       {(record.content.retests || []).map((entry, i) => (
         <div className="panel" key={i}>
           <strong>
-            {entry.result.replaceAll('_', ' ')} · {new Date(entry.at).toLocaleString()}
+            {tr(entry.result.replaceAll('_', ' '))} ·{' '}
+            {new Date(entry.at).toLocaleString(localeTag())}
           </strong>
           <Markdown source={entry.note} />
         </div>
       ))}
       <details>
-        <summary>Record a retest</summary>
+        <summary>{tr('Record a retest')}</summary>
         <p className="muted">
-          Record your manual verification and supporting evidence. Fixed resolves the finding; still
-          present confirms it. History is retained.
+          {tr(
+            'Record your manual verification and supporting evidence. Fixed resolves the finding; still present confirms it. History is retained.',
+          )}
         </p>
         <form
           className="knowledge-editor"
@@ -748,33 +774,35 @@ function RetestForm({
         >
           <fieldset className="editor-fields" disabled={busy}>
             <label>
-              Retest result
+              {tr('Retest result')}
               <select
-                aria-label="Retest result"
+                aria-label={tr('Retest result')}
                 value={result}
                 onChange={(e) => setResult(e.target.value)}
               >
-                <option value="inconclusive">Inconclusive</option>
-                <option value="fixed">Fixed</option>
-                <option value="still_present">Still present</option>
+                <option value="inconclusive">{tr('Inconclusive')}</option>
+                <option value="fixed">{tr('Fixed')}</option>
+                <option value="still_present">{tr('Still present')}</option>
               </select>
             </label>
             <label>
-              Retest notes
+              {tr('Retest notes')}
               <textarea
                 required
                 maxLength={2000}
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="What you tested, the observed result and relevant evidence references…"
+                placeholder={tr(
+                  'What you tested, the observed result and relevant evidence references…',
+                )}
               />
             </label>
-            <button disabled={!note.trim()}>Save retest</button>
+            <button disabled={!note.trim()}>{tr('Save retest')}</button>
           </fieldset>
         </form>
         {error && (
           <p role="alert" className="form-error">
-            {error}{' '}
+            {tr(error)}{' '}
             <button
               onClick={async () => {
                 try {
@@ -785,7 +813,7 @@ function RetestForm({
                 }
               }}
             >
-              Reload finding
+              {tr('Reload finding')}
             </button>
           </p>
         )}
@@ -813,6 +841,7 @@ export default function Knowledge({
   onChanged: () => Promise<unknown>;
   onSeedConsumed?: () => void;
 }) {
+  useLocale();
   const pid = detail.project.id;
   const [items, setItems] = useState<KnowledgeRecord[]>([]);
   const [selected, setSelected] = useState<KnowledgeRecord>();
@@ -842,7 +871,9 @@ export default function Knowledge({
     if (editing && isWorkspaceClosed(pid, 'draft:' + view.draft_id)) {
       setEditing(false);
       setError(
-        'This draft was saved or closed. Your retained text is available in Recover earlier text in a new editor.',
+        tr(
+          'This draft was saved or closed. Your retained text is available in Recover earlier text in a new editor.',
+        ),
       );
     }
   }, [pid, editing, view.draft_id]);
@@ -899,7 +930,7 @@ export default function Knowledge({
   }, [pid, kind, query, revision, offset, filter]);
   const shown = items.filter((item) => filter === 'all' || item.content.status === filter);
   async function remove() {
-    if (!selected || !window.confirm('Delete this ' + singular[kind] + '?')) return;
+    if (!selected || !window.confirm(tr('Delete this ') + singular[kind] + '?')) return;
     setDeleting(true);
     try {
       await api(`/projects/${pid}/knowledge/${selected.id}`, 'DELETE');
@@ -916,13 +947,13 @@ export default function Knowledge({
     <div className="page knowledge-page">
       <div className="page-heading">
         <div>
-          <h1>{titles[kind]}</h1>
+          <h1>{tr(titles[kind])}</h1>
           <p>
             {kind === 'path'
-              ? 'Turn linked objects into an ordered investigation plan.'
+              ? tr('Turn linked objects into an ordered investigation plan.')
               : kind === 'finding'
-                ? 'Document impact, evidence and remediation.'
-                : 'Keep context and reasoning close to your evidence.'}
+                ? tr('Document impact, evidence and remediation.')
+                : tr('Keep context and reasoning close to your evidence.')}
           </p>
         </div>
         <button
@@ -933,17 +964,18 @@ export default function Knowledge({
           }}
         >
           <Plus size={15} />
-          New {singular[kind]}
+          {tr('New ')}
+          {tr(singular[kind])}
         </button>
       </div>
       {error && (
         <p role="alert" className="form-error">
-          {error}
-          <button onClick={() => setRevision((v) => v + 1)}>Retry</button>
+          {tr(error)}
+          <button onClick={() => setRevision((v) => v + 1)}>{tr('Retry')}</button>
         </p>
       )}
       {!editing && getWorkspace(pid, 'draft:' + view.draft_id, null) && (
-        <button onClick={() => setEditing(true)}>Resume editor draft</button>
+        <button onClick={() => setEditing(true)}>{tr('Resume editor draft')}</button>
       )}
       <div className="knowledge-layout">
         <section className="panel knowledge-list">
@@ -951,33 +983,39 @@ export default function Knowledge({
             <label className="search-field">
               <Search size={15} />
               <input
-                aria-label={`Search ${titles[kind].toLowerCase()}`}
+                aria-label={tr('Search {0}', [titles[kind].toLowerCase()])}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search title or content…"
+                placeholder={tr('Search title or content…')}
               />
             </label>
             <select
-              aria-label="Filter by status"
+              aria-label={tr('Filter by status')}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
             >
               {['all', 'draft', 'open', 'confirmed', 'resolved', 'dismissed'].map((v) => (
-                <option key={v}>{v}</option>
+                <option key={v} value={v}>
+                  {tr(v)}
+                </option>
               ))}
             </select>
           </div>
           {loading ? (
-            <p className="knowledge-empty">Loading…</p>
+            <p className="knowledge-empty">{tr('Loading…')}</p>
           ) : shown.length === 0 ? (
             <div className="knowledge-empty">
               <Icon size={28} />
               <h2>
                 {query || filter !== 'all'
-                  ? 'No matching records'
-                  : 'A place for your investigation'}
+                  ? tr('No matching records')
+                  : tr('A place for your investigation')}
               </h2>
-              <p>Create a {singular[kind]} and link it to objects or source scans.</p>
+              <p>
+                {tr('Create a ')}
+                {tr(singular[kind])}
+                {tr(' and link it to objects or source scans.')}
+              </p>
             </div>
           ) : (
             shown.map((item) => (
@@ -992,19 +1030,19 @@ export default function Knowledge({
                 <span className="section-actions">
                   <Icon size={16} />
                   <span className={'badge severity-' + item.content.severity}>
-                    {kind === 'finding' ? item.content.severity : item.content.status}
+                    {tr(kind === 'finding' ? item.content.severity : item.content.status)}
                   </span>
                 </span>
                 <strong>{item.title}</strong>
                 <p>
                   {item.content.body ||
                     (kind === 'path'
-                      ? item.content.steps.length + ' ordered steps'
-                      : 'No description')}
+                      ? item.content.steps.length + tr(' ordered steps')
+                      : tr('No description'))}
                 </p>
                 <small>
-                  {item.content.node_ids.length} objects ·{' '}
-                  {new Date(item.updated).toLocaleDateString()}
+                  {item.content.node_ids.length}
+                  {tr(' objects ·')} {new Date(item.updated).toLocaleDateString(localeTag())}
                 </small>
               </button>
             ))
@@ -1015,7 +1053,7 @@ export default function Knowledge({
               disabled={loading}
               onClick={() => setOffset((v) => v + 50)}
             >
-              Load more records
+              {tr('Load more records')}
             </button>
           )}
         </section>
@@ -1041,14 +1079,16 @@ export default function Knowledge({
                 );
                 setRevision((v) => v + 1);
                 void onChanged().catch(() =>
-                  setError('Record saved. Screen refresh failed; use Retry to reload the list.'),
+                  setError(
+                    tr('Record saved. Screen refresh failed; use Retry to reload the list.'),
+                  ),
                 );
               }}
             />
           ) : selected ? (
             <article className="knowledge-article">
               <div className="section-actions">
-                <span className="badge">{selected.content.status}</span>
+                <span className="badge">{tr(selected.content.status)}</span>
                 <button
                   onClick={() =>
                     setView((v) => ({
@@ -1059,7 +1099,8 @@ export default function Knowledge({
                     }))
                   }
                 >
-                  Edit {singular[kind]}
+                  {tr('Edit ')}
+                  {tr(singular[kind])}
                 </button>
               </div>
               <h2>{selected.title}</h2>
@@ -1074,13 +1115,13 @@ export default function Knowledge({
               />
               {kind === 'finding' && (
                 <span className={'badge severity-' + selected.content.severity}>
-                  {selected.content.severity}
+                  {tr(selected.content.severity)}
                 </span>
               )}
               <Markdown source={selected.content.body || 'No description.'} />
               {kind === 'finding' && (
                 <>
-                  <h3>Remediation</h3>
+                  <h3>{tr('Remediation')}</h3>
                   <Markdown source={selected.content.remediation || 'Not specified.'} />
                   <RetestForm
                     key={selected.id}
@@ -1090,7 +1131,7 @@ export default function Knowledge({
                       setSelected(saved);
                       setItems((rows) => rows.map((row) => (row.id === saved.id ? saved : row)));
                       void onChanged().catch(() =>
-                        setError('Retest saved. Refresh failed; retry loading the list.'),
+                        setError(tr('Retest saved. Refresh failed; retry loading the list.')),
                       );
                     }}
                   />
@@ -1100,20 +1141,23 @@ export default function Knowledge({
                 <ol className="path-steps">
                   {selected.content.steps.map((s, i) => (
                     <li key={i}>
-                      <span className="badge">{s.status}</span>
+                      <span className="badge">{tr(s.status)}</span>
                       <p>{s.action}</p>
                       {detail.nodes.some((n) => n.id === s.node_id) ? (
                         <button onClick={() => onNode(s.node_id)}>
                           {detail.nodes.find((n) => n.id === s.node_id)?.label}
                         </button>
                       ) : (
-                        <small>Deleted object · {s.node_id}</small>
+                        <small>
+                          {tr('Deleted object · ')}
+                          {s.node_id}
+                        </small>
                       )}
                     </li>
                   ))}
                 </ol>
               )}
-              <h3>Linked objects</h3>
+              <h3>{tr('Linked objects')}</h3>
               <div className="linked-items">
                 {selected.content.node_ids.map((id) =>
                   detail.nodes.some((n) => n.id === id) ? (
@@ -1121,10 +1165,15 @@ export default function Knowledge({
                       {detail.nodes.find((n) => n.id === id)?.label}
                     </button>
                   ) : (
-                    <small key={id}>Deleted object · {id}</small>
+                    <small key={id}>
+                      {tr('Deleted object · ')}
+                      {id}
+                    </small>
                   ),
                 )}
-                {!selected.content.node_ids.length && <p className="muted">No linked objects.</p>}
+                {!selected.content.node_ids.length && (
+                  <p className="muted">{tr('No linked objects.')}</p>
+                )}
               </div>
               {kind === 'finding' && (
                 <Observations
@@ -1134,7 +1183,7 @@ export default function Knowledge({
                 />
               )}
               <LinkedEvidence pid={pid} ids={selected.content.attachment_ids || []} />
-              <h3>Source scans</h3>
+              <h3>{tr('Source scans')}</h3>
               <div className="linked-items">
                 {selected.content.scan_ids.map((id) => (
                   <button key={id} onClick={() => onScan(id)}>
@@ -1142,23 +1191,29 @@ export default function Knowledge({
                   </button>
                 ))}
                 {!selected.content.scan_ids.length && (
-                  <p className="muted">No source scans linked.</p>
+                  <p className="muted">{tr('No source scans linked.')}</p>
                 )}
               </div>
               <small>
-                Updated {new Date(selected.updated).toLocaleString()} · Investigation record
+                {tr('Updated ')}
+                {new Date(selected.updated).toLocaleString(localeTag())}
+                {tr(' · Investigation record')}
               </small>
               <div className="dialog-actions">
                 <button className="danger-button" disabled={deleting} onClick={() => void remove()}>
-                  Delete {singular[kind]}
+                  {tr('Delete ')}
+                  {tr(singular[kind])}
                 </button>
               </div>
             </article>
           ) : (
             <div className="knowledge-empty">
               <Icon size={32} />
-              <h2>Select a {singular[kind]}</h2>
-              <p>Open a record to read, edit and follow its evidence links.</p>
+              <h2>
+                {tr('Select a ')}
+                {tr(singular[kind])}
+              </h2>
+              <p>{tr('Open a record to read, edit and follow its evidence links.')}</p>
             </div>
           )}
         </section>

@@ -1,6 +1,6 @@
 # Your first investigation
 
-[Install Dragontrip](INSTALL.md) first. The interface currently uses English labels.
+[Install Dragontrip](INSTALL.md) first. Choose English or Русский in **Settings → Interface language**. This guide uses English labels; the saved language applies to every project.
 
 ## 1. Create a project
 

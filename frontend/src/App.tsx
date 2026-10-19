@@ -1,3 +1,5 @@
+import { t as tr, useLocale, localeTag } from './i18n';
+import { usePageTransition } from './motion';
 import { BackgroundWork } from './BackgroundWork';
 import { ScanForm, ReconSettings, Suggestions, ScanHistory } from './Recon';
 import type { ScanRequest } from './api';
@@ -125,7 +127,7 @@ const nav = [
 ] as const;
 type Page = WorkspacePage;
 const active = (s: Scan) => s.status === 'running' || s.status === 'queued';
-const date = (s: string) => new Date(s).toLocaleString();
+const date = (s: string) => new Date(s).toLocaleString(localeTag());
 function Empty({
   icon = Network,
   title,
@@ -135,6 +137,7 @@ function Empty({
   title: string;
   children: ReactNode;
 }) {
+  useLocale();
   const Icon = icon;
   return (
     <div className="empty">
@@ -155,6 +158,7 @@ function Dialog({
   children: ReactNode;
   onClose: () => void;
 }) {
+  useLocale();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement;
@@ -194,7 +198,7 @@ function Dialog({
       <div ref={ref} className="dialog" role="dialog" aria-modal="true" aria-label={title}>
         <header>
           <h2>{title}</h2>
-          <button className="icon-button" onClick={onClose} aria-label="Close dialog">
+          <button className="icon-button" onClick={onClose} aria-label={tr('Close dialog')}>
             <X size={18} />
           </button>
         </header>
@@ -204,6 +208,7 @@ function Dialog({
   );
 }
 export default function App() {
+  const locale = useLocale();
   const [pid, setPid] = useState<string | null>(() => readLocal('dragontrip.project'));
   const memoryDrafts = useMemoryOnlyDrafts();
   const {
@@ -270,6 +275,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
   const [loading, setLoading] = useState(true);
+  const mainRef = usePageTransition(page, pid, loading);
   const [busy, setBusy] = useState(false);
   const performing = useRef(false);
   const [selected, setSelectedValue] = useProjectState<string | null>(
@@ -442,7 +448,9 @@ export default function App() {
       !detail.edges.some((e) => e.id === selected)
     ) {
       setSelected(null);
-      setToast('The previously selected object was deleted. Choose another object to continue.');
+      setToast(
+        tr('The previously selected object was deleted. Choose another object to continue.'),
+      );
     }
   }, [detail, pid, selected, setSelected]);
   const viewedScan = scanId || detail?.scans[0]?.id;
@@ -487,10 +495,11 @@ export default function App() {
     };
   }, [pid, selected, detail?.project.updated]);
   useEffect(() => {
-    document.title = `${page} · Dragontrip`;
+    document.documentElement.lang = locale;
+    document.title = `${tr(page)} · Dragontrip`;
     if (!modal && !document.activeElement?.matches('input,textarea,select,[role="tab"]'))
       document.querySelector<HTMLElement>('.main')?.focus({ preventScroll: true });
-  }, [page]);
+  }, [page, locale]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -677,7 +686,7 @@ export default function App() {
       await refreshProjects();
       await openProject(p.id, 'Project overview');
       setModal(null);
-      notify('Project created');
+      notify(tr('Project created'));
     });
   }
   async function submitScan(request: ScanRequest) {
@@ -693,9 +702,9 @@ export default function App() {
       setScan(saved);
       setBottom(false);
       setModal(null);
-      notify('Recon queued. Follow progress in Background work; you can keep working.');
+      notify(tr('Recon queued. Follow progress in Background work; you can keep working.'));
       await refresh(projectId).catch(() =>
-        setError('Scan queued. Refresh failed; reopen the project to see progress.'),
+        setError(tr('Scan queued. Refresh failed; reopen the project to see progress.')),
       );
     } catch (e) {
       if (activeProject.current === projectId) setScanError((e as Error).message);
@@ -721,13 +730,13 @@ export default function App() {
     });
   }
   async function removeNode(n: ObjectNode) {
-    if (!pid || !window.confirm('Delete custom node and its manual relationships?')) return;
+    if (!pid || !window.confirm(tr('Delete custom node and its manual relationships?'))) return;
     await perform(async () => {
       await api('/projects/' + pid + '/nodes/' + encodeURIComponent(n.id), 'DELETE');
       setSelected(null);
       setContext(null);
       await refresh(pid);
-      notify('Custom node deleted');
+      notify(tr('Custom node deleted'));
     });
   }
   const hostCount = detail?.nodes.filter((n) => n.kind === 'host').length || 0;
@@ -742,24 +751,25 @@ export default function App() {
             <ArrowRight size={17} />
           </div>
           <h3>{p.name}</h3>
-          <p>{p.description || 'Local security workspace'}</p>
+          <p>{p.description || tr('Local security workspace')}</p>
           <footer>
             <span className="dot green" />
-            Saved locally<span>{new Date(p.updated).toLocaleDateString()}</span>
+            {tr('Saved locally')}
+            <span>{new Date(p.updated).toLocaleDateString(localeTag())}</span>
           </footer>
         </button>
       ))}
       <button className="project-card new-card" onClick={newProject}>
         <Plus size={24} />
-        <strong>Create a project</strong>
-        <span>A clean workspace for your next engagement</span>
+        <strong>{tr('Create a project')}</strong>
+        <span>{tr('A clean workspace for your next engagement')}</span>
       </button>
     </div>
   );
   return (
     <div className="app">
       <a className="skip-link" href="#main-content">
-        Skip to content
+        {tr('Skip to content')}
       </a>
       <aside className={'sidebar' + (sidebarCollapsed ? ' collapsed' : '')}>
         <div className="brand">
@@ -773,33 +783,33 @@ export default function App() {
             <path d="m8 8 10 6-3 6" stroke="currentColor" />
           </svg>
           <span>
-            DRAGONTRIP<small>SECURITY WORKSPACE</small>
+            DRAGONTRIP<small>{tr('SECURITY WORKSPACE')}</small>
           </span>
         </div>
         <button
-          aria-label="Choose project"
-          title="Choose project"
+          aria-label={tr('Choose project')}
+          title={tr('Choose project')}
           className="workspace-switch"
           onClick={() => setPage('Projects')}
         >
           <div className="avatar">P</div>
           <span>
-            {current?.name || 'Choose a project'}
-            <small>Projects · local workspace</small>
+            {current?.name || tr('Choose a project')}
+            <small>{tr('Projects · local workspace')}</small>
           </span>
           <ChevronDown size={14} />
         </button>
         <button
           className="search-button"
-          aria-label="Quick search"
-          title="Quick search (Ctrl+K)"
+          aria-label={tr('Quick search')}
+          title={tr('Quick search (Ctrl+K)')}
           onClick={() => {
             setQuery('');
             setModal('command');
           }}
         >
           <Search size={15} />
-          <span className="navigation-label">Quick search</span>
+          <span className="navigation-label">{tr('Quick search')}</span>
           <kbd>Ctrl K</kbd>
         </button>
         <div className="sidebar-navigation">
@@ -823,20 +833,24 @@ export default function App() {
           <SettingsNavigation page={page} remembered={rememberedSections} onNavigate={setPage} />
           <button
             className="sidebar-toggle"
-            aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={sidebarCollapsed ? tr('Expand sidebar') : tr('Collapse sidebar')}
+            title={sidebarCollapsed ? tr('Expand sidebar') : tr('Collapse sidebar')}
             aria-expanded={!sidebarCollapsed}
             onClick={() => setSidebarCollapsed((value) => !value)}
           >
             {sidebarCollapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
             <span className="navigation-label">
-              {sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              {sidebarCollapsed ? tr('Expand sidebar') : tr('Collapse sidebar')}
             </span>
           </button>
           <div className="local-status">
             <span className="dot green" />
             <span>
-              Local environment<small>Dragontrip {packageInfo.version}</small>
+              {tr('Local environment')}
+              <small>
+                {tr('Dragontrip ')}
+                {packageInfo.version}
+              </small>
             </span>
             <ShieldCheck size={16} />
           </div>
@@ -845,43 +859,50 @@ export default function App() {
       <div className="workspace">
         {memoryDrafts > 0 && (
           <p role="alert" className="form-error memory-warning">
-            {memoryDrafts} draft(s) exist only in memory. Reopen the editor and retry sync or
-            download the draft before closing Dragontrip.
+            {memoryDrafts}
+            {tr(
+              ' draft(s) exist only in memory. Reopen the editor and retry sync or download the draft before closing Dragontrip.',
+            )}
           </p>
         )}
         <header className="topbar">
           <div className="breadcrumb">
-            <button className="icon-button" aria-label="Go back" disabled={!canBack} onClick={back}>
+            <button
+              className="icon-button"
+              aria-label={tr('Go back')}
+              disabled={!canBack}
+              onClick={back}
+            >
               <ArrowLeft size={15} />
             </button>
             <button
               className="icon-button"
-              aria-label="Go forward"
+              aria-label={tr('Go forward')}
               disabled={!canForward}
               onClick={forward}
             >
               <ArrowRight size={15} />
             </button>
-            <span title={current?.name}>{current?.name || 'Workspace'}</span>
+            <span title={current?.name}>{current?.name || tr('Workspace')}</span>
             <ChevronRight size={13} />
-            <strong>{page}</strong>
+            <strong>{tr(page)}</strong>
           </div>
           <div className="top-actions">
             {current && (
               <button
                 className="goal-context"
-                title={current.goal || 'Set an investigation goal'}
+                title={current.goal || tr('Set an investigation goal')}
                 onClick={() => setPage('Project overview')}
               >
-                {current.goal ? 'Goal: ' + current.goal : 'Set investigation goal'}
+                {current.goal ? tr('Goal: ') + current.goal : tr('Set investigation goal')}
               </button>
             )}
           </div>
         </header>
         {error && (
           <div className="error-banner" role="alert">
-            {error}
-            <button onClick={() => setError('')} aria-label="Dismiss error">
+            {tr(error)}
+            <button onClick={() => setError('')} aria-label={tr('Dismiss error')}>
               <X size={15} />
             </button>
           </div>
@@ -895,6 +916,7 @@ export default function App() {
           }
         >
           <main
+            ref={mainRef}
             id="main-content"
             tabIndex={-1}
             className={'main ' + (page === 'Network Graph' ? 'graph-main' : '')}
@@ -911,16 +933,16 @@ export default function App() {
                   <div className="page dashboard">
                     <div className="eyebrow">
                       <span className="dot violet" />
-                      YOUR LOCAL COMMAND CENTER
+                      {tr('YOUR LOCAL COMMAND CENTER')}
                     </div>
                     <div className="page-heading">
                       <div>
-                        <h1>Workspace overview</h1>
-                        <p>A clear view of your engagements. Every discovery, connected.</p>
+                        <h1>{tr('Workspace overview')}</h1>
+                        <p>{tr('A clear view of your engagements. Every discovery, connected.')}</p>
                       </div>
                       <button className="primary" onClick={newProject}>
                         <Plus size={16} />
-                        New project
+                        {tr('New project')}
                       </button>
                     </div>
                     {projects.length > 0 && (
@@ -935,11 +957,11 @@ export default function App() {
                           return (
                             <div className="stat" key={String(label)}>
                               <div>
-                                <span>{String(label)}</span>
+                                <span>{tr(String(label))}</span>
                                 <I size={17} />
                               </div>
                               <strong>{String(value)}</strong>
-                              <small>{String(hint)}</small>
+                              <small>{tr(String(hint))}</small>
                             </div>
                           );
                         })}
@@ -947,19 +969,21 @@ export default function App() {
                     )}
                     <div className="section-heading">
                       <h2>
-                        Your projects <span>{projects.length}</span>
+                        {tr('Your projects ')}
+                        <span>{projects.length}</span>
                       </h2>
                       <button className="text-button" onClick={() => setPage('Projects')}>
-                        View all
+                        {tr('View all')}
                         <ArrowRight size={14} />
                       </button>
                     </div>
                     {projectCards}
                     <section className="panel start-project" style={{ marginTop: 20 }}>
-                      <h2>Explore Dragontrip in a minute</h2>
+                      <h2>{tr('Explore Dragontrip in a minute')}</h2>
                       <p>
-                        Create a separate project with fictional objects, a draft finding and a
-                        task. No scans run.
+                        {tr(
+                          'Create a separate project with fictional objects, a draft finding and a task. No scans run.',
+                        )}
                       </p>
                       <button
                         disabled={busy}
@@ -968,11 +992,11 @@ export default function App() {
                             const example = await api<Project>('/examples', 'POST');
                             await refreshProjects();
                             openProject(example.id);
-                            notify('Fictional demo created · no scans launched');
+                            notify(tr('Fictional demo created · no scans launched'));
                           })
                         }
                       >
-                        Create fictional demo
+                        {tr('Create fictional demo')}
                       </button>
                     </section>
                     <ProjectTransfer
@@ -980,13 +1004,13 @@ export default function App() {
                       onImported={async (value) => {
                         await refreshProjects();
                         openProject(value.id);
-                        notify('Project imported');
+                        notify(tr('Project imported'));
                       }}
                     />
                     <div className="dashboard-columns">
                       <section className="panel">
                         <div className="section-heading">
-                          <h2>Recent activity</h2>
+                          <h2>{tr('Recent activity')}</h2>
                           <Activity size={16} />
                         </div>
                         {detail?.events.length ? (
@@ -1002,12 +1026,14 @@ export default function App() {
                             ))}
                           </div>
                         ) : (
-                          <div className="quiet-empty">Your project activity will appear here.</div>
+                          <div className="quiet-empty">
+                            {tr('Your project activity will appear here.')}
+                          </div>
                         )}
                       </section>
                       <section className="panel">
                         <div className="section-heading">
-                          <h2>Environment</h2>
+                          <h2>{tr('Environment')}</h2>
                           <Wrench size={16} />
                         </div>
                         {tools.map((t) => (
@@ -1018,17 +1044,17 @@ export default function App() {
                             <span>
                               <strong>{t.name}</strong>
                               <small>
-                                {t.version || t.path || 'Install the system nmap package'}
+                                {t.version || t.path || tr('Install the system nmap package')}
                               </small>
                             </span>
                             <span className={'badge ' + (t.installed ? 'success' : 'warning')}>
-                              {t.installed ? 'Installed' : 'Not installed'}
+                              {t.installed ? tr('Installed') : tr('Not installed')}
                             </span>
                           </div>
                         ))}
                         <div className="hint">
                           <ShieldCheck size={16} />
-                          Scans run locally. Your data stays on this device.
+                          {tr('Scans run locally. Your data stays on this device.')}
                         </div>
                       </section>
                     </div>
@@ -1036,8 +1062,9 @@ export default function App() {
                       <button className="resume" onClick={() => setPage('Network Graph')}>
                         <Network size={20} />
                         <span>
-                          Continue {current.name}
-                          <small>Open the saved network graph</small>
+                          {tr('Continue ')}
+                          {current.name}
+                          <small>{tr('Open the saved network graph')}</small>
                         </span>
                         <ArrowRight size={18} />
                       </button>
@@ -1048,20 +1075,21 @@ export default function App() {
                   <div className="page">
                     <div className="page-heading">
                       <div>
-                        <h1>Projects</h1>
-                        <p>Separate engagements. A persistent place for every discovery.</p>
+                        <h1>{tr('Projects')}</h1>
+                        <p>{tr('Separate engagements. A persistent place for every discovery.')}</p>
                       </div>
                       <button className="primary" onClick={newProject}>
                         <Plus size={16} />
-                        New project
+                        {tr('New project')}
                       </button>
                     </div>
                     {projectCards}
                     <section className="panel start-project" style={{ marginTop: 20 }}>
-                      <h2>Explore Dragontrip in a minute</h2>
+                      <h2>{tr('Explore Dragontrip in a minute')}</h2>
                       <p>
-                        Create a separate project with fictional objects, a draft finding and a
-                        task. No scans run.
+                        {tr(
+                          'Create a separate project with fictional objects, a draft finding and a task. No scans run.',
+                        )}
                       </p>
                       <button
                         disabled={busy}
@@ -1070,11 +1098,11 @@ export default function App() {
                             const example = await api<Project>('/examples', 'POST');
                             await refreshProjects();
                             openProject(example.id);
-                            notify('Fictional demo created · no scans launched');
+                            notify(tr('Fictional demo created · no scans launched'));
                           })
                         }
                       >
-                        Create fictional demo
+                        {tr('Create fictional demo')}
                       </button>
                     </section>
                     <ProjectTransfer
@@ -1082,7 +1110,7 @@ export default function App() {
                       onImported={async (value) => {
                         await refreshProjects();
                         openProject(value.id);
-                        notify('Project imported');
+                        notify(tr('Project imported'));
                       }}
                     />
                   </div>
@@ -1094,12 +1122,12 @@ export default function App() {
                   ...knowledgeNav.map(([label]) => label),
                 ].includes(page) &&
                   !pid && (
-                    <Empty title="Choose your workspace" icon={Folder}>
-                      Open a project or{' '}
+                    <Empty title={tr('Choose your workspace')} icon={Folder}>
+                      {tr('Open a project or')}{' '}
                       <button className="text-button" onClick={newProject}>
-                        create a new one
+                        {tr('create a new one')}
                       </button>{' '}
-                      to get started.
+                      {tr('to get started.')}
                     </Empty>
                   )}
                 {[
@@ -1112,7 +1140,7 @@ export default function App() {
                   !detail && (
                     <div className="loading">
                       <LoaderCircle className="spin" />
-                      Loading project…
+                      {tr('Loading project…')}
                     </div>
                   )}
                 {page === 'Network Graph' && detail && (
@@ -1120,9 +1148,12 @@ export default function App() {
                     <div className="graph-toolbar">
                       <div>
                         <Network size={18} />
-                        <strong>Network Graph</strong>
+                        <strong>{tr('Network Graph')}</strong>
                         <span className="badge">
-                          {detail.nodes.length} objects · {detail.edges.length} links
+                          {detail.nodes.length}
+                          {tr(' objects · ')}
+                          {detail.edges.length}
+                          {tr(' links')}
                         </span>
                       </div>
                       <div>
@@ -1133,36 +1164,39 @@ export default function App() {
                           }}
                         >
                           <Plus size={14} />
-                          Custom node
+                          {tr('Custom node')}
                         </button>
                         <button className="primary" onClick={startScan}>
                           <Play size={13} />
-                          Start scan
+                          {tr('Start scan')}
                         </button>
                       </div>
                     </div>
                     <div className="graph-scope-hint">
                       {object ? (
                         <>
-                          <span title={object.label}>Selected: {object.label}</span>
+                          <span title={object.label}>
+                            {tr('Selected: ')}
+                            {object.label}
+                          </span>
                           <button onClick={() => setInspectorHidden(!inspectorHidden)}>
-                            {inspectorHidden ? 'Show inspector' : 'Hide inspector'}
+                            {inspectorHidden ? tr('Show inspector') : tr('Hide inspector')}
                           </button>
                         </>
                       ) : (
-                        'Select an object to inspect evidence and plan the next check.'
+                        tr('Select an object to inspect evidence and plan the next check.')
                       )}
                     </div>
                     <div className="graph-search">
                       <Search size={14} />
                       <input
-                        aria-label="Find graph object"
-                        placeholder="Find an object…"
+                        aria-label={tr('Find graph object')}
+                        placeholder={tr('Find an object…')}
                         value={graphQuery}
                         onChange={(e) => setGraphQuery(e.target.value)}
                       />
                       <select
-                        aria-label="Graph object type"
+                        aria-label={tr('Graph object type')}
                         value={nodeKind}
                         onChange={(e) => setNodeKind(e.target.value)}
                       >
@@ -1177,7 +1211,7 @@ export default function App() {
                           'custom',
                         ].map((kind) => (
                           <option key={kind} value={kind}>
-                            {kind === 'all' ? 'All types' : kind}
+                            {kind === 'all' ? tr('All types') : tr(kind)}
                           </option>
                         ))}
                       </select>
@@ -1216,7 +1250,7 @@ export default function App() {
                       )}
                     </div>
                     <div className="graph-area">
-                      <Suspense fallback={<div className="loading">Loading graph…</div>}>
+                      <Suspense fallback={<div className="loading">{tr('Loading graph…')}</div>}>
                         <Graph
                           key={detail.project.id}
                           projectId={detail.project.id}
@@ -1247,14 +1281,14 @@ export default function App() {
                               { x, y },
                             )
                               .then(() => refresh(pid!))
-                              .catch((e) => setError('Position was not saved: ' + e.message));
+                              .catch((e) => setError(tr('Position was not saved: ') + e.message));
                           }}
                           onConnect={(c) => {
                             if (c.source && c.target)
                               void perform(async () => {
                                 await api('/projects/' + pid + '/edges', 'POST', c);
                                 await refresh(pid!);
-                                notify('Hypothetical relationship saved');
+                                notify(tr('Hypothetical relationship saved'));
                               });
                           }}
                           onContext={(id, x, y) => {
@@ -1265,13 +1299,15 @@ export default function App() {
                       </Suspense>
                       {detail.nodes.length === 0 && (
                         <div className="graph-empty">
-                          <Empty title="Your infrastructure starts here">
+                          <Empty title={tr('Your infrastructure starts here')}>
                             <span>
-                              Scan a permitted IPv4 address to discover real hosts and services.
+                              {tr(
+                                'Scan a permitted IPv4 address to discover real hosts and services.',
+                              )}
                             </span>
                             <button className="primary" onClick={startScan}>
                               <Play size={14} />
-                              Run your first scan
+                              {tr('Run your first scan')}
                             </button>
                           </Empty>
                         </div>
@@ -1280,13 +1316,13 @@ export default function App() {
                     <div className="graph-legend">
                       <span>
                         <i className="line" />
-                        Observed relationship
+                        {tr('Observed relationship')}
                       </span>
                       <span>
                         <i className="line dashed" />
-                        Manual hypothesis
+                        {tr('Manual hypothesis')}
                       </span>
-                      <span>Drag handles to connect objects</span>
+                      <span>{tr('Drag handles to connect objects')}</span>
                     </div>
                   </>
                 )}
@@ -1294,36 +1330,39 @@ export default function App() {
                   <div className="page">
                     <div className="page-heading">
                       <div>
-                        <h1>Hosts</h1>
-                        <p>Observed infrastructure in {detail.project.name}</p>
+                        <h1>{tr('Hosts')}</h1>
+                        <p>
+                          {tr('Observed infrastructure in ')}
+                          {detail.project.name}
+                        </p>
                       </div>
                       <button className="primary" onClick={startScan}>
                         <Play size={14} />
-                        Start scan
+                        {tr('Start scan')}
                       </button>
                     </div>
                     {hostCount === 0 ? (
-                      <Empty icon={Server} title="No hosts discovered">
-                        Start a scan to build an evidence-backed inventory.
+                      <Empty icon={Server} title={tr('No hosts discovered')}>
+                        {tr('Start a scan to build an evidence-backed inventory.')}
                       </Empty>
                     ) : (
                       <div className="inventory">
                         <div className="inventory-head">
-                          <span>Address</span>
-                          <span>State</span>
-                          <span>Services</span>
-                          <span>Source</span>
+                          <span>{tr('Address')}</span>
+                          <span>{tr('State')}</span>
+                          <span>{tr('Services')}</span>
+                          <span>{tr('Source')}</span>
                         </div>
                         <VirtualList
                           items={detail.nodes.filter((n) => n.kind === 'host')}
                           rowHeight={56}
                           itemKey={(n) => n.id}
-                          label="Host inventory"
+                          label={tr('Host inventory')}
                           renderItem={(n) => (
                             <button className="inventory-row" onClick={() => setSelected(n.id)}>
                               <span className="mono">{n.label}</span>
                               <span>
-                                <span className="badge success">{String(n.attrs.state)}</span>
+                                <span className="badge success">{tr(String(n.attrs.state))}</span>
                               </span>
                               <span>
                                 {
@@ -1344,12 +1383,12 @@ export default function App() {
                   <div className="page">
                     <div className="page-heading">
                       <div>
-                        <h1>Scan history</h1>
-                        <p>Real executions, preserved evidence and exact arguments.</p>
+                        <h1>{tr('Scan history')}</h1>
+                        <p>{tr('Real executions, preserved evidence and exact arguments.')}</p>
                       </div>
                       <button className="primary" onClick={startScan}>
                         <Plus size={14} />
-                        New scan
+                        {tr('New scan')}
                       </button>
                     </div>
                     <ScanHistory
@@ -1366,19 +1405,19 @@ export default function App() {
                   <div className="page">
                     <div className="page-heading">
                       <div>
-                        <h1>Tool integrations</h1>
-                        <p>System binaries. No duplicated tool installations.</p>
+                        <h1>{tr('Tool integrations')}</h1>
+                        <p>{tr('System binaries. No duplicated tool installations.')}</p>
                       </div>
                       <button
                         onClick={() =>
                           void perform(async () => {
                             setTools(await api<Tool[]>('/tools'));
-                            notify('Tools checked');
+                            notify(tr('Tools checked'));
                           })
                         }
                       >
                         <Wrench size={15} />
-                        Check installation
+                        {tr('Check installation')}
                       </button>
                     </div>
                     <section className="panel">
@@ -1387,25 +1426,26 @@ export default function App() {
                           <Terminal size={24} />
                           <span>
                             <strong>{t.name}</strong>
-                            <small>{t.version || 'Version unavailable'}</small>
+                            <small>{t.version || tr('Version unavailable')}</small>
                             <code>
-                              {t.path || 'Install this tool using your system package manager'}
+                              {t.path || tr('Install this tool using your system package manager')}
                             </code>
                           </span>
                           <span className={'badge ' + (t.installed ? 'success' : 'warning')}>
-                            {t.installed ? 'Installed' : 'Missing'}
+                            {t.installed ? tr('Installed') : tr('Missing')}
                           </span>
                         </div>
                       ))}
                       <p className="muted">
-                        Tools are detected from your system. ProjectDiscovery httpx may be installed
-                        as httpx-toolkit on Kali. No tools run automatically.
+                        {tr(
+                          'Tools are detected from your system. ProjectDiscovery httpx may be installed as httpx-toolkit on Kali. No tools run automatically.',
+                        )}
                       </p>
                     </section>
                   </div>
                 )}
                 {detail && page in knowledgeKinds && (
-                  <Suspense fallback={<div className="loading">Loading workspace…</div>}>
+                  <Suspense fallback={<div className="loading">{tr('Loading workspace…')}</div>}>
                     <Knowledge
                       key={detail.project.id + page}
                       detail={detail}
@@ -1426,7 +1466,7 @@ export default function App() {
                   </Suspense>
                 )}
                 {detail && page === 'Task board' && (
-                  <Suspense fallback={<div className="loading">Loading tasks…</div>}>
+                  <Suspense fallback={<div className="loading">{tr('Loading tasks…')}</div>}>
                     <Tasks
                       key={detail.project.id}
                       detail={detail}
@@ -1441,12 +1481,12 @@ export default function App() {
                   </Suspense>
                 )}
                 {detail && page === 'Reports' && (
-                  <Suspense fallback={<div className="loading">Loading reports…</div>}>
+                  <Suspense fallback={<div className="loading">{tr('Loading reports…')}</div>}>
                     <Reports key={detail.project.id} project={detail.project} />
                   </Suspense>
                 )}
                 {detail && page === 'Project overview' && (
-                  <Suspense fallback={<div className="loading">Loading overview…</div>}>
+                  <Suspense fallback={<div className="loading">{tr('Loading overview…')}</div>}>
                     <ProjectOverview
                       key={detail.project.id}
                       project={detail.project}
@@ -1464,7 +1504,7 @@ export default function App() {
                   </Suspense>
                 )}
                 {detail && page === 'Credentials Vault' && (
-                  <Suspense fallback={<div className="loading">Loading vault…</div>}>
+                  <Suspense fallback={<div className="loading">{tr('Loading vault…')}</div>}>
                     <Vault
                       key={detail.project.id}
                       detail={detail}
@@ -1476,7 +1516,7 @@ export default function App() {
                   </Suspense>
                 )}
                 {detail && page === 'Evidence' && (
-                  <Suspense fallback={<div className="loading">Loading evidence…</div>}>
+                  <Suspense fallback={<div className="loading">{tr('Loading evidence…')}</div>}>
                     <Evidence
                       key={detail.project.id + (evidenceFocus || '')}
                       pid={detail.project.id}
@@ -1556,8 +1596,8 @@ export default function App() {
                   <div className="page">
                     <div className="page-heading">
                       <div>
-                        <h1>Environment settings</h1>
-                        <p>Predictable defaults for a small, local workstation.</p>
+                        <h1>{tr('Environment settings')}</h1>
+                        <p>{tr('Predictable defaults for a small, local workstation.')}</p>
                       </div>
                     </div>
                     <Preferences appearance={appearance} onAppearance={setAppearance} />
@@ -1583,8 +1623,8 @@ export default function App() {
                         ],
                       ].map(([k, v]) => (
                         <div key={k}>
-                          <strong>{k}</strong>
-                          <span>{v}</span>
+                          <strong>{tr(k)}</strong>
+                          <span>{tr(v)}</span>
                         </div>
                       ))}
                     </section>
@@ -1592,7 +1632,7 @@ export default function App() {
                 )}
                 {error && !detail && (
                   <button className="retry" onClick={() => void initialize()}>
-                    Retry connection
+                    {tr('Retry connection')}
                   </button>
                 )}
               </>
@@ -1603,10 +1643,10 @@ export default function App() {
             !inspectorHidden && (
               <aside className="inspector">
                 <div className="inspector-title">
-                  <span>INSPECTOR</span>
+                  <span>{tr('INSPECTOR')}</span>
                   <button
                     className="icon-button"
-                    aria-label="Close inspector"
+                    aria-label={tr('Close inspector')}
                     onClick={() => setInspectorHidden(true)}
                   >
                     <X size={16} />
@@ -1624,26 +1664,28 @@ export default function App() {
                           <Pentagon />
                         )}
                       </div>
-                      <span className="eyebrow">{object.kind}</span>
+                      <span className="eyebrow">{tr(object.kind)}</span>
                       <h2>{object.label}</h2>
                       <span
                         className={'badge ' + (object.kind === 'custom' ? 'warning' : 'success')}
                       >
                         {object.kind === 'custom'
-                          ? 'Manual · ' + String(object.attrs.status || 'idea')
+                          ? tr('Manual · ') + String(object.attrs.status || 'idea')
                           : (object.attrs.source === 'manual'
-                              ? 'Manual · '
+                              ? tr('Manual · ')
                               : object.attrs.run_id
-                                ? 'Imported · '
-                                : 'Observed · ') + String(object.attrs.source || 'nmap')}
+                                ? tr('Imported · ')
+                                : tr('Observed · ')) + String(object.attrs.source || 'nmap')}
                       </span>
                     </div>
                     {['service', 'application', 'endpoint', 'url'].includes(object.kind) && (
                       <div className="inspector-section">
                         <button disabled={busy} onClick={() => void openWebResearch(object)}>
-                          Open web research
+                          {tr('Open web research')}
                         </button>
-                        <small>Continue locally with this object. No request is sent.</small>
+                        <small>
+                          {tr('Continue locally with this object. No request is sent.')}
+                        </small>
                       </div>
                     )}
                     {pid && (
@@ -1665,10 +1707,10 @@ export default function App() {
                             'PUT',
                             content,
                           );
-                          notify('Object saved');
+                          notify(tr('Object saved'));
                           await refresh(pid!).catch(() =>
                             setError(
-                              'Object saved. Refresh failed; reopen the project to reload it.',
+                              tr('Object saved. Refresh failed; reopen the project to reload it.'),
                             ),
                           );
                         }}
@@ -1676,7 +1718,7 @@ export default function App() {
                     )}
                     {object.kind !== 'custom' && (
                       <details className="inspector-section">
-                        <summary>Object details</summary>
+                        <summary>{tr('Object details')}</summary>
                         {Object.entries(object.attrs)
                           .filter(
                             ([k]) =>
@@ -1690,7 +1732,7 @@ export default function App() {
                           )
                           .map(([k, v]) => (
                             <div className="attribute" key={k}>
-                              <span>{k}</span>
+                              <span>{tr(k)}</span>
                               <strong>{String(v) || '—'}</strong>
                             </div>
                           ))}
@@ -1710,7 +1752,7 @@ export default function App() {
                       />
                     )}
                     <details>
-                      <summary>Graph position</summary>
+                      <summary>{tr('Graph position')}</summary>
                       <PositionEditor
                         key={object.id + ':' + object.x + ':' + object.y}
                         node={object}
@@ -1725,12 +1767,12 @@ export default function App() {
                             { x, y },
                           );
                           await refresh(pid!);
-                          notify('Position updated');
+                          notify(tr('Position updated'));
                         }}
                       />
                     </details>
                     <div className="inspector-section">
-                      <h3>Related objects</h3>
+                      <h3>{tr('Related objects')}</h3>
                       {detail?.edges
                         .filter((e) => e.source === object.id || e.target === object.id)
                         .map((e) => {
@@ -1765,29 +1807,32 @@ export default function App() {
                     )}
                     {object.attrs.evidence_json != null && (
                       <details className="inspector-section">
-                        <summary>Source evidence · JSON</summary>
+                        <summary>{tr('Source evidence · JSON')}</summary>
                         {object.attrs.evidence_truncated === true && (
                           <p className="muted">
-                            Preview truncated. Export the full scan evidence below.
+                            {tr('Preview truncated. Export the full scan evidence below.')}
                           </p>
                         )}
-                        <p className="muted">Scan {String(object.attrs.scan_id)}</p>
+                        <p className="muted">
+                          {tr('Scan ')}
+                          {String(object.attrs.scan_id)}
+                        </p>
                         <pre className="evidence">{String(object.attrs.evidence_json)}</pre>
                         <button
                           onClick={() =>
                             void perform(async () => {
                               const path = await saveArtifact(String(object.attrs.scan_id), 'json');
-                              notify('Evidence saved: ' + path);
+                              notify(tr('Evidence saved: ') + path);
                             })
                           }
                         >
-                          Export source JSON
+                          {tr('Export source JSON')}
                         </button>
                       </details>
                     )}
                     {Array.isArray(object.attrs.observations) && (
                       <div className="inspector-section">
-                        <h3>Recent observations</h3>
+                        <h3>{tr('Recent observations')}</h3>
                         {(
                           object.attrs.observations as {
                             scan_id: string;
@@ -1803,26 +1848,29 @@ export default function App() {
                     )}
                     {object.attrs.evidence_xml != null && (
                       <details className="inspector-section">
-                        <summary>Source evidence</summary>
-                        <p className="muted">Scan {String(object.attrs.scan_id)}</p>
+                        <summary>{tr('Source evidence')}</summary>
+                        <p className="muted">
+                          {tr('Scan ')}
+                          {String(object.attrs.scan_id)}
+                        </p>
                         <pre className="evidence">{String(object.attrs.evidence_xml)}</pre>
                         <button
                           onClick={() =>
                             void perform(async () => {
                               const path = await saveArtifact(String(object.attrs.scan_id));
-                              notify('Evidence saved: ' + path);
+                              notify(tr('Evidence saved: ') + path);
                             })
                           }
                         >
                           <ArrowDownToLine size={14} />
-                          Export source XML
+                          {tr('Export source XML')}
                         </button>
                       </details>
                     )}
                     {object.kind === 'custom' && (
                       <div className="inspector-section">
                         <button className="danger-button" onClick={() => void removeNode(object)}>
-                          Delete custom node
+                          {tr('Delete custom node')}
                         </button>
                       </div>
                     )}
@@ -1832,10 +1880,16 @@ export default function App() {
                   <div className="inspector-section">
                     <h2>{selectedEdge.kind}</h2>
                     <span className={'badge ' + (selectedEdge.evidence ? 'success' : 'warning')}>
-                      {selectedEdge.evidence ? 'Observed' : 'Manual hypothesis'}
+                      {selectedEdge.evidence ? tr('Observed') : tr('Manual hypothesis')}
                     </span>
-                    <p>Source: {detail?.nodes.find((n) => n.id === selectedEdge.source)?.label}</p>
-                    <p>Target: {detail?.nodes.find((n) => n.id === selectedEdge.target)?.label}</p>
+                    <p>
+                      {tr('Source: ')}
+                      {detail?.nodes.find((n) => n.id === selectedEdge.source)?.label}
+                    </p>
+                    <p>
+                      {tr('Target: ')}
+                      {detail?.nodes.find((n) => n.id === selectedEdge.target)?.label}
+                    </p>
                     {!selectedEdge.evidence && (
                       <RelationshipEditor
                         key={selectedEdge.id}
@@ -1847,7 +1901,7 @@ export default function App() {
                             { kind },
                           );
                           await refresh(pid!);
-                          notify('Relationship updated');
+                          notify(tr('Relationship updated'));
                         }}
                       />
                     )}
@@ -1855,7 +1909,7 @@ export default function App() {
                       <button
                         className="danger-button"
                         onClick={() => {
-                          if (window.confirm('Delete manual relationship?'))
+                          if (window.confirm(tr('Delete manual relationship?')))
                             void perform(async () => {
                               await api(
                                 '/projects/' +
@@ -1869,7 +1923,7 @@ export default function App() {
                             });
                         }}
                       >
-                        Delete relationship
+                        {tr('Delete relationship')}
                       </button>
                     )}
                   </div>
@@ -1928,19 +1982,19 @@ export default function App() {
                 result.id,
                 result.tool && result.tool !== 'nmap' ? 'json' : 'xml',
               );
-              notify('Evidence saved: ' + path);
+              notify(tr('Evidence saved: ') + path);
             }}
           />
         )}
         <footer className="statusbar">
           <span>
             <ShieldCheck size={12} />
-            Private by design
+            {tr('Private by design')}
           </span>
           <span>
-            {current?.name || 'No project selected'}
+            {current?.name || tr('No project selected')}
             <i />
-            SQLite · local storage
+            {tr('SQLite · local storage')}
           </span>
         </footer>
       </div>
@@ -1965,7 +2019,7 @@ export default function App() {
               setContext(null);
             }}
           >
-            Inspect object
+            {tr('Inspect object')}
           </button>
           <button
             onClick={() => {
@@ -1974,44 +2028,45 @@ export default function App() {
               setContext(null);
             }}
           >
-            Add custom node
+            {tr('Add custom node')}
           </button>
           {detail?.nodes.find((n) => n.id === context.id)?.kind === 'custom' && (
             <button onClick={() => void removeNode(detail.nodes.find((n) => n.id === context.id)!)}>
-              Delete custom node
+              {tr('Delete custom node')}
             </button>
           )}
         </div>
       )}
       {closeWarning && (
-        <Dialog title="Unsaved work is only in memory" onClose={() => setCloseWarning(false)}>
+        <Dialog title={tr('Unsaved work is only in memory')} onClose={() => setCloseWarning(false)}>
           <p>
-            The browser storage and local backend could not retain some text. Keep Dragontrip open
-            to retry saving, or download a recovery copy before closing.
+            {tr(
+              'The browser storage and local backend could not retain some text. Keep Dragontrip open to retry saving, or download a recovery copy before closing.',
+            )}
           </p>
           <div className="dialog-actions">
-            <button onClick={() => setCloseWarning(false)}>Keep working</button>
+            <button onClick={() => setCloseWarning(false)}>{tr('Keep working')}</button>
             <button
               onClick={() =>
                 void downloadText(memoryDraftValues())
                   .then((path) => notify(path))
-                  .catch((e) => setError('Recovery download failed: ' + e.message))
+                  .catch((e) => setError(tr('Recovery download failed: ') + e.message))
               }
             >
-              Download recovery copy
+              {tr('Download recovery copy')}
             </button>
             <button className="danger-button" onClick={() => void invoke('confirm_close')}>
-              Close without saving
+              {tr('Close without saving')}
             </button>
           </div>
         </Dialog>
       )}
       {modal === 'project' && (
-        <Dialog title="Create a project" onClose={closeModal}>
+        <Dialog title={tr('Create a project')} onClose={closeModal}>
           <form onSubmit={submitProject}>
-            <p className="muted">A dedicated workspace for an authorized engagement.</p>
+            <p className="muted">{tr('A dedicated workspace for an authorized engagement.')}</p>
             <label>
-              Project name
+              {tr('Project name')}
               <input
                 required
                 maxLength={100}
@@ -2021,37 +2076,37 @@ export default function App() {
               />
             </label>
             <label>
-              Investigation goal
+              {tr('Investigation goal')}
               <textarea
                 maxLength={2000}
                 value={goal}
                 onChange={(e) => setGoal(e.target.value)}
-                placeholder="What question should this investigation answer?"
+                placeholder={tr('What question should this investigation answer?')}
               />
             </label>
             <label>
-              Description
+              {tr('Description')}
               <textarea
                 maxLength={4000}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Engagement context (scope is defined in Plan)"
+                placeholder={tr('Engagement context (scope is defined in Plan)')}
               />
             </label>
             <div className="dialog-actions">
               <button type="button" onClick={closeModal}>
-                Cancel
+                {tr('Cancel')}
               </button>
               <button className="primary" disabled={busy || !name.trim()}>
-                {busy ? <LoaderCircle className="spin" size={14} /> : <Plus size={14} />}Create
-                project
+                {busy ? <LoaderCircle className="spin" size={14} /> : <Plus size={14} />}
+                {tr('Create project')}
               </button>
             </div>
           </form>
         </Dialog>
       )}
       {modal === 'scan' && (
-        <Dialog title="Start recon task" onClose={closeModal}>
+        <Dialog title={tr('Start recon task')} onClose={closeModal}>
           <ScanForm
             pid={pid || undefined}
             serviceNode={serviceNode}
@@ -2068,10 +2123,11 @@ export default function App() {
         </Dialog>
       )}
       {modal === 'node' && (
-        <Dialog title="Add a custom object" onClose={closeModal}>
+        <Dialog title={tr('Add a custom object')} onClose={closeModal}>
           <p className="muted">
-            Describe an asset, note, hypothesis, task or reference. Connect objects using their
-            handles.
+            {tr(
+              'Describe an asset, note, hypothesis, task or reference. Connect objects using their handles.',
+            )}
           </p>
           <NodeEditor
             pid={pid!}
@@ -2083,9 +2139,9 @@ export default function App() {
                 y: 450,
               });
               closeModal();
-              notify('Custom object saved');
+              notify(tr('Custom object saved'));
               const updated = await refresh(pid!).catch(() => {
-                setError('Object saved. Refresh failed; reopen the project to reload it.');
+                setError(tr('Object saved. Refresh failed; reopen the project to reload it.'));
                 return undefined;
               });
               if (updated && activeProject.current === pid) setSelected(node.id);
@@ -2094,14 +2150,14 @@ export default function App() {
         </Dialog>
       )}
       {modal === 'command' && (
-        <Dialog title="Go to…" onClose={closeModal}>
+        <Dialog title={tr('Go to…')} onClose={closeModal}>
           <div className="command-input">
             <Search size={18} />
             <input
-              aria-label="Search commands"
+              aria-label={tr('Search commands')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Pages, projects, objects, knowledge…"
+              placeholder={tr('Pages, projects, objects, knowledge…')}
               onKeyDown={(e) => {
                 if (['ArrowDown', 'Enter'].includes(e.key)) {
                   e.preventDefault();
@@ -2145,7 +2201,7 @@ export default function App() {
                   void api('/vault/lock', 'POST')
                     .then(() => {
                       window.dispatchEvent(new Event('dragontrip:vault-locked'));
-                      notify('Vault locked');
+                      notify(tr('Vault locked'));
                     })
                     .catch((e) => setError(e.message));
                   closeModal();
@@ -2154,7 +2210,7 @@ export default function App() {
               },
             ]
               .filter(
-                (item) => item.enabled && item.name.toLowerCase().includes(query.toLowerCase()),
+                (item) => item.enabled && tr(item.name).toLowerCase().includes(query.toLowerCase()),
               )
               .map((item) => (
                 <button
@@ -2165,12 +2221,12 @@ export default function App() {
                   }}
                 >
                   <Command size={16} />
-                  {item.name}
-                  <span>Action</span>
+                  {tr(item.name)}
+                  <span>{tr('Action')}</span>
                 </button>
               ))}
             {[...nav, ...knowledgeNav]
-              .filter(([n]) => n.toLowerCase().includes(query.toLowerCase()))
+              .filter(([n]) => tr(n).toLowerCase().includes(query.toLowerCase()))
               .map(([n, Icon]) => (
                 <button
                   key={n}
@@ -2181,7 +2237,7 @@ export default function App() {
                   }}
                 >
                   <Icon size={16} />
-                  {n}
+                  {tr(n)}
                   <ArrowRight size={14} />
                 </button>
               ))}
@@ -2199,7 +2255,7 @@ export default function App() {
                 >
                   <Folder size={16} />
                   {p.name}
-                  <span>Project</span>
+                  <span>{tr('Project')}</span>
                 </button>
               ))}
             {detail?.nodes
@@ -2231,7 +2287,7 @@ export default function App() {
                 >
                   <Network size={16} />
                   {n.label}
-                  <span>Object</span>
+                  <span>{tr('Object')}</span>
                 </button>
               ))}
             {pid && query.trim() && (

@@ -154,6 +154,10 @@ jobs:
             node scripts/investigation-smoke.cjs
           CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
             DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
+            DRAGONTRIP_VALIDATION_DIR="${{ runner.temp }}/delivery-browser/localization" \
+            node scripts/localization-smoke.cjs
+          CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
+            DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \
             node scripts/workspace-smoke.cjs
           CHROMIUM_PATH="$(node -e "process.stdout.write(require('playwright-core').chromium.executablePath())")" \
             DRAGONTRIP_TEST_BACKEND=backend/dist/dragontrip-backend/dragontrip-backend \

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import { api } from './api';
+import { t } from './i18n';
 
 type Cell = { revision: number; value: { data: unknown } | null; closed: boolean };
 type Entry = {
@@ -190,10 +191,10 @@ export function workspaceStatus(pid: string, key: string) {
     return 'Draft retained locally; another workspace copy is newer. Recover retained text in a new editor.';
   if (state.local)
     return state.error
-      ? 'Draft saved in browser. Sync failed: ' + state.error + ' Retry sync or download.'
+      ? t('Draft saved in browser. Sync failed: {0} Retry sync or download.', [state.error])
       : 'Draft saved in browser; syncing…';
   return state.error
-    ? 'Text is only in memory. ' + state.error + ' Retry or download before closing the app.'
+    ? t('Text is only in memory. {0} Retry or download before closing the app.', [state.error])
     : 'Saving draft… Text is only in memory.';
 }
 export function retryWorkspace(pid: string, key: string) {

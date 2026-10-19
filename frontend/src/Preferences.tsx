@@ -1,6 +1,8 @@
+import { t as tr, useLocale, setLocale, type Locale } from './i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api } from './api';
 import { readLocal, writeLocal } from './workspace';
+import { applyMotionPreference } from './motion';
 
 export type Appearance = {
   theme: 'dark' | 'light' | 'system';
@@ -34,13 +36,11 @@ export function useAppearance() {
     };
     const apply = () => {
       const root = document.documentElement;
+      applyMotionPreference(value);
       root.dataset.theme =
         value.theme === 'system' ? (media.matches ? 'light' : 'dark') : value.theme;
       root.dataset.accent = value.accent;
       root.dataset.density = value.density;
-      root.dataset.reducedMotion = String(
-        value.reduced_motion || value.performance_profile === 'low',
-      );
     };
     apply();
     writeLocal('dragontrip.appearance', JSON.stringify(value));
@@ -57,6 +57,7 @@ export default function Preferences({
   appearance: Appearance;
   onAppearance: (value: Appearance) => void;
 }) {
+  const locale = useLocale();
   const [draft, setDraft] = useState(appearance);
   const [paths, setPaths] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -88,18 +89,44 @@ export default function Preferences({
       } else {
         await api('/settings/tools', 'PUT', { paths });
       }
-      setMessage(type === 'appearance' ? 'Appearance saved' : 'Tool locations validated and saved');
+      setMessage(
+        type === 'appearance' ? tr('Appearance saved') : tr('Tool locations validated and saved'),
+      );
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
   }
-  const change = <K extends keyof Appearance>(key: K, value: Appearance[K]) =>
-    setDraft((d) => ({ ...d, [key]: value }));
+  const change = <K extends keyof Appearance>(key: K, value: Appearance[K]) => {
+    const next = { ...draft, [key]: value };
+    setDraft(next);
+    applyMotionPreference(next);
+  };
+  // Preview motion changes immediately; unsaved changes revert on leaving settings.
+  useEffect(() => () => applyMotionPreference(appearance), [appearance]);
   return (
     <section className="panel product-settings">
-      <h2>Appearance and graph</h2>
+      <h2>{tr('Language')}</h2>
+      <label>
+        {tr('Interface language')}
+        <select
+          aria-label={tr('Interface language')}
+          value={locale}
+          onChange={(event) => setLocale(event.target.value as Locale)}
+        >
+          <option value="en" lang="en">
+            English
+          </option>
+          <option value="ru" lang="ru">
+            Русский
+          </option>
+        </select>
+      </label>
+      <p className="muted">
+        {tr('The language is saved automatically and applies to all projects.')}
+      </p>
+      <h2>{tr('Appearance and graph')}</h2>
       {message && (
         <p role="status" className="success-message">
           {message}
@@ -107,78 +134,86 @@ export default function Preferences({
       )}
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
       <form onSubmit={(e) => void save(e, 'appearance')}>
         <div className="recon-grid">
           <label>
-            Performance profile
+            {tr('Performance profile')}
             <select
-              aria-label="Performance profile"
+              aria-label={tr('Performance profile')}
               value={draft.performance_profile}
               onChange={(e) =>
                 change('performance_profile', e.target.value as Appearance['performance_profile'])
               }
             >
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
+              <option value="low">{tr('Low')}</option>
+              <option value="medium">{tr('Medium')}</option>
+              <option value="high">{tr('High')}</option>
             </select>
           </label>
           <label>
-            Theme
+            {tr('Theme')}
             <select
-              aria-label="Theme"
+              aria-label={tr('Theme')}
               value={draft.theme}
               onChange={(e) => change('theme', e.target.value as Appearance['theme'])}
             >
               {['dark', 'light', 'system'].map((value) => (
-                <option key={value}>{value}</option>
+                <option key={value} value={value}>
+                  {tr(value)}
+                </option>
               ))}
             </select>
           </label>
           <label>
-            Accent
+            {tr('Accent')}
             <select
-              aria-label="Accent"
+              aria-label={tr('Accent')}
               value={draft.accent}
               onChange={(e) => change('accent', e.target.value as Appearance['accent'])}
             >
               {['purple', 'cyan', 'green'].map((value) => (
-                <option key={value}>{value}</option>
+                <option key={value} value={value}>
+                  {tr(value)}
+                </option>
               ))}
             </select>
           </label>
           <label>
-            Density
+            {tr('Density')}
             <select
-              aria-label="Density"
+              aria-label={tr('Density')}
               value={draft.density}
               onChange={(e) => change('density', e.target.value as Appearance['density'])}
             >
               {['comfortable', 'compact'].map((value) => (
-                <option key={value}>{value}</option>
+                <option key={value} value={value}>
+                  {tr(value)}
+                </option>
               ))}
             </select>
           </label>
           <label>
-            Graph detail
+            {tr('Graph detail')}
             <select
-              aria-label="Graph detail"
+              aria-label={tr('Graph detail')}
               value={draft.graph_detail}
               onChange={(e) => change('graph_detail', e.target.value as Appearance['graph_detail'])}
             >
               {['auto', 'full', 'compact'].map((value) => (
-                <option key={value}>{value}</option>
+                <option key={value} value={value}>
+                  {tr(value)}
+                </option>
               ))}
             </select>
           </label>
         </div>
         <p className="muted">
-          Low reduces motion and graph decoration. Medium keeps the standard balance. High retains
-          detailed cards longer. Graph detail can override automatic card density; every profile
-          keeps large-graph limits and all objects available.
+          {tr(
+            'Low reduces motion and graph decoration. Medium keeps the standard balance. High retains detailed cards longer. Graph detail can override automatic card density; every profile keeps large-graph limits and all objects available.',
+          )}
         </p>
         <label className="checkbox">
           <input
@@ -186,16 +221,22 @@ export default function Preferences({
             checked={draft.reduced_motion}
             onChange={(e) => change('reduced_motion', e.target.checked)}
           />
-          Reduce motion
+          {tr('Reduce motion')}
         </label>
+        <p className="muted">
+          {tr(
+            'Motion changes preview immediately. Save appearance to keep them. System reduced motion and the Low profile also disable animations.',
+          )}
+        </p>
         <button className="primary" disabled={busy}>
-          Save appearance
+          {tr('Save appearance')}
         </button>
       </form>
-      <h2>Tool executable locations</h2>
+      <h2>{tr('Tool executable locations')}</h2>
       <p className="muted">
-        Leave empty to use PATH detection. Locations are checked against each tool's version output
-        before saving.
+        {tr(
+          "Leave empty to use PATH detection. Locations are checked against each tool's version output before saving.",
+        )}
       </p>
       <form onSubmit={(e) => void save(e, 'tools')}>
         <div className="recon-grid">
@@ -203,20 +244,20 @@ export default function Preferences({
             <label key={tool}>
               {tool}
               <input
-                aria-label={`${tool} executable`}
+                aria-label={tr('{0} executable', [tool])}
                 value={paths[tool] || ''}
                 maxLength={500}
                 onChange={(e) => setPaths((p) => ({ ...p, [tool]: e.target.value }))}
-                placeholder="Automatic from PATH"
+                placeholder={tr('Automatic from PATH')}
               />
             </label>
           ))}
         </div>
         <button className="primary" disabled={busy}>
-          Save tool locations
+          {tr('Save tool locations')}
         </button>
       </form>
-      <h2>Keyboard shortcuts</h2>
+      <h2>{tr('Keyboard shortcuts')}</h2>
       <dl className="shortcut-list">
         {[
           ['Ctrl/⌘ K', 'Open command palette'],
@@ -232,7 +273,7 @@ export default function Preferences({
             <dt>
               <kbd>{key}</kbd>
             </dt>
-            <dd>{action}</dd>
+            <dd>{tr(action)}</dd>
           </div>
         ))}
       </dl>

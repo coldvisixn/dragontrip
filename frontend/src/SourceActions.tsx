@@ -1,3 +1,4 @@
+import { t as tr, useLocale } from './i18n';
 import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 export type LinkedRecord = {
@@ -21,6 +22,7 @@ export function SourceActions({
   source: 'node' | 'observation' | 'scan' | 'record';
   id: string;
 }) {
+  useLocale();
   const [rows, setRows] = useState<LinkedRecord[]>([]);
   const [kind, setKind] = useState(source === 'record' ? 'task' : 'note');
   const [busy, setBusy] = useState(false);
@@ -72,34 +74,34 @@ export function SourceActions({
   const controls = (
     <div className="section-actions">
       <select
-        aria-label="Create linked record type"
+        aria-label={tr('Create linked record type')}
         value={nextKind}
         disabled={busy}
         onChange={(e) => setKind(e.target.value)}
       >
-        {available.includes('note') && <option value="note">Note / hypothesis</option>}
-        {available.includes('finding') && <option value="finding">Draft finding</option>}
-        {available.includes('task') && <option value="task">Task / check</option>}
+        {available.includes('note') && <option value="note">{tr('Note / hypothesis')}</option>}
+        {available.includes('finding') && <option value="finding">{tr('Draft finding')}</option>}
+        {available.includes('task') && <option value="task">{tr('Task / check')}</option>}
       </select>
       <button type="button" disabled={busy || !loaded} onClick={() => void create()}>
-        {busy ? 'Creating…' : 'Create linked record'}
+        {busy ? tr('Creating…') : tr('Create linked record')}
       </button>
     </div>
   );
   return (
-    <section className="source-actions" aria-label="Linked investigation">
+    <section className="source-actions" aria-label={tr('Linked investigation')}>
       {rows.length > 0 && (
         <div className="linked-items">
           {rows.map((r) => (
             <button type="button" key={r.id} onClick={() => openRecord(r)}>
-              {r.title} · {r.content.status}
+              {r.title} · {tr(r.content.status)}
             </button>
           ))}
         </div>
       )}
       {error && (
         <p role="alert">
-          {error}
+          {tr(error)}
           <button
             onClick={() => {
               void api<LinkedRecord[]>(path)
@@ -114,14 +116,14 @@ export function SourceActions({
                 });
             }}
           >
-            Retry
+            {tr('Retry')}
           </button>
         </p>
       )}
       {available.length > 0 &&
         (rows.length ? (
           <details>
-            <summary>Add another record type</summary>
+            <summary>{tr('Add another record type')}</summary>
             {controls}
           </details>
         ) : (
@@ -141,36 +143,47 @@ export function SourceLinks({
     import_id?: string;
   } | null;
 }) {
+  useLocale();
   if (!source) return null;
   return (
-    <div className="linked-items" aria-label="Record source">
+    <div className="linked-items" aria-label={tr('Record source')}>
       {source.observation_id && (
         <button
           type="button"
           onClick={() => openSource('observation', source.observation_id!, source.node_id)}
         >
-          Source observation
+          {tr('Source observation')}
         </button>
       )}
       {source.node_id && !source.observation_id && (
         <button type="button" onClick={() => openSource('node', source.node_id!)}>
-          Source object
+          {tr('Source object')}
         </button>
       )}
       {source.scan_id && (
         <button type="button" onClick={() => openSource('scan', source.scan_id!)}>
-          Source scan
+          {tr('Source scan')}
         </button>
       )}
       {source.record_id && (
         <button type="button" onClick={() => openSource('record', source.record_id!)}>
-          Source hypothesis
+          {tr('Source hypothesis')}
         </button>
       )}
       <details>
-        <summary>Source details</summary>
-        {source.observation_id && <small>Observation · {source.observation_id}</small>}
-        {source.import_id && <small>Import · {source.import_id}</small>}
+        <summary>{tr('Source details')}</summary>
+        {source.observation_id && (
+          <small>
+            {tr('Observation · ')}
+            {source.observation_id}
+          </small>
+        )}
+        {source.import_id && (
+          <small>
+            {tr('Import · ')}
+            {source.import_id}
+          </small>
+        )}
       </details>
     </div>
   );

@@ -1,3 +1,4 @@
+import { t as tr, useLocale, localeTag } from './i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, ApiError, type Detail, type Profile, type Scan } from './api';
 import { useProjectState, putWorkspace, workspaceRevision } from './workspace';
@@ -39,6 +40,7 @@ const states = [
 ] as const;
 
 export function Methodologies({ detail }: { detail: Detail }) {
+  useLocale();
   const pid = detail.project.id;
   const [records, setRecords] = useState<ResearchRecord[]>([]);
   const [selected, setSelected] = useProjectState<ResearchRecord | undefined>(
@@ -79,7 +81,7 @@ export function Methodologies({ detail }: { detail: Detail }) {
       });
       await load();
       setSelected(r);
-      setStatus('Methodology ready. Each result must be recorded explicitly.');
+      setStatus(tr('Methodology ready. Each result must be recorded explicitly.'));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -105,15 +107,16 @@ export function Methodologies({ detail }: { detail: Detail }) {
       );
       setSelected(r);
       setConflict(undefined);
-      setStatus('Methodology saved.');
+      setStatus(tr('Methodology saved.'));
       await load().catch(() =>
-        setError('Methodology saved. The list could not refresh; reopen this screen to retry.'),
+        setError(tr('Methodology saved. The list could not refresh; reopen this screen to retry.')),
       );
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
         setConflict((e.detail as { current: ResearchRecord }).current);
         setCopyId(crypto.randomUUID());
-      } else setError('Your methodology draft is retained. Retry saving: ' + (e as Error).message);
+      } else
+        setError(tr('Your methodology draft is retained. Retry saving: ') + (e as Error).message);
     } finally {
       setBusy(false);
     }
@@ -133,52 +136,55 @@ export function Methodologies({ detail }: { detail: Detail }) {
     <div className="page methodology-page">
       <div className="page-heading">
         <div>
-          <h1>Methodologies</h1>
+          <h1>{tr('Methodologies')}</h1>
           <p>
-            Track coverage for a specific application or service. Finding counts never imply that a
-            check is complete.
+            {tr(
+              'Track coverage for a specific application or service. Finding counts never imply that a check is complete.',
+            )}
           </p>
         </div>
       </div>
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
       {status && <p role="status">{status}</p>}
       <form className="panel methodology-create" onSubmit={(e) => void create(e)}>
         <label>
-          Methodology template
+          {tr('Methodology template')}
           <select value={template} onChange={(e) => setTemplate(e.target.value)}>
-            <option value="web">Web application review</option>
-            <option value="network">Network service review</option>
+            <option value="web">{tr('Web application review')}</option>
+            <option value="network">{tr('Network service review')}</option>
           </select>
         </label>
         <label>
-          Investigation object
+          {tr('Investigation object')}
           <select
             required
-            aria-label="Methodology object"
+            aria-label={tr('Methodology object')}
             value={node}
             onChange={(e) => setNode(e.target.value)}
           >
-            <option value="">Choose an application or service…</option>
+            <option value="">{tr('Choose an application or service…')}</option>
             {detail.nodes.map((n) => (
               <option value={n.id} key={n.id}>
-                {n.label} · {n.kind}
+                {n.label} · {tr(n.kind)}
               </option>
             ))}
           </select>
         </label>
         <button className="primary" disabled={busy || !node}>
-          Add methodology
+          {tr('Add methodology')}
         </button>
       </form>
       <div className="methodology-layout">
         <aside className="panel methodology-list">
-          <h2>Project coverage</h2>
+          <h2>{tr('Project coverage')}</h2>
           {!records.length && (
-            <p className="muted">Add a methodology to begin. New checks start as not tested.</p>
+            <p className="muted">
+              {tr('Add a methodology to begin. New checks start as not tested.')}
+            </p>
           )}
           {records.map((r) => (
             <button
@@ -191,9 +197,12 @@ export function Methodologies({ detail }: { detail: Detail }) {
             >
               <strong>{r.title}</strong>
               <small>
-                {r.content.checks.filter((c) => c.state === 'tested').length} tested ·{' '}
-                {r.content.checks.filter((c) => c.state === 'not_applicable').length} not applicable
-                · {r.content.checks.length} checks
+                {r.content.checks.filter((c) => c.state === 'tested').length}
+                {tr(' tested ·')}{' '}
+                {r.content.checks.filter((c) => c.state === 'not_applicable').length}
+                {tr(' not applicable · ')}
+                {r.content.checks.length}
+                {tr(' checks')}
               </small>
             </button>
           ))}
@@ -204,22 +213,27 @@ export function Methodologies({ detail }: { detail: Detail }) {
             <DraftStatus pid={pid} draftKey="methodology_work" value={selected} />
             {conflict && (
               <section className="draft-conflict" role="alert">
-                <h3>This methodology changed</h3>
+                <h3>{tr('This methodology changed')}</h3>
                 <div className="conflict-versions">
                   <div>
                     <h4>
-                      My draft ·{' '}
-                      {new Date(workspaceRevision(pid, 'methodology_work')).toLocaleString()}
+                      {tr('My draft ·')}{' '}
+                      {new Date(workspaceRevision(pid, 'methodology_work')).toLocaleString(
+                        localeTag(),
+                      )}
                     </h4>
                     <pre>{JSON.stringify(selected.content.checks, null, 2)}</pre>
                   </div>
                   <div>
-                    <h4>Saved version · {conflict.updated}</h4>
+                    <h4>
+                      {tr('Saved version · ')}
+                      {conflict.updated}
+                    </h4>
                     <pre>{JSON.stringify(conflict.content.checks, null, 2)}</pre>
                   </div>
                 </div>
                 <button disabled={busy} onClick={() => void save(true)}>
-                  Save my version as a separate methodology
+                  {tr('Save my version as a separate methodology')}
                 </button>
                 <button
                   disabled={busy}
@@ -229,7 +243,7 @@ export function Methodologies({ detail }: { detail: Detail }) {
                     setConflict(undefined);
                   }}
                 >
-                  Use saved version (retain my text)
+                  {tr('Use saved version (retain my text)')}
                 </button>
                 <button
                   disabled={busy}
@@ -239,7 +253,7 @@ export function Methodologies({ detail }: { detail: Detail }) {
                     setConflict(undefined);
                   }}
                 >
-                  Merge manually in checks below
+                  {tr('Merge manually in checks below')}
                 </button>
               </section>
             )}
@@ -247,11 +261,11 @@ export function Methodologies({ detail }: { detail: Detail }) {
               {states.map(([key, label]) => (
                 <span className={'coverage-stat ' + key} key={key}>
                   <strong>{checks.filter((c) => c.state === key).length}</strong>
-                  {label}
+                  {tr(label)}
                 </span>
               ))}
             </div>
-            <div className="coverage-bar" aria-label="Methodology coverage">
+            <div className="coverage-bar" aria-label={tr('Methodology coverage')}>
               {checks.map((c) => (
                 <span key={c.key} className={c.state} title={c.title + ': ' + c.state} />
               ))}
@@ -260,23 +274,23 @@ export function Methodologies({ detail }: { detail: Detail }) {
               <div className={'methodology-check ' + c.state} key={c.key}>
                 <div>
                   <span className="check-index">{i + 1}</span>
-                  <strong>{c.title}</strong>
+                  <strong>{tr(c.title)}</strong>
                   <select
-                    aria-label={'Check state: ' + c.title}
+                    aria-label={tr('Check state: ') + c.title}
                     value={c.state}
                     disabled={busy}
                     onChange={(e) => update(i, { state: e.target.value })}
                   >
                     {states.map(([key, label]) => (
                       <option key={key} value={key}>
-                        {label}
+                        {tr(label)}
                       </option>
                     ))}
                   </select>
                 </div>
                 <textarea
-                  aria-label={'Check notes: ' + c.title}
-                  placeholder="What was checked, what was observed, and what remains?"
+                  aria-label={tr('Check notes: ') + c.title}
+                  placeholder={tr('What was checked, what was observed, and what remains?')}
                   value={c.note}
                   rows={2}
                   maxLength={2000}
@@ -286,9 +300,9 @@ export function Methodologies({ detail }: { detail: Detail }) {
               </div>
             ))}
             <label>
-              Related scan evidence
+              {tr('Related scan evidence')}
               <select
-                aria-label="Methodology scan evidence"
+                aria-label={tr('Methodology scan evidence')}
                 multiple
                 value={selected.content.scan_ids}
                 onChange={(e) =>
@@ -303,7 +317,7 @@ export function Methodologies({ detail }: { detail: Detail }) {
               >
                 {detail.scans.map((s) => (
                   <option value={s.id} key={s.id}>
-                    {s.tool} · {s.target} · {s.status}
+                    {s.tool} · {s.target} · {tr(s.status)}
                   </option>
                 ))}
               </select>
@@ -321,7 +335,7 @@ export function Methodologies({ detail }: { detail: Detail }) {
               disabled={busy || Boolean(conflict)}
               onClick={() => void save()}
             >
-              Save methodology
+              {tr('Save methodology')}
             </button>
           </section>
         )}
@@ -339,6 +353,7 @@ export function Workflows({
   onScan: (scan: Scan) => void;
   onChanged: () => Promise<unknown>;
 }) {
+  useLocale();
   const pid = detail.project.id;
   const [workflows, setWorkflows] = useState<ResearchRecord[]>([]);
   const [runs, setRuns] = useState<ResearchRecord[]>([]);
@@ -430,20 +445,20 @@ export function Workflows({
     <div className="page workflows-page">
       <div className="page-heading">
         <div>
-          <h1>Recon workflows</h1>
-          <p>Review a saved sequence, then run all steps or advance one at a time.</p>
+          <h1>{tr('Recon workflows')}</h1>
+          <p>{tr('Review a saved sequence, then run all steps or advance one at a time.')}</p>
         </div>
       </div>
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
       {message && !(allLaunched && completed === plan?.actions.length) && (
         <p role="status">{message}</p>
       )}
       <details className="panel workflow-editor" open={!workflows.length}>
-        <summary>Create a reusable sequence</summary>
+        <summary>{tr('Create a reusable sequence')}</summary>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -457,14 +472,14 @@ export function Workflows({
               setSelected(r);
               setPlan(undefined);
               setRunId('');
-              setMessage('Workflow saved. Preview it before creating a run.');
+              setMessage(tr('Workflow saved. Preview it before creating a run.'));
             });
           }}
         >
           <label>
-            Workflow name
+            {tr('Workflow name')}
             <input
-              aria-label="Workflow name"
+              aria-label={tr('Workflow name')}
               required
               value={title}
               maxLength={160}
@@ -473,11 +488,14 @@ export function Workflows({
           </label>
           {actions.map((a, i) => (
             <div className="workflow-action-editor" key={i}>
-              <strong>Step {i + 1}</strong>
+              <strong>
+                {tr('Step ')}
+                {i + 1}
+              </strong>
               <label>
-                Profile
+                {tr('Profile')}
                 <select
-                  aria-label={`Step ${i + 1} profile`}
+                  aria-label={tr('Step {0} profile', [i + 1])}
                   value={a.profile}
                   onChange={(e) => update(i, { profile: e.target.value, service_node: null })}
                 >
@@ -489,9 +507,9 @@ export function Workflows({
                 </select>
               </label>
               <label>
-                Target
+                {tr('Target')}
                 <input
-                  aria-label={`Step ${i + 1} target`}
+                  aria-label={tr('Step {0} target', [i + 1])}
                   required
                   value={a.target}
                   onChange={(e) => update(i, { target: e.target.value })}
@@ -499,9 +517,9 @@ export function Workflows({
                 />
               </label>
               <label>
-                Use object context
+                {tr('Use object context')}
                 <select
-                  aria-label={`Step ${i + 1} object`}
+                  aria-label={tr('Step {0} object', [i + 1])}
                   value={a.service_node || ''}
                   onChange={(e) => {
                     const n = detail.nodes.find((n) => n.id === e.target.value);
@@ -514,7 +532,7 @@ export function Workflows({
                       });
                   }}
                 >
-                  <option value="">Choose a known object…</option>
+                  <option value="">{tr('Choose a known object…')}</option>
                   {detail.nodes
                     .filter((n) => ['host', 'service', 'application', 'url'].includes(n.kind))
                     .map((n) => (
@@ -526,9 +544,9 @@ export function Workflows({
               </label>
               {profiles.find((p) => p.id === a.profile)?.tool === 'ffuf' && (
                 <label>
-                  Relative wordlist
+                  {tr('Relative wordlist')}
                   <textarea
-                    aria-label={`Step ${i + 1} wordlist`}
+                    aria-label={tr('Step {0} wordlist', [i + 1])}
                     value={a.words.join('\n')}
                     onChange={(e) =>
                       update(i, { words: e.target.value.split('\n').filter(Boolean) })
@@ -546,14 +564,14 @@ export function Workflows({
                     setActions(copy);
                   }}
                 >
-                  Move up
+                  {tr('Move up')}
                 </button>
                 <button
                   type="button"
                   disabled={actions.length === 1}
                   onClick={() => setActions(actions.filter((_, index) => index !== i))}
                 >
-                  Remove step
+                  {tr('Remove step')}
                 </button>
               </div>
             </div>
@@ -566,10 +584,10 @@ export function Workflows({
                 setActions([...actions, { profile: 'whatweb', target: '', words: [] }])
               }
             >
-              Add step
+              {tr('Add step')}
             </button>
             <button className="primary" disabled={busy}>
-              Save workflow
+              {tr('Save workflow')}
             </button>
           </div>
         </form>
@@ -588,7 +606,10 @@ export function Workflows({
             }}
           >
             <strong>{w.title}</strong>
-            <small>{w.content.actions.length} ordered steps</small>
+            <small>
+              {w.content.actions.length}
+              {tr(' ordered steps')}
+            </small>
           </button>
         ))}
       </div>
@@ -605,22 +626,23 @@ export function Workflows({
               })
             }
           >
-            Preview workflow
+            {tr('Preview workflow')}
           </button>
         </section>
       )}
       {plan && (
         <section className="panel workflow-preview">
-          <h2>{runId ? 'Run progress' : 'Targets & actions preview'}</h2>
+          <h2>{runId ? tr('Run progress') : tr('Targets & actions preview')}</h2>
           <p>{plan.notice}</p>
           {plan.run && (
             <p role="status">
-              {String(plan.run.content.execution || 'Ready for explicit launch')} ·{' '}
-              {String(plan.run.content.stop_reason || '')}
+              {tr(String(plan.run.content.execution || 'Ready for explicit launch'))} ·{' '}
+              {tr(String(plan.run.content.stop_reason || ''))}
             </p>
           )}
           <div className="workflow-progress">
-            {completed} / {plan.actions.length} steps completed
+            {completed} / {plan.actions.length}
+            {tr(' steps completed')}
           </div>
           {plan.actions.map((a, i) => {
             const scan = plan.scans?.[i];
@@ -631,22 +653,32 @@ export function Workflows({
                   <h3>{a.parameters?.name || a.profile}</h3>
                   <p className="mono">{a.target}</p>
                   <small>
-                    {a.scope} · rate {a.parameters?.rate ?? '—'} · timeout{' '}
-                    {a.parameters?.timeout ?? '—'}s · ports{' '}
-                    {a.parameters?.ports || 'profile default'}
+                    {tr(a.scope)}
+                    {tr(' · rate ')}
+                    {a.parameters?.rate ?? '—'}
+                    {tr(' · timeout')} {a.parameters?.timeout ?? '—'}
+                    {tr('s · ports')} {a.parameters?.ports || tr('profile default')}
                   </small>
                   {a.parameters?.scripts?.length ? (
-                    <p>Diagnostic scripts: {a.parameters.scripts.join(', ')}</p>
+                    <p>
+                      {tr('Diagnostic scripts: ')}
+                      {a.parameters.scripts.join(', ')}
+                    </p>
                   ) : null}
-                  {a.words.length > 0 && <p>Wordlist: {a.words.join(', ')}</p>}
+                  {a.words.length > 0 && (
+                    <p>
+                      {tr('Wordlist: ')}
+                      {a.words.join(', ')}
+                    </p>
+                  )}
                   {a.error && <p className="form-error">{a.error}</p>}
                   {scan && (
                     <>
                       <p className={'badge ' + (scan.status === 'completed' ? 'success' : '')}>
-                        {scan.status}
+                        {tr(scan.status)}
                       </p>
-                      {scan.error && <p>{scan.error}</p>}
-                      <button onClick={() => onScan(scan)}>Open step results</button>
+                      {scan.error && <p>{tr(scan.error)}</p>}
+                      <button onClick={() => onScan(scan)}>{tr('Open step results')}</button>
                     </>
                   )}
                 </div>
@@ -670,16 +702,19 @@ export function Workflows({
                 })
               }
             >
-              Create run
+              {tr('Create run')}
             </button>
           )}
           {plan.history && plan.history.length > (plan.scans?.length || 0) && (
             <details>
-              <summary>All attempts · {plan.history.length}</summary>
+              <summary>
+                {tr('All attempts · ')}
+                {plan.history.length}
+              </summary>
               {plan.history.map((s) => (
                 <p key={s.id}>
                   <button onClick={() => onScan(s)}>
-                    {s.tool} · {s.target} · {s.status}
+                    {s.tool} · {s.target} · {tr(s.status)}
                   </button>
                   {s.error}
                 </p>
@@ -698,7 +733,7 @@ export function Workflows({
                         disabled={busy}
                         onChange={(e) => setAuthorized(e.target.checked)}
                       />
-                      I am authorized to run the displayed target and action.
+                      {tr('I am authorized to run the displayed target and action.')}
                     </label>
                     <label className="check-row">
                       <input
@@ -707,7 +742,7 @@ export function Workflows({
                         disabled={busy}
                         onChange={(e) => setConfirmed(e.target.checked)}
                       />
-                      I confirm higher-traffic or diagnostic-script actions where required.
+                      {tr('I confirm higher-traffic or diagnostic-script actions where required.')}
                     </label>
                     <div className="workflow-buttons">
                       {!automatic && (
@@ -724,12 +759,12 @@ export function Workflows({
                             )
                           }
                         >
-                          Run remaining sequence
+                          {tr('Run remaining sequence')}
                         </button>
                       )}
                       {automatic && (
                         <button disabled={busy} onClick={() => void work(() => control('pause'))}>
-                          Pause after current step
+                          {tr('Pause after current step')}
                         </button>
                       )}
                       <button
@@ -752,13 +787,13 @@ export function Workflows({
                             setPlan(
                               await api<Plan>(`/projects/${pid}/workflow-runs/${runId}/preview`),
                             );
-                            setMessage('Step queued. Review its result before continuing.');
+                            setMessage(tr('Step queued. Review its result before continuing.'));
                             await onChanged();
                             await load();
                           })
                         }
                       >
-                        {retry ? 'Retry failed step' : `Launch step ${next + 1}`}
+                        {retry ? tr('Retry failed step') : tr('Launch step {0}', [next + 1])}
                       </button>
                       <button
                         disabled={
@@ -777,14 +812,14 @@ export function Workflows({
                           })
                         }
                       >
-                        Stop sequence
+                        {tr('Stop sequence')}
                       </button>
                     </div>
                   </>
                 )}
               {allLaunched && completed === plan.actions.length && (
                 <p role="status">
-                  Sequence complete. Methodology coverage still requires an explicit review.
+                  {tr('Sequence complete. Methodology coverage still requires an explicit review.')}
                 </p>
               )}
             </>
@@ -792,9 +827,9 @@ export function Workflows({
         </section>
       )}
       <section className="panel">
-        <h2>Saved run history</h2>
+        <h2>{tr('Saved run history')}</h2>
         {!runs.length && (
-          <p className="muted">No runs yet. Saving a workflow does not launch scans.</p>
+          <p className="muted">{tr('No runs yet. Saving a workflow does not launch scans.')}</p>
         )}
         {runs.map((r) => (
           <button
@@ -809,15 +844,17 @@ export function Workflows({
           >
             <strong>{r.title}</strong>
             <small>
-              {r.content.scan_ids.length} steps launched ·{' '}
-              {r.content.status === 'dismissed' ? 'stopped' : 'open'}
+              {r.content.scan_ids.length}
+              {tr(' steps launched ·')}{' '}
+              {r.content.status === 'dismissed' ? tr('stopped') : tr('open')}
             </small>
           </button>
         ))}
       </section>
       <p className="muted">
-        Current adapters accept single IPv4 targets/origins. Domains can be mapped and investigated
-        offline; live hostname/CIDR/IPv6 workflow execution remains unavailable.
+        {tr(
+          'Current adapters accept single IPv4 targets/origins. Domains can be mapped and investigated offline; live hostname/CIDR/IPv6 workflow execution remains unavailable.',
+        )}
       </p>
     </div>
   );

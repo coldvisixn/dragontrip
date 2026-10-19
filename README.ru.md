@@ -8,9 +8,9 @@
 
 Объединяйте результаты разведки, наблюдения, гипотезы, находки и следующие проверки в одном проекте — и возвращайтесь к сохранённому ходу рассуждений.
 
-**[Скачать для Linux · v0.10.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.10.0)** · [Быстрый старт](#быстрый-старт) · [Посмотреть в работе](docs/SHOWCASE.md) · [English](README.md)
+**[Скачать для Linux · v0.11.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.11.0)** · [Быстрый старт](#быстрый-старт) · [Посмотреть в работе](docs/SHOWCASE.md) · [English](README.md)
 
-[![Релиз](docs/media/badges/release.svg)](https://github.com/coldvisixn/dragontrip/releases/tag/v0.10.0)
+[![Релиз](docs/media/badges/release.svg)](https://github.com/coldvisixn/dragontrip/releases/tag/v0.11.0)
 [![Сборка Linux](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml)
 [![Linux x86_64](docs/media/badges/platform.svg)](docs/INSTALL-KALI.md)
 [![Лицензия MIT](docs/media/badges/license.svg)](LICENSE)
@@ -40,6 +40,8 @@
 
 Отчёт — один из возможных результатов. Полезная следующая проверка, опровергнутая гипотеза и сохранённый исследовательский блокнот тоже имеют ценность.
 
+Переключение между English и Русским доступно в **Settings → Interface language** (**Настройки → Язык интерфейса**). Язык сохраняется автоматически для всех проектов; названия проектов и авторские записи сохраняют исходный текст. Для вкладок и внешнего вида добавлены короткие плавные переходы. **Уменьшить движение** действует сразу для предпросмотра; нажмите **Сохранить внешний вид**, чтобы оставить настройку. Низкий профиль производительности и системная настройка уменьшения движения также отключают анимацию.
+
 ## Сценарии применения
 
 - **Авторизованный пентест:** объедините инвентаризацию сервисов Nmap, наблюдения endpoint из Burp и HTTP-результаты Nuclei. Свяжите предполагаемую проблему контроля доступа с источником, запланируйте ручную проверку и сохраните результат перед подтверждением находки.
@@ -68,16 +70,16 @@
 
 ## Быстрый старт
 
-**0.10.0 объединяет полный путь исследования.** Задайте цель проекта, подтвердите план разведки, перейдите от сервиса к web research и сохраняйте связи доказательств, задач и ретестов. Новая компоновка сохраняет контекст и частичные результаты после прерывания. Публичный установщик прошёл нативные проверки на Ubuntu и после установки на Kali; скачивание и обновление с 0.9.1 проверены. [Изменения](docs/releases/v0.10.0.md) · [Проверка сборки](docs/BUILD-0.10.0.md) · [Аудит и сравнение до/после](docs/experience/README.ru.md).
+**0.11.0 добавляет русский язык и плавную навигацию.** Переключайте English и Русский в настройках без повторного открытия проекта. Короткие переходы вкладок и внешнего вида учитывают «Уменьшить движение», низкий профиль и системные настройки. Проекты, доказательства и авторские записи сохраняют исходное содержимое. [Изменения](docs/releases/v0.11.0.md) · [Проверки](docs/BUILD-0.11.0.md).
 
-Скачайте **[`dragontrip_0.10.0_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.10.0/dragontrip_0.10.0_amd64.deb)** и **[файл SHA-256](https://github.com/coldvisixn/dragontrip/releases/download/v0.10.0/dragontrip_0.10.0_amd64.deb.sha256)** в одну папку. Архивы GitHub «Source code» предназначены для разработчиков.
+Скачайте **[`dragontrip_0.11.0_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.11.0/dragontrip_0.11.0_amd64.deb)** и **[файл SHA-256](https://github.com/coldvisixn/dragontrip/releases/download/v0.11.0/dragontrip_0.11.0_amd64.deb.sha256)** в одну папку. Архивы GitHub «Source code» предназначены для разработчиков.
 
 При обновлении сначала закройте Dragontrip и [сохраните копию всей папки данных](docs/DATA.md#back-up-the-installation).
 
 ```bash
-sha256sum --check dragontrip_0.10.0_amd64.deb.sha256
+sha256sum --check dragontrip_0.11.0_amd64.deb.sha256
 sudo apt update
-sudo apt install ./dragontrip_0.10.0_amd64.deb
+sudo apt install ./dragontrip_0.11.0_amd64.deb
 dragontrip
 ```
 
@@ -91,11 +93,11 @@ sudo apt install nmap whatweb httpx-toolkit ffuf
 
 В `.deb` включены интерфейс и Python-бэкенд; Node.js, Rust, pip и Docker для запуска не нужны. Recon-инструменты устанавливаются отдельно в систему. Адаптеру httpx нужен **ProjectDiscovery httpx** (`httpx-toolkit` на Kali), а не одноимённая Python-библиотека.
 
-**Текущий пакет:** 0.10.0 — prerelease (ранний MVP), с английским интерфейсом и установщиком для Linux x86_64. Перед публикацией установщик проходит проверки на Ubuntu и установку с нативными тестами на Kali; см. [результаты верификации](docs/BUILD-0.10.0.md). Проверка настоящей 4 ГБ VirtualBox VM остаётся отдельной. [Установка, обновление и решение проблем →](docs/INSTALL-KALI.md) · [English installation guide →](docs/INSTALL.md)
+**Текущий пакет:** 0.11.0 — prerelease (ранний MVP), с русским и английским интерфейсом и установщиком для Linux x86_64. Перед публикацией установщик проходит проверки на Ubuntu и установку с нативными тестами на Kali; см. [результаты верификации](docs/BUILD-0.11.0.md). Проверка настоящей 4 ГБ VirtualBox VM остаётся отдельной. [Установка, обновление и решение проблем →](docs/INSTALL-KALI.md) · [English installation guide →](docs/INSTALL.md)
 
 ## Возможности и границы
 
-Также доступны ручные методологии проверки, граф инфраструктуры, файлы доказательств и история источников, доска задач, зашифрованное хранилище credentials, перенос проектов и настраиваемые отчёты. [Подробные возможности и ограничения →](docs/CAPABILITIES.md) · [Изменения в 0.10.0 →](docs/releases/v0.10.0.md)
+Также доступны ручные методологии проверки, граф инфраструктуры, файлы доказательств и история источников, доска задач, зашифрованное хранилище credentials, перенос проектов и настраиваемые отчёты. [Подробные возможности и ограничения →](docs/CAPABILITIES.md) · [Изменения в 0.11.0 →](docs/releases/v0.11.0.md)
 
 - Live recon использует **Nmap, WhatWeb, ProjectDiscovery httpx и ffuf** с отдельными IPv4-адресами либо IPv4 web origins в зависимости от адаптера. Offline-поддержка доменов/CIDR/IPv6 не означает их поддержку при live-сканировании.
 - Импортируются определённые XML-экспорты Nmap/Burp и HTTP Nuclei JSONL. Встроенного запуска Nuclei, произвольных shell-команд и автоматической эксплуатации нет.

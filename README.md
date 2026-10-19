@@ -8,9 +8,9 @@
 
 Connect recon results, observations, hypotheses, findings and next checks in one project — and return with your reasoning intact.
 
-**[Download for Linux · v0.10.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.10.0)** · [Quick start](#get-started) · [See it in action](docs/SHOWCASE.md) · [Русский](README.ru.md)
+**[Download for Linux · v0.11.0](https://github.com/coldvisixn/dragontrip/releases/tag/v0.11.0)** · [Quick start](#get-started) · [See it in action](docs/SHOWCASE.md) · [Русский](README.ru.md)
 
-[![Release](docs/media/badges/release.svg)](https://github.com/coldvisixn/dragontrip/releases/tag/v0.10.0)
+[![Release](docs/media/badges/release.svg)](https://github.com/coldvisixn/dragontrip/releases/tag/v0.11.0)
 [![Linux build](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml/badge.svg?branch=main)](https://github.com/coldvisixn/dragontrip/actions/workflows/linux.yml)
 [![Linux x86_64](docs/media/badges/platform.svg)](docs/INSTALL.md)
 [![MIT license](docs/media/badges/license.svg)](LICENSE)
@@ -40,6 +40,8 @@ Built for practicing pentesters, independent security researchers and people lea
 
 Reports are one possible result. A useful next check, a disproved hypothesis and a recoverable research notebook are results too.
 
+Switch between English and Russian in **Settings → Interface language**. The choice is saved automatically for all projects; project names and authored content retain their original text. Tabs and appearance changes use short transitions. **Reduce motion** previews immediately; use **Save appearance** to keep it. The Low performance profile and the system's reduced-motion preference also disable animations.
+
 ## In practice
 
 - **Authorized pentest:** bring together Nmap service inventory, Burp endpoint observations and Nuclei HTTP results. Link a suspected access-control issue to its source, plan a manual check and record the outcome before confirming a finding.
@@ -68,16 +70,16 @@ Screenshots and the recording use the real application with an isolated, explici
 
 ## Get started
 
-**0.10.0 connects the complete investigation.** Set a project goal, approve a recon plan, follow services into web research and keep evidence, tasks and retests linked. The new workspace preserves context and partial results across interruptions. The published installer passed native Ubuntu and installed-Kali checks; its public download and upgrade from 0.9.1 were verified. [Release notes](docs/releases/v0.10.0.md) · [Build verification](docs/BUILD-0.10.0.md) · [Audit and before/after evidence](docs/experience/README.ru.md).
+**0.11.0 adds Russian and smoother navigation.** Switch between English and Russian in Settings without reopening your project. Short tab and appearance transitions respect Reduce motion, the Low rendering profile and system preferences. Existing projects, evidence and authored text keep their original content. [Release notes](docs/releases/v0.11.0.md) · [Validation](docs/BUILD-0.11.0.md).
 
-Download **[`dragontrip_0.10.0_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.10.0/dragontrip_0.10.0_amd64.deb)** and its **[SHA-256 file](https://github.com/coldvisixn/dragontrip/releases/download/v0.10.0/dragontrip_0.10.0_amd64.deb.sha256)** into the same folder. GitHub's “Source code” archives are for developers.
+Download **[`dragontrip_0.11.0_amd64.deb`](https://github.com/coldvisixn/dragontrip/releases/download/v0.11.0/dragontrip_0.11.0_amd64.deb)** and its **[SHA-256 file](https://github.com/coldvisixn/dragontrip/releases/download/v0.11.0/dragontrip_0.11.0_amd64.deb.sha256)** into the same folder. GitHub's “Source code” archives are for developers.
 
 If upgrading, close Dragontrip and [back up the complete data directory](docs/DATA.md#back-up-the-installation) before installing.
 
 ```bash
-sha256sum --check dragontrip_0.10.0_amd64.deb.sha256
+sha256sum --check dragontrip_0.11.0_amd64.deb.sha256
 sudo apt update
-sudo apt install ./dragontrip_0.10.0_amd64.deb
+sudo apt install ./dragontrip_0.11.0_amd64.deb
 dragontrip
 ```
 
@@ -91,11 +93,11 @@ sudo apt install nmap whatweb httpx-toolkit ffuf
 
 The `.deb` bundles the frontend and Python backend; Node.js, Rust, pip and Docker are not needed to run it. Recon tools are separate system executables. The httpx adapter needs **ProjectDiscovery httpx** (`httpx-toolkit` on Kali), not the Python library.
 
-**Current download:** 0.10.0 is a prerelease (early MVP), with an English interface and a Linux x86_64 installer. The release installer is checked on Ubuntu and installed on Kali before publication; see [build verification](docs/BUILD-0.10.0.md). A real 4 GB VirtualBox acceptance remains separate. [Installation, updates and troubleshooting →](docs/INSTALL.md) · [Инструкция для Kali →](docs/INSTALL-KALI.md)
+**Current download:** 0.11.0 is a prerelease (early MVP), with English/Russian interfaces and a Linux x86_64 installer. The release installer is checked on Ubuntu and installed on Kali before publication; see [build verification](docs/BUILD-0.11.0.md). A real 4 GB VirtualBox acceptance remains separate. [Installation, updates and troubleshooting →](docs/INSTALL.md) · [Инструкция для Kali →](docs/INSTALL-KALI.md)
 
 ## Capabilities and boundaries
 
-The workspace also includes manual review methodologies, an infrastructure graph, evidence attachments and source history, a task board, an encrypted credential vault, portable projects and configurable reports. [Full capabilities and current limits →](docs/CAPABILITIES.md) · [What changed in 0.10.0 →](docs/releases/v0.10.0.md)
+The workspace also includes manual review methodologies, an infrastructure graph, evidence attachments and source history, a task board, an encrypted credential vault, portable projects and configurable reports. [Full capabilities and current limits →](docs/CAPABILITIES.md) · [What changed in 0.11.0 →](docs/releases/v0.11.0.md)
 
 - Live recon uses **Nmap, WhatWeb, ProjectDiscovery httpx and ffuf**, with individual IPv4 targets or IPv4 web origins depending on the adapter. Offline domain/CIDR/IPv6 support does not enable live scanning of those forms.
 - Imports support specific Nmap XML, Burp XML and HTTP Nuclei JSONL exports. There is no built-in Nuclei runner, arbitrary shell runner or automatic exploitation.

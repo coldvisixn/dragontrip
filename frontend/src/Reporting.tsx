@@ -1,3 +1,4 @@
+import { t as tr, useLocale, localeTag } from './i18n';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Download, RefreshCw } from 'lucide-react';
 import { api, type Project } from './api';
@@ -45,6 +46,7 @@ export function ProjectOverview({
   onProjectChanged?: () => Promise<unknown>;
   onNavigate?: (page: WorkspacePage) => void;
 }) {
+  useLocale();
   const [data, setData] = useState<Overview>();
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
@@ -81,8 +83,11 @@ export function ProjectOverview({
     <div className="page">
       <div className="page-heading">
         <div>
-          <h1>Project overview</h1>
-          <p>{project.name} · Investigation progress and current risks.</p>
+          <h1>{tr('Project overview')}</h1>
+          <p>
+            {project.name}
+            {tr(' · Investigation progress and current risks.')}
+          </p>
         </div>
         <button
           disabled={loading}
@@ -92,16 +97,16 @@ export function ProjectOverview({
           }}
         >
           <RefreshCw size={15} />
-          Refresh
+          {tr('Refresh')}
         </button>
       </div>
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
-      {loading && <p role="status">Loading overview…</p>}
-      <section className="panel project-plan" aria-label="Investigation plan">
+      {loading && <p role="status">{tr('Loading overview…')}</p>}
+      <section className="panel project-plan" aria-label={tr('Investigation plan')}>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -114,7 +119,7 @@ export function ProjectOverview({
                 expected_goal: project.goal || '',
                 goal,
               });
-              setGoalSaved('Goal saved. Continue with target scope.');
+              setGoalSaved(tr('Goal saved. Continue with target scope.'));
               await onProjectChanged?.();
               setRevision((v) => v + 1);
             } catch (e) {
@@ -125,45 +130,45 @@ export function ProjectOverview({
           }}
         >
           <label>
-            Investigation goal
+            {tr('Investigation goal')}
             <textarea
               maxLength={2000}
               value={goal}
               onChange={(e) => setGoal(e.target.value)}
-              placeholder="What question should this investigation answer?"
+              placeholder={tr('What question should this investigation answer?')}
             />
           </label>
-          <button disabled={saving || goal === (project.goal || '')}>Save goal</button>
-          {goalSaved && <p role="status">{goalSaved}</p>}
+          <button disabled={saving || goal === (project.goal || '')}>{tr('Save goal')}</button>
+          {goalSaved && <p role="status">{tr(goalSaved)}</p>}
         </form>
         {data?.journey && (
           <div className="journey-next">
-            <span className="eyebrow">NEXT STEP</span>
-            <h2>{data.journey.label}</h2>
-            <p>{data.journey.reason}</p>
+            <span className="eyebrow">{tr('NEXT STEP')}</span>
+            <h2>{tr(data.journey.label)}</h2>
+            <p>{tr(data.journey.reason)}</p>
             <p>
-              Scope:{' '}
+              {tr('Scope:')}{' '}
               {data.journey.included_targets.length
                 ? data.journey.included_targets.join(', ')
-                : 'Not defined yet'}
+                : tr('Not defined yet')}
             </p>
             <div className="section-actions">
               {data.journey.stage !== 'goal' && (
                 <button className="primary" onClick={() => onNavigate?.(data.journey!.page)}>
-                  {data.journey.label}
+                  {tr(data.journey.label)}
                 </button>
               )}
-              <button onClick={onScope}>Targets & scope</button>
-              <button onClick={onImport}>Import results</button>
+              <button onClick={onScope}>{tr('Targets & scope')}</button>
+              <button onClick={onImport}>{tr('Import results')}</button>
               {data.journey.included_targets.length > 0 && (
-                <button onClick={onRecon}>Review discovery plan</button>
+                <button onClick={onRecon}>{tr('Review discovery plan')}</button>
               )}
             </div>
           </div>
         )}
       </section>
       <details className="panel" style={{ marginBottom: 20 }}>
-        <summary>Project details</summary>
+        <summary>{tr('Project details')}</summary>
         <form
           className="knowledge-editor"
           onSubmit={async (event) => {
@@ -181,7 +186,7 @@ export function ProjectOverview({
           }}
         >
           <label>
-            Project name
+            {tr('Project name')}
             <input
               required
               maxLength={100}
@@ -190,7 +195,7 @@ export function ProjectOverview({
             />
           </label>
           <label>
-            Project description
+            {tr('Project description')}
             <textarea
               maxLength={4000}
               value={description}
@@ -198,7 +203,7 @@ export function ProjectOverview({
             />
           </label>
           <button disabled={saving || !name.trim()}>
-            {saving ? 'Saving…' : 'Save project details'}
+            {saving ? tr('Saving…') : tr('Save project details')}
           </button>
         </form>
       </details>
@@ -206,20 +211,23 @@ export function ProjectOverview({
         <>
           {sum(data.objects) === 0 && !data.journey && (
             <section className="panel start-project">
-              <h2>Start with the evidence you already have</h2>
+              <h2>{tr('Start with the evidence you already have')}</h2>
               <p>
-                Import Nmap XML, Burp saved items or issues, or HTTP Nuclei JSONL. Preview the
-                changes before adding them to this project.
+                {tr(
+                  'Import Nmap XML, Burp saved items or issues, or HTTP Nuclei JSONL. Preview the changes before adding them to this project.',
+                )}
               </p>
               <div className="start-actions">
                 <button className="primary" onClick={onImport}>
-                  Import results
+                  {tr('Import results')}
                 </button>
-                <button onClick={onScope}>Define target scope</button>
-                <button onClick={onRecon}>Start live recon</button>
+                <button onClick={onScope}>{tr('Define target scope')}</button>
+                <button onClick={onRecon}>{tr('Start live recon')}</button>
               </div>
               <small className="muted">
-                Importing files sends no traffic. Live recon runs only when you launch a scan.
+                {tr(
+                  'Importing files sends no traffic. Live recon runs only when you launch a scan.',
+                )}
               </small>
             </section>
           )}
@@ -233,7 +241,7 @@ export function ProjectOverview({
                   ['Overdue tasks', data.overdue],
                 ].map(([label, value]) => (
                   <section className="panel metric-card" key={label}>
-                    <small>{label}</small>
+                    <small>{tr(String(label))}</small>
                     <strong>{value}</strong>
                   </section>
                 ))}
@@ -241,59 +249,63 @@ export function ProjectOverview({
               <div className="recon-grid overview-grid">
                 <section className="panel">
                   <div className="section-actions">
-                    <h2>Work progress</h2>
-                    <button onClick={onTasks}>Open task board</button>
+                    <h2>{tr('Work progress')}</h2>
+                    <button onClick={onTasks}>{tr('Open task board')}</button>
                   </div>
                   <progress
-                    aria-label="Task completion"
+                    aria-label={tr('Task completion')}
                     max={Math.max(actionable, 1)}
                     value={completed}
                   />
                   <p>
-                    {actionable ? Math.round((completed / actionable) * 100) : 0}% complete ·{' '}
-                    {data.tasks.blocked || 0} blocked · {data.tasks.cancelled || 0} cancelled
+                    {actionable ? Math.round((completed / actionable) * 100) : 0}
+                    {tr('% complete ·')} {data.tasks.blocked || 0}
+                    {tr(' blocked · ')}
+                    {data.tasks.cancelled || 0}
+                    {tr(' cancelled')}
                   </p>
                   <p className="muted">
-                    Overdue means an unfinished task with a due date before today in UTC.
+                    {tr('Overdue means an unfinished task with a due date before today in UTC.')}
                   </p>
                 </section>
                 <section className="panel">
                   <div className="section-actions">
-                    <h2>Active risk</h2>
-                    <button onClick={onFindings}>Review findings</button>
+                    <h2>{tr('Active risk')}</h2>
+                    <button onClick={onFindings}>{tr('Review findings')}</button>
                   </div>
                   {['critical', 'high', 'medium', 'low', 'info'].map((s) => (
                     <div className="overview-row" key={s}>
-                      <span className={'badge severity-' + s}>{s}</span>
+                      <span className={'badge severity-' + s}>{tr(s)}</span>
                       <strong>{data.active_risks[s] || 0}</strong>
                     </div>
                   ))}
                   <p className="muted">
-                    Draft, open and confirmed findings; resolved and dismissed findings are
-                    excluded.
+                    {tr(
+                      'Draft, open and confirmed findings; resolved and dismissed findings are excluded.',
+                    )}
                   </p>
                 </section>
                 <section className="panel">
-                  <h2>Inventory</h2>
+                  <h2>{tr('Inventory')}</h2>
                   {['host', 'domain', 'application', 'endpoint', 'service', 'url', 'custom'].map(
                     (s) => (
                       <div className="overview-row" key={s}>
-                        <span>{s}</span>
+                        <span>{tr(s)}</span>
                         <strong>{data.objects[s] || 0}</strong>
                       </div>
                     ),
                   )}
                   <div className="overview-row">
-                    <span>Evidence attachments</span>
+                    <span>{tr('Evidence attachments')}</span>
                     <strong>{data.attachments}</strong>
                   </div>
                 </section>
                 <section className="panel">
-                  <h2>Scan outcomes</h2>
+                  <h2>{tr('Scan outcomes')}</h2>
                   {['queued', 'running', 'completed', 'failed', 'cancelled', 'interrupted'].map(
                     (s) => (
                       <div className="overview-row" key={s}>
-                        <span>{s}</span>
+                        <span>{tr(s)}</span>
                         <strong>{data.scans[s] || 0}</strong>
                       </div>
                     ),
@@ -303,7 +315,9 @@ export function ProjectOverview({
             </>
           )}
           <p className="muted">
-            Snapshot: {new Date(data.as_of).toLocaleString()}. Refresh to include recent changes.
+            {tr('Snapshot: ')}
+            {new Date(data.as_of).toLocaleString(localeTag())}
+            {tr('. Refresh to include recent changes.')}
           </p>
         </>
       )}
@@ -325,6 +339,7 @@ const defaults = {
   attachment_ids: [] as string[],
 };
 export default function Reports({ project }: { project: Project }) {
+  useLocale();
   const draft = useDraft(project.id, 'report', defaults);
   const options = draft.value;
   const setOptions = draft.change;
@@ -372,13 +387,13 @@ export default function Reports({ project }: { project: Project }) {
     <div className="page">
       <div className="page-heading">
         <div>
-          <h1>Reports</h1>
-          <p>Build a reviewed Markdown, standalone HTML or evidence bundle deliverable.</p>
+          <h1>{tr('Reports')}</h1>
+          <p>{tr('Build a reviewed Markdown, standalone HTML or evidence bundle deliverable.')}</p>
         </div>
       </div>
       {error && (
         <p className="form-error" role="alert">
-          {error}
+          {tr(error)}
         </p>
       )}
       {message && (
@@ -388,15 +403,15 @@ export default function Reports({ project }: { project: Project }) {
       )}
       <div className="report-layout">
         <form className="panel knowledge-editor report-options" onSubmit={generate}>
-          <h2>Report contents</h2>
+          <h2>{tr('Report contents')}</h2>
           <p aria-live="polite" className="muted">
-            {draft.status}
+            {tr(draft.status)}
           </p>
           {draft.error && (
             <p role="alert" className="form-error">
-              {draft.error}{' '}
+              {tr(draft.error)}{' '}
               <button type="button" onClick={draft.retry}>
-                Retry draft recovery
+                {tr('Retry draft recovery')}
               </button>
             </p>
           )}
@@ -415,7 +430,7 @@ export default function Reports({ project }: { project: Project }) {
                   })
                 }
               >
-                Delivery preset
+                {tr('Delivery preset')}
               </button>
               <button
                 type="button"
@@ -429,11 +444,11 @@ export default function Reports({ project }: { project: Project }) {
                   })
                 }
               >
-                Working preset
+                {tr('Working preset')}
               </button>
             </div>
             <label>
-              Report title
+              {tr('Report title')}
               <input
                 required
                 maxLength={160}
@@ -442,36 +457,38 @@ export default function Reports({ project }: { project: Project }) {
               />
             </label>
             <label>
-              Executive summary
+              {tr('Executive summary')}
               <textarea
                 rows={6}
                 maxLength={12000}
                 value={options.summary}
                 onChange={(e) => change({ summary: e.target.value })}
-                placeholder="Scope, objectives, main observations and recommended next steps…"
+                placeholder={tr('Scope, objectives, main observations and recommended next steps…')}
               />
             </label>
             <label>
-              Finding status
+              {tr('Finding status')}
               <select
-                aria-label="Finding status"
+                aria-label={tr('Finding status')}
                 value={options.finding_status}
                 onChange={(e) => change({ finding_status: e.target.value })}
               >
-                <option value="active">Active (draft, open, confirmed)</option>
-                <option value="confirmed">Confirmed only</option>
-                <option value="all">All findings</option>
+                <option value="active">{tr('Active (draft, open, confirmed)')}</option>
+                <option value="confirmed">{tr('Confirmed only')}</option>
+                <option value="all">{tr('All findings')}</option>
               </select>
             </label>
             <label>
-              Minimum severity
+              {tr('Minimum severity')}
               <select
-                aria-label="Minimum severity"
+                aria-label={tr('Minimum severity')}
                 value={options.minimum_severity}
                 onChange={(e) => change({ minimum_severity: e.target.value })}
               >
                 {['info', 'low', 'medium', 'high', 'critical'].map((s) => (
-                  <option key={s}>{s}</option>
+                  <option key={s} value={s}>
+                    {tr(s)}
+                  </option>
                 ))}
               </select>
             </label>
@@ -490,13 +507,13 @@ export default function Reports({ project }: { project: Project }) {
                   checked={options[key]}
                   onChange={(e) => change({ [key]: e.target.checked })}
                 />
-                {label}
+                {tr(String(label))}
               </label>
             ))}
             <label>
-              Export format
+              {tr('Export format')}
               <select
-                aria-label="Export format"
+                aria-label={tr('Export format')}
                 value={options.format}
                 onChange={(e) =>
                   change({
@@ -506,16 +523,17 @@ export default function Reports({ project }: { project: Project }) {
                 }
               >
                 <option value="markdown">Markdown</option>
-                <option value="html">Standalone HTML</option>
-                <option value="bundle">ZIP: HTML, Markdown and evidence</option>
+                <option value="html">{tr('Standalone HTML')}</option>
+                <option value="bundle">{tr('ZIP: HTML, Markdown and evidence')}</option>
               </select>
             </label>
             {options.format !== 'markdown' && (
               <fieldset className="reference-picker">
-                <legend>Include evidence files (optional)</legend>
+                <legend>{tr('Include evidence files (optional)')}</legend>
                 <p className="muted">
-                  Only checked files are copied. Up to 100 files / 32 MiB. Check attachments for
-                  sensitive data before sharing.
+                  {tr(
+                    'Only checked files are copied. Up to 100 files / 32 MiB. Check attachments for sensitive data before sharing.',
+                  )}
                 </p>
                 <div className="reference-options">
                   {attachments.map((item) => (
@@ -533,23 +551,26 @@ export default function Reports({ project }: { project: Project }) {
                       />
                       <span>
                         {item.filename}
-                        <small>{(item.size / 1024).toFixed(1)} KiB</small>
+                        <small>
+                          {(item.size / 1024).toFixed(1)}
+                          {tr(' KiB')}
+                        </small>
                       </span>
                     </label>
                   ))}
                   {!attachments.length && (
-                    <p className="muted">No evidence files in this project yet.</p>
+                    <p className="muted">{tr('No evidence files in this project yet.')}</p>
                   )}
                 </div>
               </fieldset>
             )}
             <p className="muted">
-              Includes selected authored content and evidence filenames/checksums. Vault entries,
-              editor drafts and raw scan buffers are excluded. Attachment bytes are included only
-              when explicitly checked. Review the preview before sharing.
+              {tr(
+                'Includes selected authored content and evidence filenames/checksums. Vault entries, editor drafts and raw scan buffers are excluded. Attachment bytes are included only when explicitly checked. Review the preview before sharing.',
+              )}
             </p>
             <button className="primary" disabled={!options.title.trim()}>
-              {busy ? 'Working…' : 'Generate preview'}
+              {busy ? tr('Working…') : tr('Generate preview')}
             </button>
           </fieldset>
           <button
@@ -564,7 +585,7 @@ export default function Reports({ project }: { project: Project }) {
                   'POST',
                   { ...options, expected_preview: preview?.preview_token },
                 );
-                setMessage(`Saved: ${saved.path} · SHA-256 ${saved.sha256}`);
+                setMessage(tr('Saved: {0} · SHA-256 {1}', [saved.path, saved.sha256]));
               } catch (e) {
                 setError((e as Error).message);
               } finally {
@@ -574,25 +595,29 @@ export default function Reports({ project }: { project: Project }) {
           >
             <Download size={15} />
             {options.format === 'markdown'
-              ? 'Export Markdown'
+              ? tr('Export Markdown')
               : options.format === 'html'
-                ? 'Export HTML'
-                : 'Export bundle'}
+                ? tr('Export HTML')
+                : tr('Export bundle')}
           </button>
         </form>
-        <section className="panel report-preview" aria-label="Report preview">
+        <section className="panel report-preview" aria-label={tr('Report preview')}>
           {preview ? (
             <>
               <p className="muted">
-                {preview.finding_count} findings selected · Export checks that project content still
-                matches this preview.
+                {preview.finding_count}
+                {tr(
+                  ' findings selected · Export checks that project content still matches this preview.',
+                )}
               </p>
               <Markdown source={preview.markdown} />
             </>
           ) : (
             <div className="knowledge-empty">
-              <h2>Build your report</h2>
-              <p>Choose sections and finding filters, add a summary, then generate a preview.</p>
+              <h2>{tr('Build your report')}</h2>
+              <p>
+                {tr('Choose sections and finding filters, add a summary, then generate a preview.')}
+              </p>
             </div>
           )}
         </section>

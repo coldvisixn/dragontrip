@@ -14,8 +14,8 @@ User-facing installers belong in [GitHub Releases](https://github.com/coldvisixn
 From the intended release commit, for example:
 
 ```bash
-git tag -a v0.10.0 -m "Dragontrip 0.10.0"
-git push origin v0.10.0
+git tag -a v0.11.0 -m "Dragontrip 0.11.0"
+git push origin v0.11.0
 ```
 
 [The release workflow](../.github/workflows/release.yml) checks the tag against version metadata, builds the Linux `amd64` package on Ubuntu 24.04, runs backend/UI/frozen-backend checks, published-version upgrade checks and native Tauri/WebKit acceptance, and verifies package metadata/checksums. A separate Kali Rolling job installs and exercises that exact package before publication. Only the publish job receives `contents: write`.

@@ -1,3 +1,4 @@
+import { t as tr, useLocale } from './i18n';
 import { useEffect, useState } from 'react';
 import { Plus, Search, ListChecks } from 'lucide-react';
 import { api, type Detail } from './api';
@@ -61,6 +62,7 @@ export default function Tasks({
   onNode: (id: string) => void;
   onSeedConsumed?: () => void;
 }) {
+  useLocale();
   const pid = detail.project.id;
   const [items, setItems] = useState<Task[]>([]);
   const [view, setView] = useProjectState(pid, 'tasks', {
@@ -150,26 +152,26 @@ export default function Tasks({
     <div className="page tasks-page">
       <div className="page-heading">
         <div>
-          <h1>Task board</h1>
-          <p>Plan investigations, assign work and track follow-up. Due dates use UTC.</p>
+          <h1>{tr('Task board')}</h1>
+          <p>{tr('Plan investigations, assign work and track follow-up. Due dates use UTC.')}</p>
         </div>
         <button className="primary" disabled={busy} onClick={() => edit(empty())}>
           <Plus size={15} />
-          New task
+          {tr('New task')}
         </button>
       </div>
       {error && (
         <p role="alert" className="form-error">
-          {error}
-          <button onClick={() => setRevision((v) => v + 1)}>Retry</button>
+          {tr(error)}
+          <button onClick={() => setRevision((v) => v + 1)}>{tr('Retry')}</button>
         </p>
       )}
       <div className="knowledge-filters">
         <label className="search-field">
           <Search size={15} />
           <input
-            aria-label="Search tasks"
-            placeholder="Search tasks, owners or content…"
+            aria-label={tr('Search tasks')}
+            placeholder={tr('Search tasks, owners or content…')}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -178,17 +180,17 @@ export default function Tasks({
           />
         </label>
         <select
-          aria-label="Task status filter"
+          aria-label={tr('Task status filter')}
           value={status}
           onChange={(e) => {
             setStatus(e.target.value);
             setOffset(0);
           }}
         >
-          <option value="all">All statuses</option>
+          <option value="all">{tr('All statuses')}</option>
           {statuses.map((s) => (
             <option key={s} value={s}>
-              {names[s]}
+              {tr(names[s])}
             </option>
           ))}
         </select>
@@ -214,15 +216,19 @@ export default function Tasks({
                 setEditor(undefined);
                 setOffset(0);
                 setRevision((v) => v + 1);
-                void onChanged().catch(() => setError('Task saved. Refresh failed; use Retry.'));
+                void onChanged().catch(() =>
+                  setError(tr('Task saved. Refresh failed; use Retry.')),
+                );
               }}
             />
           </section>
         )}
       {!view.editing && getWorkspace(pid, 'draft:' + view.draft_id, null) && (
-        <button onClick={() => setView((v) => ({ ...v, editing: true }))}>Resume task draft</button>
+        <button onClick={() => setView((v) => ({ ...v, editing: true }))}>
+          {tr('Resume task draft')}
+        </button>
       )}
-      {loading && <p role="status">Loading tasks…</p>}
+      {loading && <p role="status">{tr('Loading tasks…')}</p>}
       <div className="task-board">
         {statuses
           .filter((s) => status === 'all' || status === s)
@@ -238,7 +244,7 @@ export default function Tasks({
             return (
               <section className="task-column panel" key={s}>
                 <h2>
-                  {names[s]} <span className="badge">{rows.length}</span>
+                  {tr(names[s])} <span className="badge">{rows.length}</span>
                 </h2>
                 {rows.map((task) => (
                   <article
@@ -246,16 +252,16 @@ export default function Tasks({
                     key={task.id}
                   >
                     <span className={'badge priority-' + task.content.priority}>
-                      {task.content.priority}
+                      {tr(task.content.priority)}
                     </span>
                     <button className="task-title" disabled={busy} onClick={() => edit(task)}>
                       {task.title}
                     </button>
                     <Markdown source={task.content.body.slice(0, 200)} />
-                    <small>{task.content.assignee || 'Unassigned'}</small>
+                    <small>{task.content.assignee || tr('Unassigned')}</small>
                     {task.content.due_date && (
                       <small className={overdue(task) ? 'form-error' : ''}>
-                        {overdue(task) ? 'Overdue · ' : 'Due · '}
+                        {overdue(task) ? tr('Overdue · ') : tr('Due · ')}
                         {task.content.due_date}
                       </small>
                     )}
@@ -266,7 +272,7 @@ export default function Tasks({
                           disabled={!detail.nodes.some((n) => n.id === id)}
                           onClick={() => onNode(id)}
                         >
-                          {detail.nodes.find((n) => n.id === id)?.label || 'Deleted object'}
+                          {detail.nodes.find((n) => n.id === id)?.label || tr('Deleted object')}
                         </button>
                       ))}
                     </div>
@@ -274,7 +280,8 @@ export default function Tasks({
                 ))}
                 {!rows.length && (
                   <p className="muted">
-                    <ListChecks size={18} /> No tasks in this column.
+                    <ListChecks size={18} />
+                    {tr(' No tasks in this column.')}
                   </p>
                 )}
               </section>
@@ -282,11 +289,13 @@ export default function Tasks({
           })}
       </div>
       <p className="muted">
-        {items.length} tasks loaded{query || status !== 'all' ? ' for these filters' : ''}.
+        {items.length}
+        {tr(' tasks loaded')}
+        {query || status !== 'all' ? tr(' for these filters') : ''}.
       </p>
       {more && (
         <button disabled={loading} onClick={() => setOffset((v) => v + 100)}>
-          Load more tasks
+          {tr('Load more tasks')}
         </button>
       )}
     </div>

@@ -2023,8 +2023,8 @@ html[data-density='compact'] .knowledge-card {
 html[data-reduced-motion='true'] *,
 html[data-reduced-motion='true'] *::before,
 html[data-reduced-motion='true'] *::after {
-  animation-duration: 0.01ms !important;
-  transition-duration: 0.01ms !important;
+  animation: none !important;
+  transition: none !important;
   scroll-behavior: auto !important;
 }
 .compact-card {
@@ -3392,5 +3392,50 @@ summary {
   }
   .web-workbench .endpoint-detail {
     max-height: calc(100vh - 230px);
+  }
+}
+
+/* Theme and workspace changes share a short, unobtrusive transition. */
+body,
+.app,
+.workspace,
+.main,
+.topbar,
+.sidebar,
+.statusbar,
+.panel,
+.inspector,
+.dialog,
+.project-card,
+input,
+textarea,
+select {
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease;
+}
+.sidebar {
+  transition:
+    width 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+.page {
+  transition: padding 180ms ease;
+}
+nav button,
+.section-tabs [role='tab'],
+.breadcrumb button {
+  transition:
+    background-color 160ms ease,
+    color 160ms ease,
+    border-color 160ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
   }
 }

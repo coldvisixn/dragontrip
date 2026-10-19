@@ -1,3 +1,4 @@
+import { t as tr, useLocale } from './i18n';
 import { useState } from 'react';
 import { type Scan } from './api';
 import { SourceActions } from './SourceActions';
@@ -25,6 +26,7 @@ export function BackgroundWork({
   onResult: (scan: Scan) => Promise<void>;
   onExport: (scan: Scan) => Promise<void>;
 }) {
+  useLocale();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const running = scans.filter((s) => ['queued', 'running'].includes(s.status)).length;
@@ -46,7 +48,7 @@ export function BackgroundWork({
   return (
     <section
       className={'background-work' + (expanded ? ' expanded' : '')}
-      aria-label="Background work"
+      aria-label={tr('Background work')}
     >
       <button
         className="work-summary"
@@ -54,20 +56,20 @@ export function BackgroundWork({
         aria-controls="work-result"
         onClick={() => onExpand(!expanded)}
       >
-        <strong>Background work</strong>
+        <strong>{tr('Background work')}</strong>
         <span>
           {running
-            ? `${running} queued / running · You can keep working`
+            ? tr('{0} queued / running · You can keep working', [running])
             : scan
-              ? `${scan.tool || 'nmap'} · ${scan.status}`
-              : 'No active jobs'}
+              ? `${scan.tool || 'nmap'} · ${tr(scan.status)}`
+              : tr('No active jobs')}
         </span>
-        <span>{expanded ? 'Hide results' : 'View results'}</span>
+        <span>{expanded ? tr('Hide results') : tr('View results')}</span>
       </button>
       {expanded && (
         <div id="work-result" className="work-result">
           <label>
-            Selected job
+            {tr('Selected job')}
             <select
               value={scan?.id || ''}
               onChange={(e) => {
@@ -75,15 +77,15 @@ export function BackgroundWork({
                 onSelect(e.target.value);
               }}
             >
-              {!scan && <option value="">Choose a job…</option>}
+              {!scan && <option value="">{tr('Choose a job…')}</option>}
               {scans.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.tool || 'nmap'} · {s.target} · {s.status}
+                  {s.tool || tr('nmap')} · {s.target} · {tr(s.status)}
                 </option>
               ))}
               {scan && !scans.some((s) => s.id === scan.id) && (
                 <option value={scan.id}>
-                  {scan.target} · {scan.status}
+                  {scan.target} · {tr(scan.status)}
                 </option>
               )}
             </select>
@@ -92,34 +94,35 @@ export function BackgroundWork({
             <>
               <div className="terminal-heading">
                 <strong>{scan.target}</strong>
-                <span className="badge">{scan.status}</span>
+                <span className="badge">{tr(scan.status)}</span>
               </div>
               <p role="status">
                 {active
                   ? scan.status === 'queued'
-                    ? 'Waiting for a queue slot. Other work remains available.'
+                    ? tr('Waiting for a queue slot. Other work remains available.')
                     : scan.options?.stage === 'saving'
-                      ? 'Saving observations and evidence…'
-                      : 'Tool is running. Results appear after they have been saved.'
-                  : `${result?.partial ? 'Partial result retained.' : scan.status === 'completed' ? 'Results saved.' : 'Execution stopped.'} ${result?.objects === undefined ? '' : `${result.objects} objects · ${result.observations || 0} observations.`}`}
+                      ? tr('Saving observations and evidence…')
+                      : tr('Tool is running. Results appear after they have been saved.')
+                  : `${tr(result?.partial ? 'Partial result retained.' : scan.status === 'completed' ? 'Results saved.' : 'Execution stopped.')} ${result?.objects === undefined ? '' : tr('{0} objects · {1} observations.', [result.objects, result.observations || 0])}`}
               </p>
-              {scan.error && <p className="form-error">{scan.error}</p>}
+              {scan.error && <p className="form-error">{tr(scan.error)}</p>}
               {!active && !hasObjects && (
                 <p>
-                  No objects were saved from this attempt. Inspect the available evidence or review
-                  a new attempt.
+                  {tr(
+                    'No objects were saved from this attempt. Inspect the available evidence or review a new attempt.',
+                  )}
                 </p>
               )}
               {result?.projection_error && (
                 <p>
-                  Some output could not be interpreted. The original file is available:{' '}
+                  {tr('Some output could not be interpreted. The original file is available:')}{' '}
                   {result.projection_error}
                 </p>
               )}
               <div className="section-actions">
                 {active ? (
                   <button disabled={busy} onClick={() => void perform(() => onCancel(scan.id))}>
-                    Stop scan
+                    {tr('Stop scan')}
                   </button>
                 ) : (
                   <>
@@ -128,12 +131,12 @@ export function BackgroundWork({
                       disabled={busy || !hasObjects}
                       onClick={() => void perform(() => onResult(scan))}
                     >
-                      Open saved results
+                      {tr('Open saved results')}
                     </button>
-                    <button onClick={() => onRetry(scan)}>Review new attempt</button>
+                    <button onClick={() => onRetry(scan)}>{tr('Review new attempt')}</button>
                     {(result?.artifact_available || scan.status === 'completed') && (
                       <button disabled={busy} onClick={() => void perform(() => onExport(scan))}>
-                        Export scan evidence
+                        {tr('Export scan evidence')}
                       </button>
                     )}
                   </>
@@ -141,19 +144,21 @@ export function BackgroundWork({
               </div>
               {!active && <SourceActions key={scan.id} pid={pid} source="scan" id={scan.id} />}
               <details className="work-technical">
-                <summary>Technical output and exact command</summary>
+                <summary>{tr('Technical output and exact command')}</summary>
                 <pre className="terminal">
                   {scan.command.join(' ')}
                   {'\n\n'}
                   {scan.output ||
-                    (active ? 'Waiting for tool output…' : 'No console output was produced.')}
+                    (active
+                      ? tr('Waiting for tool output…')
+                      : tr('No console output was produced.'))}
                 </pre>
               </details>
             </>
           )}
           {error && (
             <p role="alert" className="form-error">
-              {error} <button onClick={() => setError('')}>Dismiss</button>
+              {tr(error)} <button onClick={() => setError('')}>{tr('Dismiss')}</button>
             </p>
           )}
         </div>

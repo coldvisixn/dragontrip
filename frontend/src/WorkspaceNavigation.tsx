@@ -1,3 +1,4 @@
+import { t as tr, useLocale } from './i18n';
 import {
   Activity,
   Target,
@@ -70,18 +71,19 @@ function NavigationButton({
   pages?: readonly string[];
   count?: number;
 }) {
+  useLocale();
   return (
     <button
       className={selected ? 'active' : ''}
       onClick={onClick}
       disabled={disabled}
       aria-current={selected ? 'page' : undefined}
-      aria-label={label}
-      title={disabled ? 'Open a project to use ' + label : label}
+      aria-label={tr(label)}
+      title={disabled ? tr('Open a project to use ') + tr(label) : tr(label)}
       data-pages={pages?.join('|')}
     >
       <Icon size={18} />
-      <span className="navigation-label">{label}</span>
+      <span className="navigation-label">{tr(label)}</span>
       {count > 0 && <span className="count">{count}</span>}
     </button>
   );
@@ -100,32 +102,33 @@ export function PrimaryNavigation({
   onNavigate: (page: WorkspacePage) => void;
   remembered: Partial<Record<string, WorkspacePage>>;
 }) {
+  useLocale();
   const section = sectionFor(page);
   return (
     <>
-      <div className="nav-label">WORKSPACE</div>
-      <nav aria-label="Workspace navigation">
+      <div className="nav-label">{tr('WORKSPACE')}</div>
+      <nav aria-label={tr('Workspace navigation')}>
         <NavigationButton
-          label="Dashboard"
+          label={tr('Dashboard')}
           Icon={LayoutDashboard}
           selected={page === 'Dashboard'}
           onClick={() => onNavigate('Dashboard')}
         />
         <NavigationButton
-          label="Projects"
+          label={tr('Projects')}
           Icon={Folder}
           selected={page === 'Projects'}
           onClick={() => onNavigate('Projects')}
         />
       </nav>
-      <div className="nav-label project-nav-label">PROJECT</div>
-      <nav aria-label="Project navigation">
+      <div className="nav-label project-nav-label">{tr('PROJECT')}</div>
+      <nav aria-label={tr('Project navigation')}>
         {sectionGroups
           .filter((g) => g.id !== 'settings')
           .map((g) => (
             <NavigationButton
               key={g.id}
-              label={g.label}
+              label={tr(g.label)}
               Icon={g.icon}
               selected={section?.id === g.id}
               disabled={!hasProject}
@@ -147,11 +150,12 @@ export function SettingsNavigation({
   onNavigate: (page: WorkspacePage) => void;
   remembered: Partial<Record<string, WorkspacePage>>;
 }) {
+  useLocale();
   const group = sectionGroups.find((g) => g.id === 'settings')!;
   return (
-    <nav aria-label="Environment navigation">
+    <nav aria-label={tr('Environment navigation')}>
       <NavigationButton
-        label="Settings"
+        label={tr('Settings')}
         Icon={Settings}
         selected={sectionFor(page)?.id === 'settings'}
         pages={group.pages}
@@ -167,15 +171,16 @@ export function SectionTabs({
   page: WorkspacePage;
   onNavigate: (page: WorkspacePage) => void;
 }) {
+  useLocale();
   const section = sectionFor(page);
   if (!section) return null;
   return (
     <div className="section-tabs-wrap">
-      <span className="section-tabs-label">{section.label}</span>
+      <span className="section-tabs-label">{tr(section.label)}</span>
       <div
         className="section-tabs"
         role="tablist"
-        aria-label={section.label + ' sections'}
+        aria-label={tr(section.label) + tr(' sections')}
         aria-orientation="vertical"
         onKeyDown={(event) => {
           if (event.altKey || event.ctrlKey || event.metaKey) return;
@@ -201,8 +206,8 @@ export function SectionTabs({
             key={name}
             id={tabId(name)}
             type="button"
-            title={name}
-            aria-label={name}
+            title={tr(name)}
+            aria-label={tr(name)}
             data-short={name
               .split(/ |&/)
               .filter(Boolean)
@@ -215,7 +220,7 @@ export function SectionTabs({
             tabIndex={page === name ? 0 : -1}
             onClick={() => onNavigate(name)}
           >
-            <span>{name}</span>
+            <span>{tr(name)}</span>
           </button>
         ))}
       </div>

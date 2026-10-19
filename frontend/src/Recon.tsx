@@ -1,3 +1,4 @@
+import { t as tr, useLocale, localeTag } from './i18n';
 import { useProjectState } from './workspace';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, type Profile, type Scan, type ScanRequest } from './api';
@@ -23,6 +24,7 @@ export function ScanForm({
   onSubmit: (request: ScanRequest) => void;
   onClose: () => void;
 }) {
+  useLocale();
   const receipt = useRef({ signature: '', id: '' });
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [profileId, setProfile] = useState(initialProfile);
@@ -131,7 +133,7 @@ export function ScanForm({
       }}
     >
       <p className="muted">
-        Choose a profile. Tasks enter the queue; only explicitly authorized actions run.
+        {tr('Choose a profile. Tasks enter the queue; only explicitly authorized actions run.')}
       </p>
       {(error || submissionError) && (
         <p className="form-error" role="alert">
@@ -140,11 +142,11 @@ export function ScanForm({
       )}
       {pid && (error || submissionError) && (
         <button type="button" onClick={() => setPlanRevision((v) => v + 1)}>
-          Refresh plan
+          {tr('Refresh plan')}
         </button>
       )}
       <label>
-        Scan profile
+        {tr('Scan profile')}
         <select
           value={profileId}
           onChange={(e) => {
@@ -161,7 +163,7 @@ export function ScanForm({
         </select>
       </label>
       <label>
-        {web ? 'Target HTTP(S) URL · IPv4 host' : 'Target IPv4 address'}
+        {web ? tr('Target HTTP(S) URL · IPv4 host') : tr('Target IPv4 address')}
         <input
           required
           value={target}
@@ -177,29 +179,34 @@ export function ScanForm({
       {profile && (
         <p className="hint">
           {profile.tool} ·{' '}
-          {scopePorts || (web ? 'One web origin · redirects disabled' : 'Top 100 TCP ports')} · rate
-          ≤ {profile.rate}/s · timeout {profile.timeout}s
+          {scopePorts ||
+            (web ? tr('One web origin · redirects disabled') : tr('Top 100 TCP ports'))}
+          {tr(' · rate ≤ ')}
+          {profile.rate}
+          {tr('/s · timeout ')}
+          {profile.timeout}s
         </p>
       )}
       {pid && (
         <p className="hint">
           {plan
-            ? `Scope: ${plan.scope}. Parameters checked against the saved project.`
+            ? tr('Scope: {0}. Parameters checked against the saved project.', [plan.scope])
             : error
-              ? 'Resolve the plan error before launch.'
-              : 'Checking the saved scope and parameters…'}
+              ? tr('Resolve the plan error before launch.')
+              : tr('Checking the saved scope and parameters…')}
         </p>
       )}
       {profile?.tool === 'ffuf' && (
         <label>
-          Wordlist · one relative path per line (maximum 500)
+          {tr('Wordlist · one relative path per line (maximum 500)')}
           <textarea required rows={5} value={words} onChange={(e) => setWords(e.target.value)} />
         </label>
       )}
       {!!profile?.scripts?.length && (
         <p className="hint">
-          Diagnostic scripts: {profile.scripts.join(', ')}. No arbitrary script names or script
-          arguments.
+          {tr('Diagnostic scripts: ')}
+          {profile.scripts.join(', ')}
+          {tr('. No arbitrary script names or script arguments.')}
         </p>
       )}
       <label className="checkbox">
@@ -211,8 +218,9 @@ export function ScanForm({
           onChange={(e) => setAuthorized(e.target.checked)}
         />
         <span>
-          I own this target or have explicit permission to scan it. This target is within my
-          permitted scope.
+          {tr(
+            'I own this target or have explicit permission to scan it. This target is within my permitted scope.',
+          )}
         </span>
       </label>
       {intrusive && (
@@ -225,17 +233,17 @@ export function ScanForm({
             onChange={(e) => setConfirmed(e.target.checked)}
           />
           <span>
-            I explicitly approve this higher-traffic scan:{' '}
+            {tr('I explicitly approve this higher-traffic scan:')}{' '}
             {profile?.tool === 'ffuf'
-              ? 'wordlist path discovery'
-              : 'an extended port range, higher rate or diagnostic NSE scripts'}
+              ? tr('wordlist path discovery')
+              : tr('an extended port range, higher rate or diagnostic NSE scripts')}
             .
           </span>
         </label>
       )}
       <div className="dialog-actions">
         <button type="button" onClick={onClose}>
-          Cancel
+          {tr('Cancel')}
         </button>
         <button
           className="primary"
@@ -248,7 +256,7 @@ export function ScanForm({
             (!!pid && !plan)
           }
         >
-          Start scan
+          {tr('Start scan')}
         </button>
       </div>
     </form>
@@ -256,6 +264,7 @@ export function ScanForm({
 }
 
 export function ReconSettings() {
+  useLocale();
   const [concurrency, setConcurrency] = useState(1);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [tasks, setTasks] = useState<Scan[]>([]);
@@ -291,9 +300,9 @@ export function ReconSettings() {
   }, [tasks.length]);
   return (
     <section className="panel recon-settings">
-      <h2>Recon queue</h2>
+      <h2>{tr('Recon queue')}</h2>
       <label>
-        Concurrent tasks
+        {tr('Concurrent tasks')}
         <select
           value={concurrency}
           onChange={async (e) => {
@@ -301,25 +310,26 @@ export function ReconSettings() {
               const value = Number(e.target.value);
               await api('/queue', 'PUT', { concurrency: value });
               setConcurrency(value);
-              setMessage('Queue settings saved');
+              setMessage(tr('Queue settings saved'));
             } catch (error) {
               setMessage((error as Error).message);
             }
           }}
         >
-          <option value={1}>1 · recommended for 4 GB</option>
+          <option value={1}>{tr('1 · recommended for 4 GB')}</option>
           <option value={2}>2</option>
           <option value={3}>3</option>
         </select>
       </label>
       <p className="muted">
-        At most 32 queued/running tasks across projects. Restarted tasks are marked interrupted and
-        never automatically rerun.
+        {tr(
+          'At most 32 queued/running tasks across projects. Restarted tasks are marked interrupted and never automatically rerun.',
+        )}
       </p>
       {tasks.map((task) => (
         <div className="recon-task" key={task.id}>
           <span>
-            {task.tool} · {task.target} · {task.status}
+            {task.tool} · {task.target} · {tr(task.status)}
           </span>
           <button
             onClick={async () => {
@@ -331,16 +341,18 @@ export function ReconSettings() {
               }
             }}
           >
-            Cancel
+            {tr('Cancel')}
           </button>
         </div>
       ))}
-      <h2>Saved scan profiles</h2>
-      <p className="muted">Structured settings only. No arbitrary shell arguments or scripts.</p>
+      <h2>{tr('Saved scan profiles')}</h2>
+      <p className="muted">
+        {tr('Structured settings only. No arbitrary shell arguments or scripts.')}
+      </p>
       {profiles.map((p) => (
         <div className="recon-task" key={p.id}>
           <span>
-            {p.name} · {p.tool} · {p.ports || 'default scope'} · {p.rate}/s
+            {p.name} · {p.tool} · {p.ports || tr('default scope')} · {p.rate}/s
           </span>
           {!['quick', 'full', 'service', 'whatweb', 'httpx', 'ffuf'].includes(p.id) && (
             <button
@@ -353,7 +365,7 @@ export function ReconSettings() {
                 }
               }}
             >
-              Delete
+              {tr('Delete')}
             </button>
           )}
         </div>
@@ -372,18 +384,18 @@ export function ReconSettings() {
             });
             setName('');
             await load();
-            setMessage('Profile saved');
+            setMessage(tr('Profile saved'));
           } catch (error) {
             setMessage((error as Error).message);
           }
         }}
       >
         <label>
-          Profile name
+          {tr('Profile name')}
           <input required maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label>
-          Tool
+          {tr('Tool')}
           <select
             value={tool}
             onChange={(e) => {
@@ -399,13 +411,13 @@ export function ReconSettings() {
         </label>
         {tool === 'nmap' && (
           <label>
-            Ports · blank for top 100
+            {tr('Ports · blank for top 100')}
             <input value={ports} onChange={(e) => setPorts(e.target.value)} />
           </label>
         )}
         {tool === 'nmap' && (
           <fieldset>
-            <legend>Optional diagnostic NSE scripts · explicit approval required</legend>
+            <legend>{tr('Optional diagnostic NSE scripts · explicit approval required')}</legend>
             {['ssh-hostkey', 'smb-protocols', 'ftp-syst', 'rdp-enum-encryption'].map((script) => (
               <label className="checkbox" key={script}>
                 <input
@@ -426,7 +438,7 @@ export function ReconSettings() {
         )}
         <div className="recon-grid">
           <label>
-            Maximum rate per second
+            {tr('Maximum rate per second')}
             <input
               type="number"
               min={1}
@@ -436,7 +448,7 @@ export function ReconSettings() {
             />
           </label>
           <label>
-            Timeout in seconds
+            {tr('Timeout in seconds')}
             <input
               type="number"
               min={10}
@@ -446,7 +458,7 @@ export function ReconSettings() {
             />
           </label>
         </div>
-        <button className="primary">Save profile</button>
+        <button className="primary">{tr('Save profile')}</button>
       </form>
       {message && <p role="status">{message}</p>}
     </section>
@@ -464,6 +476,7 @@ export function Suggestions({
   revision: string;
   onChoose: (profile: string, target: string, nodeId: string) => void;
 }) {
+  useLocale();
   const [items, setItems] = useState<
     { node_id: string; target: string; profile: string; reason: string }[]
   >([]);
@@ -489,8 +502,10 @@ export function Suggestions({
     <>
       {selected.length > 0 && (
         <div className="inspector-section">
-          <h3>Recommended enumeration</h3>
-          <p className="muted">Review target and confirm each action before it enters the queue.</p>
+          <h3>{tr('Recommended enumeration')}</h3>
+          <p className="muted">
+            {tr('Review target and confirm each action before it enters the queue.')}
+          </p>
           {selected.map((item) => (
             <button
               className="recommendation"
@@ -498,12 +513,12 @@ export function Suggestions({
               onClick={() => onChoose(item.profile, item.target, item.node_id)}
             >
               <strong>{item.profile}</strong>
-              <small>{item.reason}</small>
+              <small>{tr(item.reason)}</small>
             </button>
           ))}
         </div>
       )}
-      {error && <p role="alert">{error}</p>}
+      {error && <p role="alert">{tr(error)}</p>}
     </>
   );
 }
@@ -517,6 +532,7 @@ export function ScanHistory({
   revision: string;
   onSelect: (id: string) => void;
 }) {
+  useLocale();
   const [query, setQuery] = useProjectState(pid, 'scan_query', '');
   const [status, setStatus] = useProjectState(pid, 'scan_filter', 'all');
   const [tool, setTool] = useProjectState(pid, 'scan_tool', 'all');
@@ -557,10 +573,10 @@ export function ScanHistory({
     };
   }, [pid, revision, query, status, tool, offset]);
   return (
-    <section aria-label="Scan history">
+    <section aria-label={tr('Scan history')}>
       <div className="recon-grid">
         <label>
-          Search history
+          {tr('Search history')}
           <input
             value={query}
             maxLength={100}
@@ -568,11 +584,11 @@ export function ScanHistory({
               setQuery(e.target.value);
               setOffset(0);
             }}
-            placeholder="Target, tool or profile"
+            placeholder={tr('Target, tool or profile')}
           />
         </label>
         <label>
-          Status
+          {tr('Status')}
           <select
             value={status}
             onChange={(e) => {
@@ -582,13 +598,15 @@ export function ScanHistory({
           >
             {['all', 'queued', 'running', 'completed', 'failed', 'cancelled', 'interrupted'].map(
               (value) => (
-                <option key={value}>{value}</option>
+                <option key={value} value={value}>
+                  {tr(value)}
+                </option>
               ),
             )}
           </select>
         </label>
         <label>
-          Tool
+          {tr('Tool')}
           <select
             value={tool}
             onChange={(e) => {
@@ -597,21 +615,25 @@ export function ScanHistory({
             }}
           >
             {['all', 'nmap', 'whatweb', 'httpx', 'ffuf'].map((value) => (
-              <option key={value}>{value}</option>
+              <option key={value} value={value}>
+                {tr(value)}
+              </option>
             ))}
           </select>
         </label>
       </div>
-      {error && <p role="alert">{error}</p>}
-      {loading && <p role="status">Loading history…</p>}
-      {!loading && rows.length === 0 && <p className="muted">No scans match these filters.</p>}
+      {error && <p role="alert">{tr(error)}</p>}
+      {loading && <p role="status">{tr('Loading history…')}</p>}
+      {!loading && rows.length === 0 && (
+        <p className="muted">{tr('No scans match these filters.')}</p>
+      )}
       {rows.map((scan) => (
         <button className="scan-row" key={scan.id} onClick={() => onSelect(scan.id)}>
           <span>
             <strong>{scan.target}</strong>
             <small>
               {scan.tool} · {scan.options?.name || scan.profile} ·{' '}
-              {new Date(scan.queued_at || scan.started).toLocaleString()}
+              {new Date(scan.queued_at || scan.started).toLocaleString(localeTag())}
             </small>
           </span>
           <span
@@ -620,22 +642,24 @@ export function ScanHistory({
               (scan.status === 'completed' ? 'success' : scan.status === 'failed' ? 'danger' : '')
             }
           >
-            {scan.status}
+            {tr(scan.status)}
           </span>
         </button>
       ))}
       <div className="dialog-actions">
         <span>
-          {total} scans · page {Math.floor(offset / 50) + 1}
+          {total}
+          {tr(' scans · page ')}
+          {Math.floor(offset / 50) + 1}
         </span>
         <button
           disabled={offset === 0 || loading}
           onClick={() => setOffset(Math.max(0, offset - 50))}
         >
-          Previous
+          {tr('Previous')}
         </button>
         <button disabled={offset + 50 >= total || loading} onClick={() => setOffset(offset + 50)}>
-          Next
+          {tr('Next')}
         </button>
       </div>
     </section>

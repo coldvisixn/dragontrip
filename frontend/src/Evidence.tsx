@@ -1,3 +1,4 @@
+import { t as tr, useLocale, localeTag } from './i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Download, Image, Paperclip, Upload } from 'lucide-react';
 import { api, fetchEvidence, uploadFile } from './api';
@@ -20,6 +21,7 @@ const size = (value: number) =>
       : (value / 1048576).toFixed(1) + ' MiB';
 
 export function EvidencePreview({ pid, attachment }: { pid: string; attachment: Attachment }) {
+  useLocale();
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   useEffect(() => {
@@ -44,7 +46,7 @@ export function EvidencePreview({ pid, attachment }: { pid: string; attachment: 
     <>
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
       {url && <img className="evidence-image" src={url} alt={attachment.filename} loading="lazy" />}
@@ -63,6 +65,7 @@ export function AttachmentLinks({
   onChange: (ids: string[]) => void;
   onBusyChange?: (busy: boolean) => void;
 }) {
+  useLocale();
   const [items, setItems] = useState<Attachment[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -93,11 +96,11 @@ export function AttachmentLinks({
   async function upload(file?: File) {
     if (!file || inFlight.current || !alive.current) return;
     if (current.current.ids.length >= 30) {
-      setError('A record supports up to 30 linked files');
+      setError(tr('A record supports up to 30 linked files'));
       return;
     }
     if (file.size > 10 * 1048576) {
-      setError('The maximum attachment size is 10 MiB');
+      setError(tr('The maximum attachment size is 10 MiB'));
       return;
     }
     inFlight.current = true;
@@ -126,7 +129,7 @@ export function AttachmentLinks({
     <fieldset
       className="reference-picker"
       tabIndex={0}
-      aria-label="Evidence upload: paste a screenshot or drop files"
+      aria-label={tr('Evidence upload: paste a screenshot or drop files')}
       onPaste={(event) => {
         const files = Array.from(event.clipboardData.files).filter((file) =>
           file.type.startsWith('image/'),
@@ -148,17 +151,18 @@ export function AttachmentLinks({
         })();
       }}
     >
-      <legend>Evidence and screenshots</legend>
+      <legend>{tr('Evidence and screenshots')}</legend>
       <p className="muted">
-        PNG, JPEG, WebP, PDF or UTF-8 text/JSON/XML · 10 MiB per file. Files are retained in the
-        project when you cancel editing. Paste a screenshot here or drop files to attach them.
+        {tr(
+          'PNG, JPEG, WebP, PDF or UTF-8 text/JSON/XML · 10 MiB per file. Files are retained in the project when you cancel editing. Paste a screenshot here or drop files to attach them.',
+        )}
       </p>
       <label className="file-button">
         <Upload size={14} />
-        {busy ? 'Uploading…' : 'Upload evidence'}
+        {busy ? tr('Uploading…') : tr('Upload evidence')}
         <input
           ref={input}
-          aria-label="Upload evidence"
+          aria-label={tr('Upload evidence')}
           type="file"
           accept={accept}
           disabled={busy}
@@ -167,7 +171,7 @@ export function AttachmentLinks({
       </label>
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
       <div className="reference-options">
@@ -192,6 +196,7 @@ export function AttachmentLinks({
 }
 
 export function LinkedEvidence({ pid, ids }: { pid: string; ids: string[] }) {
+  useLocale();
   const [items, setItems] = useState<Attachment[]>([]);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -211,7 +216,7 @@ export function LinkedEvidence({ pid, ids }: { pid: string; ids: string[] }) {
   }, [pid, ids]);
   return (
     <section className="linked-evidence">
-      <h3>Evidence and screenshots</h3>
+      <h3>{tr('Evidence and screenshots')}</h3>
       {notice && (
         <p role="status" className="success-message">
           {notice}
@@ -219,10 +224,10 @@ export function LinkedEvidence({ pid, ids }: { pid: string; ids: string[] }) {
       )}
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
-      {!ids.length && <p className="muted">No attachments linked.</p>}
+      {!ids.length && <p className="muted">{tr('No attachments linked.')}</p>}
       {ids.map((id) => {
         const item = items.find((row) => row.id === id);
         return item ? (
@@ -231,25 +236,27 @@ export function LinkedEvidence({ pid, ids }: { pid: string; ids: string[] }) {
               <span>
                 <Paperclip size={14} /> {item.filename}
                 <small>
-                  {size(item.size)} · SHA-256 {item.sha256.slice(0, 12)}…
+                  {size(item.size)}
+                  {tr(' · SHA-256 ')}
+                  {item.sha256.slice(0, 12)}…
                 </small>
               </span>
               <div className="step-actions">
                 {item.media_type.startsWith('image/') && (
                   <button
-                    aria-label={`Preview ${item.filename}`}
+                    aria-label={tr('Preview {0}', [item.filename])}
                     onClick={() => setPreview(preview === id ? undefined : id)}
                   >
                     <Image size={15} />
                   </button>
                 )}
                 <button
-                  aria-label={`Save ${item.filename}`}
+                  aria-label={tr('Save {0}', [item.filename])}
                   onClick={() =>
                     void api<{ path: string }>(`/projects/${pid}/attachments/${id}/export`, 'POST')
                       .then((value) => {
                         setError('');
-                        setNotice('Saved: ' + value.path);
+                        setNotice(tr('Saved: ') + value.path);
                       })
                       .catch((e) => setError(e.message))
                   }
@@ -261,7 +268,10 @@ export function LinkedEvidence({ pid, ids }: { pid: string; ids: string[] }) {
             {preview === id && <EvidencePreview pid={pid} attachment={item} />}
           </div>
         ) : (
-          <small key={id}>Missing attachment · {id}</small>
+          <small key={id}>
+            {tr('Missing attachment · ')}
+            {id}
+          </small>
         );
       })}
     </section>
@@ -269,6 +279,7 @@ export function LinkedEvidence({ pid, ids }: { pid: string; ids: string[] }) {
 }
 
 export default function Evidence({ pid, focusId }: { pid: string; focusId?: string }) {
+  useLocale();
   const [items, setItems] = useState<Attachment[]>([]);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -292,13 +303,13 @@ export default function Evidence({ pid, focusId }: { pid: string; focusId?: stri
     <div className="page">
       <div className="page-heading">
         <div>
-          <h1>Evidence</h1>
-          <p>Original attachments, screenshots and integrity digests.</p>
+          <h1>{tr('Evidence')}</h1>
+          <p>{tr('Original attachments, screenshots and integrity digests.')}</p>
         </div>
       </div>
       {error && (
         <p role="alert" className="form-error">
-          {error}
+          {tr(error)}
         </p>
       )}
       {notice && (
@@ -323,11 +334,11 @@ export default function Evidence({ pid, focusId }: { pid: string; focusId?: stri
               <Paperclip size={17} />
               <strong>{item.filename}</strong>
               <small>
-                {size(item.size)} · {new Date(item.created).toLocaleDateString()}
+                {size(item.size)} · {new Date(item.created).toLocaleDateString(localeTag())}
               </small>
             </button>
           ))}
-          {!items.length && <p className="knowledge-empty">No evidence uploaded yet.</p>}
+          {!items.length && <p className="knowledge-empty">{tr('No evidence uploaded yet.')}</p>}
         </section>
         <section className="panel knowledge-detail">
           {entry ? (
@@ -336,7 +347,10 @@ export default function Evidence({ pid, focusId }: { pid: string; focusId?: stri
               <p className="muted">
                 {entry.media_type} · {size(entry.size)}
               </p>
-              <code className="integrity-digest">SHA-256 {entry.sha256}</code>
+              <code className="integrity-digest">
+                {tr('SHA-256 ')}
+                {entry.sha256}
+              </code>
               <EvidencePreview pid={pid} attachment={entry} />
               <div className="dialog-actions">
                 <button
@@ -347,20 +361,20 @@ export default function Evidence({ pid, focusId }: { pid: string; focusId?: stri
                     )
                       .then((value) => {
                         setError('');
-                        setNotice('Saved: ' + value.path);
+                        setNotice(tr('Saved: ') + value.path);
                       })
                       .catch((e) => setError(e.message))
                   }
                 >
                   <Download size={14} />
-                  Save original
+                  {tr('Save original')}
                 </button>
                 <button
                   className="danger-button"
                   onClick={() => {
                     if (
                       !window.confirm(
-                        'Delete this evidence file? Linked files must be unlinked first.',
+                        tr('Delete this evidence file? Linked files must be unlinked first.'),
                       )
                     )
                       return;
@@ -372,12 +386,12 @@ export default function Evidence({ pid, focusId }: { pid: string; focusId?: stri
                       .catch((e) => setError(e.message));
                   }}
                 >
-                  Delete evidence
+                  {tr('Delete evidence')}
                 </button>
               </div>
             </>
           ) : (
-            <p className="knowledge-empty">Select evidence to inspect it.</p>
+            <p className="knowledge-empty">{tr('Select evidence to inspect it.')}</p>
           )}
         </section>
       </div>
