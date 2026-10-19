@@ -122,7 +122,7 @@ export function PrimaryNavigation({
         />
       </nav>
       <div className="nav-label project-nav-label">{tr('PROJECT')}</div>
-      <nav aria-label={tr('Project navigation')}>
+      <nav className="project-navigation" aria-label={tr('Project navigation')}>
         {sectionGroups
           .filter((g) => g.id !== 'settings')
           .map((g) => (

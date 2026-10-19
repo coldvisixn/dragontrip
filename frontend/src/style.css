@@ -2837,7 +2837,7 @@ summary {
   right: 0;
   font-size: 8px;
 }
-.sidebar.collapsed nav[aria-label='Project navigation'] {
+.sidebar.collapsed .project-navigation {
   margin-top: 20px;
 }
 .sidebar.collapsed .search-button {
