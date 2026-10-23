@@ -32,7 +32,7 @@ pyinstaller-hooks-contrib==2026.8
 pytest==9.1.1
 ruff==0.15.7
 python-multipart==0.0.32
-setuptools==84.0.0
+setuptools==84.2.0
 SQLAlchemy==2.1.4
 starlette==1.8.0
 typing-inspection==0.4.4
