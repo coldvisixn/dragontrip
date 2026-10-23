@@ -19,7 +19,7 @@
     "@fontsource/jetbrains-mono": "^5.2.5",
     "@tauri-apps/api": "^2.5.0",
     "@xyflow/react": "^12.6.0",
-    "lucide-react": "^0.468.0",
+    "lucide-react": "^1.59.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "10.1.0",
